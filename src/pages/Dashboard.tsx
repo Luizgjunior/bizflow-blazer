@@ -76,6 +76,7 @@ export default function Dashboard() {
           queryClient.invalidateQueries({ queryKey: ['webhook-leads'] });
           queryClient.invalidateQueries({ queryKey: ['webhook-leads-count'] });
           queryClient.invalidateQueries({ queryKey: ['search-leads'] });
+          queryClient.invalidateQueries({ queryKey: ['webhook-leads-today'] });
           queryClient.invalidateQueries({ queryKey: ['api-leads-count'] });
         }
       )
@@ -108,6 +109,21 @@ export default function Dashboard() {
         .from('leads')
         .select('*', { count: 'exact', head: true })
         .contains('tags', ['webhook']);
+      return count ?? 0;
+    },
+  });
+
+  // Contagem de webhook leads de hoje
+  const { data: webhookTodayCount = 0 } = useQuery({
+    queryKey: ['webhook-leads-today', tenantId],
+    queryFn: async () => {
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const { count } = await supabase
+        .from('leads')
+        .select('*', { count: 'exact', head: true })
+        .contains('tags', ['webhook'])
+        .gte('created_at', todayStart.toISOString());
       return count ?? 0;
     },
   });
@@ -162,8 +178,6 @@ export default function Dashboard() {
   const activeRuns = runs.filter((r: any) => r.status === 'running' || r.status === 'queued').length;
   const errorRuns = runs.filter((r: any) => r.status === 'error');
 
-  const today = new Date().toISOString().slice(0, 10);
-  const webhookToday = webhookLeads.filter((l: any) => l.created_at?.slice(0, 10) === today).length;
 
   // Extrair todos os campos do raw_json para exibição
   const getLeadDetails = (lead: any): Array<{ key: string; label: string; value: string }> => {
@@ -231,7 +245,7 @@ export default function Dashboard() {
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Total</p>
               </div>
               <div className="bg-card p-3 text-center">
-                <p className="text-lg font-bold text-primary">{webhookToday}</p>
+                <p className="text-lg font-bold text-primary">{webhookTodayCount}</p>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Hoje</p>
               </div>
             </div>
