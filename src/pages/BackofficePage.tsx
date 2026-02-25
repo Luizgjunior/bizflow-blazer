@@ -6,15 +6,18 @@ import { Navigate } from 'react-router-dom';
 import {
   Building2, Users, Plus, Trash2, Loader2, Shield, BarChart3,
   Target, Play, FileText, Activity, Webhook, Copy, Check, Info,
+  Edit, TrendingUp, AlertTriangle, Save,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/StatCard';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Progress } from '@/components/ui/progress';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
@@ -33,21 +36,20 @@ export default function BackofficePage() {
 
   return (
     <AppLayout>
-      <PageHeader
-        title="Backoffice"
-        description="Painel administrativo global"
-      />
+      <PageHeader title="Backoffice" description="Painel administrativo global" />
 
       <Tabs defaultValue="overview" className="space-y-4">
-        <TabsList className="bg-muted/50">
-          <TabsTrigger value="overview">Visão Geral</TabsTrigger>
-          <TabsTrigger value="tenants">Tenants</TabsTrigger>
-          <TabsTrigger value="users">Usuários</TabsTrigger>
-          <TabsTrigger value="webhook">Webhook</TabsTrigger>
+        <TabsList className="bg-muted/50 flex-wrap h-auto gap-1 p-1">
+          <TabsTrigger value="overview" className="text-xs">Visão Geral</TabsTrigger>
+          <TabsTrigger value="tenants" className="text-xs">Tenants</TabsTrigger>
+          <TabsTrigger value="consumo" className="text-xs">Consumo</TabsTrigger>
+          <TabsTrigger value="users" className="text-xs">Usuários</TabsTrigger>
+          <TabsTrigger value="webhook" className="text-xs">Webhook</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview"><OverviewTab /></TabsContent>
         <TabsContent value="tenants"><TenantsTab /></TabsContent>
+        <TabsContent value="consumo"><ConsumoTab /></TabsContent>
         <TabsContent value="users"><UsersTab /></TabsContent>
         <TabsContent value="webhook"><WebhookTab /></TabsContent>
       </Tabs>
@@ -78,16 +80,146 @@ function OverviewTab() {
     },
   });
 
+  // Leads por dia (últimos 7 dias)
+  const { data: dailyLeads = [] } = useQuery({
+    queryKey: ['backoffice-daily-leads'],
+    queryFn: async () => {
+      const result = [];
+      for (let i = 6; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dayStart = new Date(date); dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(date); dayEnd.setHours(23, 59, 59, 999);
+
+        const { count } = await supabase
+          .from('leads')
+          .select('*', { count: 'exact', head: true })
+          .gte('created_at', dayStart.toISOString())
+          .lte('created_at', dayEnd.toISOString());
+
+        result.push({
+          dia: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+          leads: count ?? 0,
+        });
+      }
+      return result;
+    },
+  });
+
   if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>;
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
-      <StatCard title="Tenants" value={counts?.tenants ?? 0} icon={Building2} variant="primary" />
-      <StatCard title="Usuários" value={counts?.users ?? 0} icon={Users} />
-      <StatCard title="ICPs" value={counts?.icps ?? 0} icon={Target} variant="accent" />
-      <StatCard title="Runs" value={counts?.runs ?? 0} icon={Play} variant="warning" />
-      <StatCard title="Leads" value={counts?.leads ?? 0} icon={Activity} variant="primary" />
-      <StatCard title="Exports" value={counts?.exports ?? 0} icon={FileText} />
+    <div className="space-y-6">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
+        <StatCard title="Tenants" value={counts?.tenants ?? 0} icon={Building2} variant="primary" />
+        <StatCard title="Usuários" value={counts?.users ?? 0} icon={Users} />
+        <StatCard title="ICPs" value={counts?.icps ?? 0} icon={Target} variant="accent" />
+        <StatCard title="Runs" value={counts?.runs ?? 0} icon={Play} variant="warning" />
+        <StatCard title="Leads" value={counts?.leads ?? 0} icon={Activity} variant="primary" />
+        <StatCard title="Exports" value={counts?.exports ?? 0} icon={FileText} />
+      </div>
+
+      {dailyLeads.length > 0 && (
+        <div className="rounded-xl border border-border bg-card p-4">
+          <div className="flex items-center gap-2 mb-4">
+            <BarChart3 className="w-4 h-4 text-primary" />
+            <h2 className="text-sm font-semibold text-foreground">Leads por Dia (Global)</h2>
+          </div>
+          <div className="h-48">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={dailyLeads}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis dataKey="dia" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
+                <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
+                <Tooltip contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }} />
+                <Bar dataKey="leads" name="Leads" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ConsumoTab() {
+  const { data: tenantsConsumo = [], isLoading } = useQuery({
+    queryKey: ['backoffice-consumo'],
+    queryFn: async () => {
+      const { data: tenants } = await supabase.from('tenants').select('*').order('nome');
+      if (!tenants) return [];
+
+      const results = [];
+      for (const tenant of tenants) {
+        const [leads, runs, exports] = await Promise.all([
+          supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
+          supabase.from('runs').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
+          supabase.from('exports').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
+        ]);
+
+        results.push({
+          ...tenant,
+          leads_count: leads.count ?? 0,
+          runs_count: runs.count ?? 0,
+          exports_count: exports.count ?? 0,
+          usage_percent: Math.min(100, ((leads.count ?? 0) / tenant.limites_consulta) * 100),
+        });
+      }
+      return results;
+    },
+  });
+
+  if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>;
+
+  return (
+    <div className="space-y-4">
+      <h2 className="text-sm font-semibold text-foreground">Consumo por Tenant</h2>
+      {tenantsConsumo.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-8">Nenhum tenant.</p>
+      ) : (
+        <div className="space-y-3">
+          {tenantsConsumo.map((t: any) => (
+            <motion.div key={t.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}
+              className="rounded-xl border border-border bg-card p-4">
+              <div className="flex items-center justify-between mb-3">
+                <div>
+                  <h3 className="text-sm font-semibold text-foreground">{t.nome}</h3>
+                  <p className="text-[11px] text-muted-foreground">
+                    Plano <span className="capitalize">{t.plano}</span> • Limite: {t.limites_consulta.toLocaleString()}
+                  </p>
+                </div>
+                <Badge
+                  variant={t.usage_percent > 90 ? 'destructive' : t.usage_percent > 70 ? 'outline' : 'secondary'}
+                  className="text-[10px]"
+                >
+                  {Math.round(t.usage_percent)}%
+                </Badge>
+              </div>
+              <Progress value={t.usage_percent} className="h-2 mb-3" />
+              <div className="grid grid-cols-3 gap-4">
+                <div className="text-center">
+                  <p className="text-base font-bold text-foreground">{t.leads_count.toLocaleString()}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase">Leads</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-base font-bold text-foreground">{t.runs_count}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase">Runs</p>
+                </div>
+                <div className="text-center">
+                  <p className="text-base font-bold text-foreground">{t.exports_count}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase">Exports</p>
+                </div>
+              </div>
+              {t.usage_percent > 90 && (
+                <div className="mt-3 flex items-center gap-2 p-2 rounded-lg bg-destructive/10">
+                  <AlertTriangle className="w-3.5 h-3.5 text-destructive" />
+                  <p className="text-[11px] text-destructive font-medium">Limite quase esgotado</p>
+                </div>
+              )}
+            </motion.div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -95,6 +227,7 @@ function OverviewTab() {
 function TenantsTab() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingTenant, setEditingTenant] = useState<any>(null);
   const [nome, setNome] = useState('');
   const [plano, setPlano] = useState('starter');
   const [limites, setLimites] = useState('1000');
@@ -108,21 +241,39 @@ function TenantsTab() {
     },
   });
 
-  const createTenant = useMutation({
+  const resetForm = () => {
+    setNome(''); setPlano('starter'); setLimites('1000'); setEditingTenant(null);
+  };
+
+  const openEdit = (tenant: any) => {
+    setEditingTenant(tenant);
+    setNome(tenant.nome);
+    setPlano(tenant.plano);
+    setLimites(tenant.limites_consulta.toString());
+    setDialogOpen(true);
+  };
+
+  const saveTenant = useMutation({
     mutationFn: async () => {
-      const { error } = await supabase.from('tenants').insert({
-        nome,
-        plano,
-        limites_consulta: parseInt(limites),
-      });
-      if (error) throw error;
+      if (editingTenant) {
+        const { error } = await supabase.from('tenants').update({
+          nome, plano, limites_consulta: parseInt(limites),
+        }).eq('id', editingTenant.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('tenants').insert({
+          nome, plano, limites_consulta: parseInt(limites),
+        });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['backoffice-tenants'] });
       queryClient.invalidateQueries({ queryKey: ['backoffice-counts'] });
-      toast.success('Tenant criado!');
+      queryClient.invalidateQueries({ queryKey: ['backoffice-consumo'] });
+      toast.success(editingTenant ? 'Tenant atualizado!' : 'Tenant criado!');
       setDialogOpen(false);
-      setNome('');
+      resetForm();
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -143,12 +294,12 @@ function TenantsTab() {
   return (
     <div>
       <div className="flex justify-end mb-4">
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
           <DialogTrigger asChild>
             <Button size="sm" className="gap-1.5"><Plus className="w-4 h-4" /> Novo Tenant</Button>
           </DialogTrigger>
           <DialogContent>
-            <DialogHeader><DialogTitle>Criar Tenant</DialogTitle></DialogHeader>
+            <DialogHeader><DialogTitle>{editingTenant ? 'Editar Tenant' : 'Criar Tenant'}</DialogTitle></DialogHeader>
             <div className="space-y-4 mt-2">
               <div><Label>Nome</Label><Input className="mt-1.5" value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome da empresa" /></div>
               <div>
@@ -163,8 +314,8 @@ function TenantsTab() {
                 </Select>
               </div>
               <div><Label>Limite de Consultas</Label><Input type="number" className="mt-1.5" value={limites} onChange={e => setLimites(e.target.value)} /></div>
-              <Button className="w-full" onClick={() => createTenant.mutate()} disabled={!nome || createTenant.isPending}>
-                {createTenant.isPending ? 'Criando...' : 'Criar Tenant'}
+              <Button className="w-full gap-1.5" onClick={() => saveTenant.mutate()} disabled={!nome || saveTenant.isPending}>
+                {saveTenant.isPending ? 'Salvando...' : editingTenant ? <><Save className="w-4 h-4" /> Salvar</> : 'Criar Tenant'}
               </Button>
             </div>
           </DialogContent>
@@ -176,34 +327,66 @@ function TenantsTab() {
       ) : tenants.length === 0 ? (
         <div className="text-center py-12"><p className="text-sm text-muted-foreground">Nenhum tenant cadastrado.</p></div>
       ) : (
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border bg-muted/30">
-                <th className="text-left text-xs font-medium text-muted-foreground p-3 pl-4">Nome</th>
-                <th className="text-left text-xs font-medium text-muted-foreground p-3">Plano</th>
-                <th className="text-left text-xs font-medium text-muted-foreground p-3">Limite</th>
-                <th className="text-left text-xs font-medium text-muted-foreground p-3">Criado</th>
-                <th className="text-right text-xs font-medium text-muted-foreground p-3 pr-4">Ações</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {tenants.map((t: any) => (
-                <tr key={t.id} className="hover:bg-muted/20 transition-colors">
-                  <td className="p-3 pl-4 text-sm font-medium text-foreground">{t.nome}</td>
-                  <td className="p-3"><Badge variant="secondary" className="text-[10px] capitalize">{t.plano}</Badge></td>
-                  <td className="p-3 text-sm text-muted-foreground">{t.limites_consulta.toLocaleString()}</td>
-                  <td className="p-3 text-sm text-muted-foreground">{new Date(t.created_at).toLocaleDateString('pt-BR')}</td>
-                  <td className="p-3 pr-4 text-right">
-                    <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive hover:text-destructive" onClick={() => deleteTenant.mutate(t.id)}>
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </Button>
-                  </td>
+        <>
+          {/* Desktop table */}
+          <div className="hidden lg:block rounded-xl border border-border bg-card overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border bg-muted/30">
+                  <th className="text-left text-xs font-medium text-muted-foreground p-3 pl-4">Nome</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground p-3">Plano</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground p-3">Limite</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground p-3">Criado</th>
+                  <th className="text-right text-xs font-medium text-muted-foreground p-3 pr-4">Ações</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {tenants.map((t: any) => (
+                  <tr key={t.id} className="hover:bg-muted/20 transition-colors">
+                    <td className="p-3 pl-4 text-sm font-medium text-foreground">{t.nome}</td>
+                    <td className="p-3"><Badge variant="secondary" className="text-[10px] capitalize">{t.plano}</Badge></td>
+                    <td className="p-3 text-sm text-muted-foreground">{t.limites_consulta.toLocaleString()}</td>
+                    <td className="p-3 text-sm text-muted-foreground">{new Date(t.created_at).toLocaleDateString('pt-BR')}</td>
+                    <td className="p-3 pr-4 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => openEdit(t)}>
+                          <Edit className="w-3.5 h-3.5" />
+                        </Button>
+                        <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive hover:text-destructive" onClick={() => deleteTenant.mutate(t.id)}>
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="lg:hidden space-y-3">
+            {tenants.map((t: any) => (
+              <div key={t.id} className="rounded-xl border border-border bg-card p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">{t.nome}</p>
+                    <p className="text-[11px] text-muted-foreground">{new Date(t.created_at).toLocaleDateString('pt-BR')}</p>
+                  </div>
+                  <Badge variant="secondary" className="text-[10px] capitalize">{t.plano}</Badge>
+                </div>
+                <p className="text-xs text-muted-foreground mb-3">Limite: {t.limites_consulta.toLocaleString()} consultas</p>
+                <div className="flex gap-2">
+                  <Button size="sm" variant="outline" className="flex-1 gap-1.5 text-xs" onClick={() => openEdit(t)}>
+                    <Edit className="w-3.5 h-3.5" /> Editar
+                  </Button>
+                  <Button size="sm" variant="outline" className="gap-1.5 text-xs text-destructive hover:text-destructive" onClick={() => deleteTenant.mutate(t.id)}>
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </Button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
@@ -229,40 +412,63 @@ function UsersTab() {
       ) : users.length === 0 ? (
         <div className="text-center py-12"><p className="text-sm text-muted-foreground">Nenhum usuário cadastrado.</p></div>
       ) : (
-        <div className="rounded-xl border border-border bg-card overflow-hidden">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-border bg-muted/30">
-                <th className="text-left text-xs font-medium text-muted-foreground p-3 pl-4">Nome</th>
-                <th className="text-left text-xs font-medium text-muted-foreground p-3">Email</th>
-                <th className="text-left text-xs font-medium text-muted-foreground p-3">Role</th>
-                <th className="text-left text-xs font-medium text-muted-foreground p-3">Tenant</th>
-                <th className="text-left text-xs font-medium text-muted-foreground p-3">Criado</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {users.map((u: any) => {
-                const roles = u.user_roles as any[];
-                const roleLabel = roles?.length > 0 ? roles[0].role : 'sem role';
-                return (
-                  <tr key={u.id} className="hover:bg-muted/20 transition-colors">
-                    <td className="p-3 pl-4 text-sm font-medium text-foreground">{u.nome}</td>
-                    <td className="p-3 text-sm text-muted-foreground">{u.email}</td>
-                    <td className="p-3">
-                      <Badge variant={roleLabel === 'admin_global' ? 'default' : 'secondary'} className="text-[10px]">
-                        {roleLabel === 'admin_global' ? (
-                          <span className="flex items-center gap-1"><Shield className="w-3 h-3" /> Admin</span>
-                        ) : roleLabel}
-                      </Badge>
-                    </td>
-                    <td className="p-3 text-sm text-muted-foreground">{u.tenants?.nome || '—'}</td>
-                    <td className="p-3 text-sm text-muted-foreground">{new Date(u.created_at).toLocaleDateString('pt-BR')}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+        <>
+          {/* Desktop table */}
+          <div className="hidden lg:block rounded-xl border border-border bg-card overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border bg-muted/30">
+                  <th className="text-left text-xs font-medium text-muted-foreground p-3 pl-4">Nome</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground p-3">Email</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground p-3">Role</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground p-3">Tenant</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground p-3">Criado</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {users.map((u: any) => {
+                  const roles = u.user_roles as any[];
+                  const roleLabel = roles?.length > 0 ? roles[0].role : 'sem role';
+                  return (
+                    <tr key={u.id} className="hover:bg-muted/20 transition-colors">
+                      <td className="p-3 pl-4 text-sm font-medium text-foreground">{u.nome}</td>
+                      <td className="p-3 text-sm text-muted-foreground">{u.email}</td>
+                      <td className="p-3">
+                        <Badge variant={roleLabel === 'admin_global' ? 'default' : 'secondary'} className="text-[10px]">
+                          {roleLabel === 'admin_global' ? (
+                            <span className="flex items-center gap-1"><Shield className="w-3 h-3" /> Admin</span>
+                          ) : roleLabel}
+                        </Badge>
+                      </td>
+                      <td className="p-3 text-sm text-muted-foreground">{u.tenants?.nome || '—'}</td>
+                      <td className="p-3 text-sm text-muted-foreground">{new Date(u.created_at).toLocaleDateString('pt-BR')}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Mobile cards */}
+          <div className="lg:hidden space-y-3">
+            {users.map((u: any) => {
+              const roles = u.user_roles as any[];
+              const roleLabel = roles?.length > 0 ? roles[0].role : 'sem role';
+              return (
+                <div key={u.id} className="rounded-xl border border-border bg-card p-4">
+                  <div className="flex items-start justify-between mb-1">
+                    <p className="text-sm font-semibold text-foreground">{u.nome}</p>
+                    <Badge variant={roleLabel === 'admin_global' ? 'default' : 'secondary'} className="text-[10px]">
+                      {roleLabel === 'admin_global' ? 'Admin' : roleLabel}
+                    </Badge>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">{u.email}</p>
+                  <p className="text-[11px] text-muted-foreground mt-1">Tenant: {u.tenants?.nome || '—'}</p>
+                </div>
+              );
+            })}
+          </div>
+        </>
       )}
     </div>
   );
@@ -324,8 +530,9 @@ function WebhookTab() {
         <ol className="text-xs text-muted-foreground space-y-2 list-decimal list-inside">
           <li>O provedor de dados envia um POST com os CNPJs detectados</li>
           <li>O sistema deduplica automaticamente por CNPJ</li>
-          <li>Os leads são inseridos para <strong>todos os tenants</strong> do sistema</li>
-          <li>Os dados aparecem no Dashboard e na página de Leads de cada tenant</li>
+          <li>O score é calculado automaticamente com base nos ICPs do tenant</li>
+          <li>O limite de consultas por tenant é respeitado</li>
+          <li>Os leads aparecem no Dashboard e na página de Leads</li>
         </ol>
       </div>
 
