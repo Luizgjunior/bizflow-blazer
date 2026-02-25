@@ -28,7 +28,7 @@ Deno.serve(async (req) => {
 
     const body = await req.json();
 
-    // Parse Casa dos Dados format: { data_evento, evento: [...] } or flat array
+    // Parse webhook format: { data_evento, evento: [...] } or flat array
     let records: any[];
     if (body.evento && Array.isArray(body.evento)) {
       records = body.evento;
@@ -45,7 +45,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Map Casa dos Dados fields to leads fields
+    // Map incoming fields to leads fields
     const mappedRecords = records.map((r: any) => {
       const cnpj = (r.cnpj || "").replace(/[^\d]/g, "");
       return {
@@ -109,7 +109,7 @@ Deno.serve(async (req) => {
           data_abertura: r.data_abertura,
           score: 50,
           raw_json: r.raw_json,
-          tags: ["webhook", "casa-dos-dados"],
+          tags: ["webhook"],
         }));
 
       if (leadsToInsert.length > 0) {
