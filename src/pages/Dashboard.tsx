@@ -229,7 +229,8 @@ export default function Dashboard() {
       const { count: totalLeads } = await supabase
         .from('leads')
         .select('*', { count: 'exact', head: true })
-        .eq('tenant_id', tenantId);
+        .eq('tenant_id', tenantId)
+        .not('tags', 'cs', '{"webhook"}');
       const { count: totalRuns } = await supabase
         .from('runs')
         .select('*', { count: 'exact', head: true })
@@ -302,7 +303,7 @@ export default function Dashboard() {
               <div>
                 <h2 className="text-sm font-semibold text-foreground">Consumo do Plano</h2>
                 <p className="text-[11px] text-muted-foreground">
-                  Plano <span className="capitalize font-medium">{tenantUsage.plano}</span> • {tenantUsage.leads.toLocaleString()} / {tenantUsage.limite.toLocaleString()} leads
+                  Plano <span className="capitalize font-medium">{tenantUsage.plano}</span> • {tenantUsage.leads.toLocaleString()} / {tenantUsage.limite.toLocaleString()} leads (via API)
                 </p>
               </div>
               <Badge variant={usagePercent > 90 ? 'destructive' : usagePercent > 70 ? 'outline' : 'secondary'} className="text-[10px]">

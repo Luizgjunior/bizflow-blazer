@@ -159,17 +159,7 @@ Deno.serve(async (req) => {
     const tenantResults: any[] = [];
 
     for (const tenant of tenants) {
-      // Check tenant limits
-      const { count: currentLeads } = await supabase
-        .from("leads")
-        .select("*", { count: "exact", head: true })
-        .eq("tenant_id", tenant.id);
-
-      const remaining = tenant.limites_consulta - (currentLeads || 0);
-      if (remaining <= 0) {
-        tenantResults.push({ tenant_id: tenant.id, inserted: 0, reason: "limit_reached" });
-        continue;
-      }
+      // Webhook leads não contam contra o limite do tenant
 
       // Get tenant ICPs for scoring
       const { data: icps } = await supabase
@@ -193,7 +183,7 @@ Deno.serve(async (req) => {
           existingCnpjs.add(r.cnpj);
           return true;
         })
-        .slice(0, remaining) // Respect tenant limit
+        // Webhook leads não contam contra limites
         .map((r: any) => {
           // Calculate best score across all tenant ICPs
           let bestScore = { total: 10, breakdown: { base: 10 } as Record<string, number> };
