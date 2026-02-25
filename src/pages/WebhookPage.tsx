@@ -39,7 +39,7 @@ export default function WebhookPage() {
     <AppLayout>
       <PageHeader
         title="Webhook"
-        description="Receba leads automaticamente da Casa dos Dados"
+        description="Receba leads automaticamente via integração externa"
       />
 
       <div className="space-y-6 max-w-2xl">
@@ -50,7 +50,7 @@ export default function WebhookPage() {
             <h2 className="text-sm font-semibold text-foreground">URL do Webhook</h2>
           </div>
           <p className="text-xs text-muted-foreground">
-            Cole esta URL no painel da Casa dos Dados em <strong>Portal → API → Webhook</strong>. 
+            Cole esta URL no painel do provedor de dados em <strong>Configurações → Webhook</strong>. 
             Os leads serão distribuídos automaticamente para todos os usuários do sistema.
           </p>
           <div className="flex gap-2">
@@ -69,7 +69,7 @@ export default function WebhookPage() {
             <h2 className="text-sm font-semibold text-foreground">Como funciona</h2>
           </div>
           <ol className="text-xs text-muted-foreground space-y-2 list-decimal list-inside">
-            <li>A Casa dos Dados envia um POST com os CNPJs detectados</li>
+            <li>O provedor de dados envia um POST com os CNPJs detectados</li>
             <li>O sistema recebe e deduplica automaticamente por CNPJ</li>
             <li>Os leads são inseridos para <strong>todos os usuários</strong> do sistema</li>
             <li>Os dados aparecem no Dashboard e na página de Leads</li>
@@ -90,9 +90,9 @@ export default function WebhookPage() {
 
         {/* Payload Example */}
         <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-          <h2 className="text-sm font-semibold text-foreground">Formato do Payload (Casa dos Dados)</h2>
+          <h2 className="text-sm font-semibold text-foreground">Formato do Payload</h2>
           <p className="text-xs text-muted-foreground">
-            Este é o formato que a Casa dos Dados envia automaticamente:
+            Este é o formato aceito pelo webhook:
           </p>
           <pre className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground overflow-x-auto">
             {examplePayload}
@@ -102,7 +102,7 @@ export default function WebhookPage() {
         {/* Fields Reference */}
         <div className="rounded-xl border border-border bg-card p-5 space-y-4">
           <h2 className="text-sm font-semibold text-foreground">Mapeamento de Campos</h2>
-          <p className="text-xs text-muted-foreground">Campos recebidos da Casa dos Dados e como são armazenados:</p>
+          <p className="text-xs text-muted-foreground">Campos recebidos e como são armazenados:</p>
           <div className="space-y-1.5">
             {[
               ['cnpj', 'cnpj'],

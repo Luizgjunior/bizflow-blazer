@@ -304,7 +304,7 @@ function WebhookTab() {
           <h2 className="text-sm font-semibold text-foreground">URL do Webhook Universal</h2>
         </div>
         <p className="text-xs text-muted-foreground">
-          Cole esta URL no painel da Casa dos Dados em <strong>Portal → API → Webhook</strong>.
+          Cole esta URL no painel do provedor de dados em <strong>Configurações → Webhook</strong>.
           Os leads serão distribuídos automaticamente para todos os tenants.
         </p>
         <div className="flex gap-2">
@@ -322,7 +322,7 @@ function WebhookTab() {
           <h2 className="text-sm font-semibold text-foreground">Como funciona</h2>
         </div>
         <ol className="text-xs text-muted-foreground space-y-2 list-decimal list-inside">
-          <li>A Casa dos Dados envia um POST com os CNPJs detectados</li>
+          <li>O provedor de dados envia um POST com os CNPJs detectados</li>
           <li>O sistema deduplica automaticamente por CNPJ</li>
           <li>Os leads são inseridos para <strong>todos os tenants</strong> do sistema</li>
           <li>Os dados aparecem no Dashboard e na página de Leads de cada tenant</li>
@@ -330,7 +330,7 @@ function WebhookTab() {
       </div>
 
       <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-foreground">Formato do Payload (Casa dos Dados)</h2>
+        <h2 className="text-sm font-semibold text-foreground">Formato do Payload</h2>
         <pre className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground overflow-x-auto">
           {examplePayload}
         </pre>
