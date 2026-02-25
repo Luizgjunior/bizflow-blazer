@@ -40,7 +40,9 @@ export default function LeadsPage() {
   const { data: allLeads = [], isLoading } = useQuery({
     queryKey: ['leads', tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('leads').select('*').order('score', { ascending: false });
+      const { data, error } = await supabase.from('leads').select('*')
+        .not('tags', 'cs', '{"webhook"}')
+        .order('score', { ascending: false });
       if (error) throw error;
       return data;
     },

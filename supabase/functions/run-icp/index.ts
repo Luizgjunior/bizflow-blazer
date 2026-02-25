@@ -60,7 +60,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Check tenant limits
+    // Check tenant limits (only API leads count)
     const { data: tenant } = await supabase
       .from("tenants")
       .select("limites_consulta")
@@ -70,7 +70,8 @@ Deno.serve(async (req) => {
     const { count: existingLeads } = await supabase
       .from("leads")
       .select("*", { count: "exact", head: true })
-      .eq("tenant_id", icp.tenant_id);
+      .eq("tenant_id", icp.tenant_id)
+      .not("tags", "cs", '{"webhook"}');
 
     if (tenant && (existingLeads ?? 0) >= tenant.limites_consulta) {
       return new Response(
@@ -104,8 +105,14 @@ Deno.serve(async (req) => {
     if (payload.cnaes?.length) pesquisa.codigo_atividade_principal = payload.cnaes;
     if (payload.uf) pesquisa.uf = [payload.uf.toLowerCase()];
     if (payload.municipio) pesquisa.municipio = [payload.municipio.toLowerCase()];
+    if (payload.bairro) pesquisa.bairro = [payload.bairro.toLowerCase()];
+    if (payload.cep) pesquisa.cep = [payload.cep.replace(/[^\d]/g, "")];
     if (payload.situacao_cadastral) pesquisa.situacao_cadastral = [payload.situacao_cadastral];
     else pesquisa.situacao_cadastral = ["ATIVA"];
+
+    if (payload.natureza_juridica) {
+      pesquisa.natureza_juridica = [payload.natureza_juridica];
+    }
 
     if (payload.porte) {
       const porteMap: Record<string, string> = {
@@ -119,7 +126,19 @@ Deno.serve(async (req) => {
       }
     }
 
-    if (payload.tempo_abertura_min) {
+    if (payload.capital_social_min || payload.capital_social_max) {
+      pesquisa.capital_social = {};
+      if (payload.capital_social_min) pesquisa.capital_social.inicio = payload.capital_social_min;
+      if (payload.capital_social_max) pesquisa.capital_social.fim = payload.capital_social_max;
+    }
+
+    // Date range: use explicit dates or compute from tempo_abertura_min
+    if (payload.data_abertura_inicio || payload.data_abertura_fim) {
+      pesquisa.data_abertura = {
+        inicio: payload.data_abertura_inicio || "1900-01-01",
+        fim: payload.data_abertura_fim || new Date().toISOString().split("T")[0],
+      };
+    } else if (payload.tempo_abertura_min) {
       const now = new Date();
       const yearsAgo = new Date(now.getFullYear() - payload.tempo_abertura_min, now.getMonth(), now.getDate());
       pesquisa.data_abertura = {
@@ -127,6 +146,9 @@ Deno.serve(async (req) => {
         fim: yearsAgo.toISOString().split("T")[0],
       };
     }
+
+    if (payload.com_telefone) pesquisa.com_telefone = true;
+    if (payload.com_email) pesquisa.com_email = true;
 
     if (payload.exclusoes) {
       const cnpjsToExclude = payload.exclusoes
@@ -136,10 +158,14 @@ Deno.serve(async (req) => {
       if (cnpjsToExclude.length) pesquisa.excluir = { cnpj: cnpjsToExclude };
     }
 
+    // Determine quantity
+    const quantidade = payload.quantidade_leads || 100;
+
     // Call Casa dos Dados v5 to generate file
     const cdBody = {
       nome: `LeadFlow_${icp.nome}_${run.id.slice(0, 8)}`,
       tipo: "csv",
+      quantidade,
       pesquisa,
     };
 
