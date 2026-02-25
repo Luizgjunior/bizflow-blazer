@@ -1,1 +1,10 @@
 project_id = "rzgsqaasexjjqajfwkdu"
+
+[functions.run-icp]
+verify_jwt = false
+
+[functions.check-run]
+verify_jwt = false
+
+[functions.export-leads]
+verify_jwt = false
