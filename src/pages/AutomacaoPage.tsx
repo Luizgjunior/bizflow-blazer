@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, Zap, Clock, Calendar, Loader2 } from 'lucide-react';
+import { Plus, Zap, Clock, Calendar, Loader2, Trash2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import AppLayout from '@/components/AppLayout';
@@ -41,10 +41,15 @@ export default function AutomacaoPage() {
   const createAuto = useMutation({
     mutationFn: async () => {
       if (!tenantId) throw new Error('Sem tenant');
+      const now = new Date();
+      const proxima = freq === 'diaria'
+        ? new Date(now.getTime() + 24 * 60 * 60 * 1000)
+        : new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
       const { error } = await supabase.from('automations').insert({
         tenant_id: tenantId,
         icp_id: selectedIcp,
         frequencia: freq,
+        proxima_execucao: proxima.toISOString(),
       });
       if (error) throw error;
     },
@@ -52,8 +57,21 @@ export default function AutomacaoPage() {
       queryClient.invalidateQueries({ queryKey: ['automations'] });
       toast.success('Automação criada!');
       setDialogOpen(false);
+      setSelectedIcp('');
+      setFreq('');
     },
     onError: (e: any) => toast.error(e.message),
+  });
+
+  const deleteAuto = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from('automations').delete().eq('id', id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['automations'] });
+      toast.success('Automação removida');
+    },
   });
 
   const toggleActive = useMutation({
@@ -130,6 +148,9 @@ export default function AutomacaoPage() {
                 <div className="flex items-center gap-3">
                   <StatusBadge status={auto.ativa ? 'ativa' : 'inativa'} />
                   <Switch checked={auto.ativa} onCheckedChange={(checked) => toggleActive.mutate({ id: auto.id, ativa: checked })} />
+                  <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive" onClick={() => deleteAuto.mutate(auto.id)}>
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
               </div>
             </motion.div>
