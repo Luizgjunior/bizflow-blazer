@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { Activity, Mail, Lock, ArrowRight, User } from 'lucide-react';
+import { Activity, Mail, Lock, ArrowRight, User, Building2 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 
 export default function LoginPage() {
@@ -15,6 +16,8 @@ export default function LoginPage() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [nome, setNome] = useState('');
+  const [empresaNome, setEmpresaNome] = useState('');
+  const [plano, setPlano] = useState('starter');
 
   // Redirect if already logged in
   if (session) {
@@ -28,7 +31,7 @@ export default function LoginPage() {
 
     try {
       if (isSignUp) {
-        const { error } = await signUp(email, password, nome);
+        const { error } = await signUp(email, password, nome, empresaNome, plano);
         if (error) {
           toast.error(error.message);
         } else {
@@ -69,21 +72,51 @@ export default function LoginPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {isSignUp && (
-              <div>
-                <Label htmlFor="nome">Nome</Label>
-                <div className="relative mt-1.5">
-                  <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    id="nome"
-                    type="text"
-                    placeholder="Seu nome"
-                    className="pl-9"
-                    value={nome}
-                    onChange={(e) => setNome(e.target.value)}
-                    required
-                  />
+              <>
+                <div>
+                  <Label htmlFor="nome">Seu Nome</Label>
+                  <div className="relative mt-1.5">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="nome"
+                      type="text"
+                      placeholder="Seu nome"
+                      className="pl-9"
+                      value={nome}
+                      onChange={(e) => setNome(e.target.value)}
+                      required
+                    />
+                  </div>
                 </div>
-              </div>
+                <div>
+                  <Label htmlFor="empresa">Nome da Empresa</Label>
+                  <div className="relative mt-1.5">
+                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      id="empresa"
+                      type="text"
+                      placeholder="Nome da sua empresa"
+                      className="pl-9"
+                      value={empresaNome}
+                      onChange={(e) => setEmpresaNome(e.target.value)}
+                      required
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label>Plano</Label>
+                  <Select value={plano} onValueChange={setPlano}>
+                    <SelectTrigger className="mt-1.5">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="starter">Starter — Gratuito</SelectItem>
+                      <SelectItem value="pro">Pro</SelectItem>
+                      <SelectItem value="enterprise">Enterprise</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
             )}
             <div>
               <Label htmlFor="email">Email</Label>
