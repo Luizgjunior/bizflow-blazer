@@ -242,10 +242,10 @@ export default function ICPsPage() {
                         </div>
                         <div>
                           <Label>Natureza Jurídica</Label>
-                          <Select value={naturezaJuridica} onValueChange={setNaturezaJuridica}>
+                          <Select value={naturezaJuridica || "__all__"} onValueChange={v => setNaturezaJuridica(v === "__all__" ? "" : v)}>
                             <SelectTrigger className="mt-1.5"><SelectValue placeholder="Todas" /></SelectTrigger>
                             <SelectContent>
-                              <SelectItem value="">Todas</SelectItem>
+                              <SelectItem value="__all__">Todas</SelectItem>
                               {NATUREZA_JURIDICA.map(nj => (
                                 <SelectItem key={nj.value} value={nj.value}>{nj.label}</SelectItem>
                               ))}
@@ -261,10 +261,10 @@ export default function ICPsPage() {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <Label>UF</Label>
-                        <Select value={uf} onValueChange={setUf}>
+                        <Select value={uf || "__all__"} onValueChange={v => setUf(v === "__all__" ? "" : v)}>
                           <SelectTrigger className="mt-1.5"><SelectValue placeholder="Todas" /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Todas</SelectItem>
+                            <SelectItem value="__all__">Todas</SelectItem>
                             {UF_LIST.map(u => (
                               <SelectItem key={u} value={u}>{u}</SelectItem>
                             ))}
@@ -291,10 +291,10 @@ export default function ICPsPage() {
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <Label>Porte</Label>
-                        <Select value={porte} onValueChange={setPorte}>
+                        <Select value={porte || "__all__"} onValueChange={v => setPorte(v === "__all__" ? "" : v)}>
                           <SelectTrigger className="mt-1.5"><SelectValue placeholder="Todos" /></SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="">Todos</SelectItem>
+                            <SelectItem value="__all__">Todos</SelectItem>
                             <SelectItem value="MEI">MEI</SelectItem>
                             <SelectItem value="ME">ME</SelectItem>
                             <SelectItem value="EPP">EPP</SelectItem>
