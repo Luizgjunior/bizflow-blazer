@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Users, Target, Play, TrendingUp, AlertTriangle, ArrowRight, Loader2, Webhook, Search, Calendar, X, Building2, MapPin, FileText, Hash } from 'lucide-react';
 import { Link } from 'react-router-dom';
@@ -63,6 +63,25 @@ function formatFieldValue(key: string, value: any): string {
 export default function Dashboard() {
   const { tenantId, isAdmin } = useAuth();
   const [selectedLead, setSelectedLead] = useState<any>(null);
+  const queryClient = useQueryClient();
+
+  // Realtime: atualiza dashboard quando novos leads chegam
+  useEffect(() => {
+    const channel = supabase
+      .channel('dashboard-leads-realtime')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'leads' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['dashboard-leads'] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [queryClient]);
 
   const { data: allLeads = [], isLoading: leadsLoading } = useQuery({
     queryKey: ['dashboard-leads', tenantId],
