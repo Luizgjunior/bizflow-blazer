@@ -1,10 +1,11 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Eye, Download, RefreshCw, Loader2 } from 'lucide-react';
+import { Eye, Download, RefreshCw, Loader2, CheckCircle2 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
+import { toast } from 'sonner';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
 import StatusBadge from '@/components/StatusBadge';
@@ -13,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 export default function RunsPage() {
   const { tenantId } = useAuth();
+  const queryClient = useQueryClient();
   const [statusFilter, setStatusFilter] = useState<string>('all');
 
   const { data: runs = [], isLoading, refetch } = useQuery({
@@ -24,6 +26,49 @@ export default function RunsPage() {
       if (error) throw error;
       return data;
     },
+    refetchInterval: 10000, // Poll every 10s for status updates
+  });
+
+  const checkRun = useMutation({
+    mutationFn: async (runId: string) => {
+      const { data, error } = await supabase.functions.invoke('check-run', {
+        body: { run_id: runId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['runs'] });
+      queryClient.invalidateQueries({ queryKey: ['recent-runs'] });
+      queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['leads-count'] });
+      if (data.status === 'done') {
+        toast.success(`${data.total_leads} leads importados!`);
+      } else {
+        toast.info(data.message || 'Ainda processando...');
+      }
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const exportRun = useMutation({
+    mutationFn: async (runId: string) => {
+      const { data, error } = await supabase.functions.invoke('export-leads', {
+        body: { run_id: runId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['exports'] });
+      if (data.download_url) {
+        window.open(data.download_url, '_blank');
+        toast.success(`Export de ${data.rows_count} leads gerado!`);
+      }
+    },
+    onError: (e: any) => toast.error(e.message),
   });
 
   return (
@@ -73,12 +118,24 @@ export default function RunsPage() {
                     <td className="p-3 text-sm text-muted-foreground">{new Date(run.requested_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}</td>
                     <td className="p-3 text-sm text-muted-foreground">{run.finished_at ? new Date(run.finished_at).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '—'}</td>
                     <td className="p-3 pr-4 text-right">
-                      {run.status === 'done' && (
-                        <div className="flex items-center justify-end gap-1">
-                          <Link to="/leads"><Button size="sm" variant="ghost" className="h-7 px-2"><Eye className="w-3.5 h-3.5" /></Button></Link>
-                          <Button size="sm" variant="ghost" className="h-7 px-2"><Download className="w-3.5 h-3.5" /></Button>
-                        </div>
-                      )}
+                      <div className="flex items-center justify-end gap-1">
+                        {(run.status === 'running' || run.status === 'queued') && (
+                          <Button size="sm" variant="ghost" className="h-7 px-2 gap-1 text-xs"
+                            onClick={() => checkRun.mutate(run.id)} disabled={checkRun.isPending}>
+                            {checkRun.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                            Verificar
+                          </Button>
+                        )}
+                        {run.status === 'done' && (
+                          <>
+                            <Link to="/leads"><Button size="sm" variant="ghost" className="h-7 px-2"><Eye className="w-3.5 h-3.5" /></Button></Link>
+                            <Button size="sm" variant="ghost" className="h-7 px-2"
+                              onClick={() => exportRun.mutate(run.id)} disabled={exportRun.isPending}>
+                              {exportRun.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -98,13 +155,25 @@ export default function RunsPage() {
                   <StatusBadge status={run.status} />
                 </div>
                 {run.total_leads > 0 && <p className="text-xs text-muted-foreground mb-3">{run.total_leads} leads gerados</p>}
-                {run.status === 'done' && (
-                  <div className="flex gap-2">
-                    <Link to="/leads" className="flex-1"><Button size="sm" variant="outline" className="w-full gap-1.5 text-xs"><Eye className="w-3.5 h-3.5" /> Ver Leads</Button></Link>
-                    <Button size="sm" variant="outline" className="gap-1.5 text-xs"><Download className="w-3.5 h-3.5" /></Button>
-                  </div>
-                )}
-                {run.status === 'error' && run.error_json && <p className="text-xs text-destructive">{(run.error_json as any).message}</p>}
+                <div className="flex gap-2">
+                  {(run.status === 'running' || run.status === 'queued') && (
+                    <Button size="sm" variant="outline" className="flex-1 gap-1.5 text-xs"
+                      onClick={() => checkRun.mutate(run.id)} disabled={checkRun.isPending}>
+                      {checkRun.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
+                      Verificar Status
+                    </Button>
+                  )}
+                  {run.status === 'done' && (
+                    <>
+                      <Link to="/leads" className="flex-1"><Button size="sm" variant="outline" className="w-full gap-1.5 text-xs"><Eye className="w-3.5 h-3.5" /> Ver Leads</Button></Link>
+                      <Button size="sm" variant="outline" className="gap-1.5 text-xs"
+                        onClick={() => exportRun.mutate(run.id)} disabled={exportRun.isPending}>
+                        {exportRun.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Download className="w-3.5 h-3.5" />}
+                      </Button>
+                    </>
+                  )}
+                </div>
+                {run.status === 'error' && run.error_json && <p className="text-xs text-destructive mt-2">{(run.error_json as any).message}</p>}
               </motion.div>
             ))}
           </div>

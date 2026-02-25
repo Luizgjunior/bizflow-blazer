@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Plus, Search, MoreVertical, Edit, Trash2, Play, Loader2 } from 'lucide-react';
+import { Plus, Search, MoreVertical, Edit, Trash2, Play, Loader2, Save } from 'lucide-react';
 import { motion } from 'framer-motion';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
@@ -22,11 +22,14 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from '@/components/ui/select';
 
+const UF_LIST = ['AC','AL','AM','AP','BA','CE','DF','ES','GO','MA','MG','MS','MT','PA','PB','PE','PI','PR','RJ','RN','RO','RR','RS','SC','SE','SP','TO'];
+
 export default function ICPsPage() {
   const { tenantId } = useAuth();
   const queryClient = useQueryClient();
   const [search, setSearch] = useState('');
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingIcp, setEditingIcp] = useState<any>(null);
   const [nome, setNome] = useState('');
   const [cnaes, setCnaes] = useState('');
   const [uf, setUf] = useState('');
@@ -44,29 +47,62 @@ export default function ICPsPage() {
     },
   });
 
-  const createIcp = useMutation({
+  const resetForm = () => {
+    setNome(''); setCnaes(''); setUf(''); setMunicipio(''); setPorte(''); setTempoAbertura(''); setExclusoes('');
+    setEditingIcp(null);
+  };
+
+  const openEdit = (icp: any) => {
+    const p = icp.payload_json as Record<string, any> || {};
+    setEditingIcp(icp);
+    setNome(icp.nome);
+    setCnaes(p.cnaes?.join(', ') || '');
+    setUf(p.uf || '');
+    setMunicipio(p.municipio || '');
+    setPorte(p.porte || '');
+    setTempoAbertura(p.tempo_abertura_min?.toString() || '');
+    setExclusoes(p.exclusoes || '');
+    setDialogOpen(true);
+  };
+
+  const buildPayload = () => {
+    const payload: Record<string, any> = {};
+    if (cnaes) payload.cnaes = cnaes.split(',').map(s => s.trim()).filter(Boolean);
+    if (uf) payload.uf = uf;
+    if (municipio) payload.municipio = municipio;
+    if (porte) payload.porte = porte;
+    if (tempoAbertura) payload.tempo_abertura_min = parseInt(tempoAbertura);
+    if (exclusoes) payload.exclusoes = exclusoes;
+    return payload;
+  };
+
+  const saveMutation = useMutation({
     mutationFn: async () => {
       if (!tenantId) throw new Error('Sem tenant');
-      const payload: Record<string, any> = {};
-      if (cnaes) payload.cnaes = cnaes.split(',').map(s => s.trim());
-      if (uf) payload.uf = uf;
-      if (municipio) payload.municipio = municipio;
-      if (porte) payload.porte = porte;
-      if (tempoAbertura) payload.tempo_abertura_min = parseInt(tempoAbertura);
-      if (exclusoes) payload.exclusoes = exclusoes;
+      const payload = buildPayload();
 
-      const { error } = await supabase.from('icps').insert({
-        tenant_id: tenantId,
-        nome,
-        payload_json: payload,
-      });
-      if (error) throw error;
+      if (editingIcp) {
+        // Update existing + increment version
+        const { error } = await supabase.from('icps').update({
+          nome,
+          payload_json: payload,
+          versao: (editingIcp.versao || 1) + 1,
+        }).eq('id', editingIcp.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase.from('icps').insert({
+          tenant_id: tenantId,
+          nome,
+          payload_json: payload,
+        });
+        if (error) throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['icps'] });
-      toast.success('ICP criado!');
+      toast.success(editingIcp ? 'ICP atualizado! Nova versão criada.' : 'ICP criado!');
       setDialogOpen(false);
-      setNome(''); setCnaes(''); setUf(''); setMunicipio(''); setPorte(''); setTempoAbertura(''); setExclusoes('');
+      resetForm();
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -82,6 +118,23 @@ export default function ICPsPage() {
     },
   });
 
+  const executeIcp = useMutation({
+    mutationFn: async (icpId: string) => {
+      const { data, error } = await supabase.functions.invoke('run-icp', {
+        body: { icp_id: icpId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      return data;
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['runs'] });
+      queryClient.invalidateQueries({ queryKey: ['recent-runs'] });
+      toast.success(`Run criada! ${data.message || ''}`);
+    },
+    onError: (e: any) => toast.error(`Erro ao executar: ${e.message}`),
+  });
+
   const filtered = icps.filter((icp: any) =>
     icp.nome.toLowerCase().includes(search.toLowerCase())
   );
@@ -92,14 +145,16 @@ export default function ICPsPage() {
         title="ICPs"
         description="Perfis ideais de cliente para geração de leads"
         actions={
-          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+          <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
             <DialogTrigger asChild>
               <Button size="sm" className="gap-1.5" disabled={!tenantId}>
                 <Plus className="w-4 h-4" /> Novo ICP
               </Button>
             </DialogTrigger>
             <DialogContent className="max-w-lg">
-              <DialogHeader><DialogTitle>Criar ICP</DialogTitle></DialogHeader>
+              <DialogHeader>
+                <DialogTitle>{editingIcp ? `Editar ICP (v${editingIcp.versao})` : 'Criar ICP'}</DialogTitle>
+              </DialogHeader>
               <div className="space-y-4 mt-2">
                 <div>
                   <Label>Nome do ICP</Label>
@@ -115,7 +170,7 @@ export default function ICPsPage() {
                     <Select value={uf} onValueChange={setUf}>
                       <SelectTrigger className="mt-1.5"><SelectValue placeholder="Selecione" /></SelectTrigger>
                       <SelectContent>
-                        {['SP', 'RJ', 'MG', 'PR', 'SC', 'RS', 'BA', 'PE'].map(u => (
+                        {UF_LIST.map(u => (
                           <SelectItem key={u} value={u}>{u}</SelectItem>
                         ))}
                       </SelectContent>
@@ -145,11 +200,13 @@ export default function ICPsPage() {
                   <Input type="number" placeholder="2" className="mt-1.5" value={tempoAbertura} onChange={e => setTempoAbertura(e.target.value)} />
                 </div>
                 <div>
-                  <Label>Exclusões</Label>
-                  <Textarea placeholder="CNPJs ou CNAEs a excluir..." className="mt-1.5" rows={2} value={exclusoes} onChange={e => setExclusoes(e.target.value)} />
+                  <Label>Exclusões (CNPJs separados por vírgula)</Label>
+                  <Textarea placeholder="12345678000190, 98765432000101" className="mt-1.5" rows={2} value={exclusoes} onChange={e => setExclusoes(e.target.value)} />
                 </div>
-                <Button className="w-full" onClick={() => createIcp.mutate()} disabled={!nome || createIcp.isPending}>
-                  {createIcp.isPending ? 'Salvando...' : 'Salvar ICP'}
+                <Button className="w-full gap-1.5" onClick={() => saveMutation.mutate()} disabled={!nome || saveMutation.isPending}>
+                  {saveMutation.isPending ? 'Salvando...' : editingIcp ? (
+                    <><Save className="w-4 h-4" /> Salvar (nova versão)</>
+                  ) : 'Salvar ICP'}
                 </Button>
               </div>
             </DialogContent>
@@ -187,6 +244,9 @@ export default function ICPsPage() {
                       <button className="p-1 text-muted-foreground hover:text-foreground"><MoreVertical className="w-4 h-4" /></button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end">
+                      <DropdownMenuItem onClick={() => openEdit(icp)}>
+                        <Edit className="w-3.5 h-3.5 mr-2" /> Editar
+                      </DropdownMenuItem>
                       <DropdownMenuItem onClick={() => deleteIcp.mutate(icp.id)} className="text-destructive">
                         <Trash2 className="w-3.5 h-3.5 mr-2" /> Excluir
                       </DropdownMenuItem>
@@ -196,10 +256,22 @@ export default function ICPsPage() {
                 <div className="flex flex-wrap gap-1.5 mb-4">
                   {payload.cnaes && <Badge variant="secondary" className="text-[10px]">CNAE: {payload.cnaes[0]}</Badge>}
                   {payload.uf && <Badge variant="secondary" className="text-[10px]">{payload.uf}</Badge>}
+                  {payload.municipio && <Badge variant="secondary" className="text-[10px]">{payload.municipio}</Badge>}
                   {payload.porte && <Badge variant="secondary" className="text-[10px]">{payload.porte}</Badge>}
+                  {payload.tempo_abertura_min && <Badge variant="secondary" className="text-[10px]">{payload.tempo_abertura_min}+ anos</Badge>}
                 </div>
-                <Button size="sm" variant="outline" className="w-full gap-1.5">
-                  <Play className="w-3.5 h-3.5" /> Executar
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="w-full gap-1.5"
+                  disabled={executeIcp.isPending}
+                  onClick={() => executeIcp.mutate(icp.id)}
+                >
+                  {executeIcp.isPending ? (
+                    <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Executando...</>
+                  ) : (
+                    <><Play className="w-3.5 h-3.5" /> Executar</>
+                  )}
                 </Button>
               </motion.div>
             );
