@@ -339,6 +339,38 @@ export type Database = {
         }
         Relationships: []
       }
+      webhook_tokens: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          id: string
+          tenant_id: string
+          token: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          tenant_id: string
+          token?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          id?: string
+          tenant_id?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "webhook_tokens_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
