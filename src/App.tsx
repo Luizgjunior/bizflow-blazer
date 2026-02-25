@@ -3,6 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 import Dashboard from "./pages/Dashboard";
 import ICPsPage from "./pages/ICPsPage";
 import RunsPage from "./pages/RunsPage";
@@ -20,16 +22,18 @@ const App = () => (
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/icps" element={<ICPsPage />} />
-          <Route path="/runs" element={<RunsPage />} />
-          <Route path="/leads" element={<LeadsPage />} />
-          <Route path="/exports" element={<ExportsPage />} />
-          <Route path="/automacao" element={<AutomacaoPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+        <AuthProvider>
+          <Routes>
+            <Route path="/login" element={<LoginPage />} />
+            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/icps" element={<ProtectedRoute><ICPsPage /></ProtectedRoute>} />
+            <Route path="/runs" element={<ProtectedRoute><RunsPage /></ProtectedRoute>} />
+            <Route path="/leads" element={<ProtectedRoute><LeadsPage /></ProtectedRoute>} />
+            <Route path="/exports" element={<ProtectedRoute><ExportsPage /></ProtectedRoute>} />
+            <Route path="/automacao" element={<ProtectedRoute><AutomacaoPage /></ProtectedRoute>} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

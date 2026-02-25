@@ -1,5 +1,6 @@
 import { ReactNode } from 'react';
-import { useLocation, Link } from 'react-router-dom';
+import { useLocation, Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '@/contexts/AuthContext';
 import {
   LayoutDashboard,
   Target,
@@ -29,7 +30,14 @@ const bottomNavItems = navItems.slice(0, 5);
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { profile, role, signOut } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/login');
+  };
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -78,7 +86,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
             <Settings className="w-4 h-4" />
             Configurações
           </Link>
-          <button className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive transition-all w-full">
+          <button onClick={handleSignOut} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive transition-all w-full">
             <LogOut className="w-4 h-4" />
             Sair
           </button>
@@ -86,8 +94,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
         <div className="p-3 border-t border-sidebar-border">
           <div className="px-3 py-2">
-            <p className="text-xs font-medium text-foreground truncate">TechCorp Brasil</p>
-            <p className="text-[10px] text-muted-foreground">Plano Pro • 1.240/5.000 consultas</p>
+            <p className="text-xs font-medium text-foreground truncate">{profile?.nome || 'Usuário'}</p>
+            <p className="text-[10px] text-muted-foreground">{role === 'admin_global' ? 'Admin Global' : 'Empresa'}</p>
           </div>
         </div>
       </aside>
