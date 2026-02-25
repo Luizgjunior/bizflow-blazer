@@ -74,6 +74,7 @@ export default function Dashboard() {
         { event: '*', schema: 'public', table: 'leads' },
         () => {
           queryClient.invalidateQueries({ queryKey: ['dashboard-leads'] });
+          queryClient.invalidateQueries({ queryKey: ['leads-count'] });
         }
       )
       .subscribe();
@@ -92,6 +93,14 @@ export default function Dashboard() {
         .order('created_at', { ascending: false })
         .limit(200);
       return data ?? [];
+    },
+  });
+
+  const { data: totalLeadsCount = 0 } = useQuery({
+    queryKey: ['leads-count', tenantId],
+    queryFn: async () => {
+      const { count } = await supabase.from('leads').select('*', { count: 'exact', head: true });
+      return count ?? 0;
     },
   });
 
@@ -159,7 +168,7 @@ export default function Dashboard() {
       <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="space-y-6">
         {/* Top Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
-          <StatCard title="Total Leads" value={allLeads.length.toLocaleString()} icon={Users} variant="primary" />
+          <StatCard title="Total Leads" value={totalLeadsCount.toLocaleString()} icon={Users} variant="primary" />
           <StatCard title="Runs Ativas" value={activeRuns} icon={Play} variant="warning" />
           <StatCard title="ICPs Ativos" value={icpsCount} icon={Target} />
           <StatCard title="Execuções" value={runs.length} icon={TrendingUp} variant="accent" />
