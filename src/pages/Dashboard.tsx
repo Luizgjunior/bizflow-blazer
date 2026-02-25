@@ -73,8 +73,10 @@ export default function Dashboard() {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'leads' },
         () => {
-          queryClient.invalidateQueries({ queryKey: ['dashboard-leads'] });
-          queryClient.invalidateQueries({ queryKey: ['leads-count'] });
+          queryClient.invalidateQueries({ queryKey: ['webhook-leads'] });
+          queryClient.invalidateQueries({ queryKey: ['webhook-leads-count'] });
+          queryClient.invalidateQueries({ queryKey: ['search-leads'] });
+          queryClient.invalidateQueries({ queryKey: ['api-leads-count'] });
         }
       )
       .subscribe();
@@ -84,22 +86,54 @@ export default function Dashboard() {
     };
   }, [queryClient]);
 
-  const { data: allLeads = [], isLoading: leadsLoading } = useQuery({
-    queryKey: ['dashboard-leads', tenantId],
+  // Leads via webhook (empresas abertas)
+  const { data: webhookLeads = [], isLoading: leadsLoading } = useQuery({
+    queryKey: ['webhook-leads', tenantId],
     queryFn: async () => {
       const { data } = await supabase
         .from('leads')
         .select('*')
+        .contains('tags', ['webhook'])
         .order('created_at', { ascending: false })
         .limit(200);
       return data ?? [];
     },
   });
 
-  const { data: totalLeadsCount = 0 } = useQuery({
-    queryKey: ['leads-count', tenantId],
+  // Contagem total de webhook leads
+  const { data: webhookLeadsCount = 0 } = useQuery({
+    queryKey: ['webhook-leads-count', tenantId],
     queryFn: async () => {
-      const { count } = await supabase.from('leads').select('*', { count: 'exact', head: true });
+      const { count } = await supabase
+        .from('leads')
+        .select('*', { count: 'exact', head: true })
+        .contains('tags', ['webhook']);
+      return count ?? 0;
+    },
+  });
+
+  // Leads via API/runs (não webhook)
+  const { data: searchLeads = [] } = useQuery({
+    queryKey: ['search-leads', tenantId],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('leads')
+        .select('*')
+        .not('tags', 'cs', '{"webhook"}')
+        .order('created_at', { ascending: false })
+        .limit(200);
+      return data ?? [];
+    },
+  });
+
+  // Contagem de leads via API (Total Leads = não webhook)
+  const { data: totalLeadsCount = 0 } = useQuery({
+    queryKey: ['api-leads-count', tenantId],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from('leads')
+        .select('*', { count: 'exact', head: true })
+        .not('tags', 'cs', '{"webhook"}');
       return count ?? 0;
     },
   });
@@ -124,8 +158,6 @@ export default function Dashboard() {
     },
   });
 
-  const webhookLeads = allLeads.filter((l: any) => (l.tags || []).includes('webhook'));
-  const searchLeads = allLeads.filter((l: any) => !(l.tags || []).includes('webhook'));
 
   const activeRuns = runs.filter((r: any) => r.status === 'running' || r.status === 'queued').length;
   const errorRuns = runs.filter((r: any) => r.status === 'error');
@@ -195,7 +227,7 @@ export default function Dashboard() {
 
             <div className="grid grid-cols-2 gap-px bg-border">
               <div className="bg-card p-3 text-center">
-                <p className="text-lg font-bold text-foreground">{webhookLeads.length}</p>
+                <p className="text-lg font-bold text-foreground">{webhookLeadsCount}</p>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Total</p>
               </div>
               <div className="bg-card p-3 text-center">
