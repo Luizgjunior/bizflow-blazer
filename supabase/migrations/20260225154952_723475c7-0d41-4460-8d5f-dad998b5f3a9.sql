@@ -1,0 +1,1 @@
+ALTER TABLE public.leads ALTER COLUMN run_id DROP NOT NULL;
