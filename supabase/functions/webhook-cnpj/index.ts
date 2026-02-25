@@ -16,11 +16,9 @@ Deno.serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, serviceKey);
 
-    // Validate webhook secret
+    // Optional webhook secret validation
     const webhookSecret = req.headers.get("x-webhook-secret");
     const expectedSecret = Deno.env.get("WEBHOOK_SECRET");
-    
-    // If WEBHOOK_SECRET is set, validate it
     if (expectedSecret && webhookSecret !== expectedSecret) {
       return new Response(JSON.stringify({ error: "Invalid webhook secret" }), {
         status: 401,
@@ -29,10 +27,17 @@ Deno.serve(async (req) => {
     }
 
     const body = await req.json();
-    
-    // Support both single and batch payloads
-    const records = Array.isArray(body) ? body : [body];
-    
+
+    // Parse Casa dos Dados format: { data_evento, evento: [...] } or flat array
+    let records: any[];
+    if (body.evento && Array.isArray(body.evento)) {
+      records = body.evento;
+    } else if (Array.isArray(body)) {
+      records = body;
+    } else {
+      records = [body];
+    }
+
     if (records.length === 0) {
       return new Response(JSON.stringify({ error: "No records provided" }), {
         status: 400,
@@ -40,91 +45,82 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Require tenant_id in payload
-    const tenantId = records[0].tenant_id;
-    if (!tenantId) {
-      return new Response(JSON.stringify({ error: "tenant_id is required" }), {
+    // Map Casa dos Dados fields to leads fields
+    const mappedRecords = records.map((r: any) => {
+      const cnpj = (r.cnpj || "").replace(/[^\d]/g, "");
+      return {
+        cnpj,
+        razao_social: r.razao_social || r.nome_fantasia || `Empresa ${cnpj}`,
+        uf: r.uf || null,
+        municipio: r.municipio || null,
+        cnae_principal: r.cnae_fiscal?.toString() || r.cnae_principal || null,
+        situacao: r.situacao_cadastral || r.situacao || "ATIVA",
+        data_abertura: r.data_inicio_atividade || r.data_abertura || null,
+        raw_json: r,
+      };
+    }).filter((r: any) => r.cnpj && r.cnpj.length >= 11);
+
+    if (mappedRecords.length === 0) {
+      return new Response(JSON.stringify({ error: "No valid CNPJs in payload" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Verify tenant exists
-    const { data: tenant, error: tenantError } = await supabase
+    // Fetch all tenants
+    const { data: tenants, error: tenantsError } = await supabase
       .from("tenants")
-      .select("id, limites_consulta")
-      .eq("id", tenantId)
-      .single();
+      .select("id");
 
-    if (tenantError || !tenant) {
-      return new Response(JSON.stringify({ error: "Tenant not found" }), {
-        status: 404,
+    if (tenantsError || !tenants || tenants.length === 0) {
+      console.error("Error fetching tenants:", tenantsError);
+      return new Response(JSON.stringify({ error: "No tenants found" }), {
+        status: 500,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Check limits
-    const { count: existingCount } = await supabase
-      .from("leads")
-      .select("*", { count: "exact", head: true })
-      .eq("tenant_id", tenantId);
+    let totalInserted = 0;
 
-    if ((existingCount ?? 0) >= tenant.limites_consulta) {
-      return new Response(JSON.stringify({ error: "Tenant limit reached" }), {
-        status: 429,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
+    // For each tenant, deduplicate and insert
+    for (const tenant of tenants) {
+      const { data: existingLeads } = await supabase
+        .from("leads")
+        .select("cnpj")
+        .eq("tenant_id", tenant.id);
 
-    // Get existing CNPJs for dedup
-    const { data: existingLeads } = await supabase
-      .from("leads")
-      .select("cnpj")
-      .eq("tenant_id", tenantId);
-    const existingCnpjs = new Set((existingLeads || []).map((l) => l.cnpj));
+      const existingCnpjs = new Set((existingLeads || []).map((l: any) => l.cnpj));
 
-    const leadsToInsert: any[] = [];
-    const skipped: string[] = [];
+      const leadsToInsert = mappedRecords
+        .filter((r: any) => {
+          if (existingCnpjs.has(r.cnpj)) return false;
+          existingCnpjs.add(r.cnpj); // prevent duplicates within batch
+          return true;
+        })
+        .map((r: any) => ({
+          tenant_id: tenant.id,
+          run_id: null,
+          cnpj: r.cnpj,
+          razao_social: r.razao_social,
+          uf: r.uf,
+          municipio: r.municipio,
+          cnae_principal: r.cnae_principal,
+          situacao: r.situacao,
+          data_abertura: r.data_abertura,
+          score: 50,
+          raw_json: r.raw_json,
+          tags: ["webhook", "casa-dos-dados"],
+        }));
 
-    for (const record of records) {
-      const cnpj = (record.cnpj || "").replace(/[^\d]/g, "");
-      if (!cnpj || cnpj.length < 11) {
-        skipped.push(record.cnpj || "invalid");
-        continue;
-      }
-
-      if (existingCnpjs.has(cnpj)) {
-        skipped.push(cnpj);
-        continue;
-      }
-      existingCnpjs.add(cnpj);
-
-      leadsToInsert.push({
-        tenant_id: tenantId,
-        run_id: record.run_id || null,
-        cnpj,
-        razao_social: record.razao_social || `Empresa ${cnpj}`,
-        uf: record.uf || null,
-        municipio: record.municipio || null,
-        cnae_principal: record.cnae_principal || null,
-        situacao: record.situacao || "ATIVA",
-        data_abertura: record.data_abertura || null,
-        score: record.score || 50,
-        raw_json: record.raw_json || record,
-        tags: record.tags || ["webhook"],
-      });
-    }
-
-    let insertedCount = 0;
-    if (leadsToInsert.length > 0) {
-      // Insert in batches
-      for (let i = 0; i < leadsToInsert.length; i += 500) {
-        const batch = leadsToInsert.slice(i, i + 500);
-        const { error: insertError } = await supabase.from("leads").insert(batch);
-        if (insertError) {
-          console.error("Insert error:", insertError);
-        } else {
-          insertedCount += batch.length;
+      if (leadsToInsert.length > 0) {
+        for (let i = 0; i < leadsToInsert.length; i += 500) {
+          const batch = leadsToInsert.slice(i, i + 500);
+          const { error: insertError } = await supabase.from("leads").insert(batch);
+          if (insertError) {
+            console.error(`Insert error for tenant ${tenant.id}:`, insertError);
+          } else {
+            totalInserted += batch.length;
+          }
         }
       }
     }
@@ -132,9 +128,10 @@ Deno.serve(async (req) => {
     return new Response(
       JSON.stringify({
         success: true,
-        inserted: insertedCount,
-        skipped: skipped.length,
-        total_received: records.length,
+        tenants_count: tenants.length,
+        total_inserted: totalInserted,
+        records_received: records.length,
+        valid_records: mappedRecords.length,
       }),
       { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );

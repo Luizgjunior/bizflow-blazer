@@ -150,7 +150,7 @@ export type Database = {
           notas: string | null
           raw_json: Json | null
           razao_social: string
-          run_id: string
+          run_id: string | null
           score: number | null
           situacao: string | null
           tags: string[] | null
@@ -167,7 +167,7 @@ export type Database = {
           notas?: string | null
           raw_json?: Json | null
           razao_social: string
-          run_id: string
+          run_id?: string | null
           score?: number | null
           situacao?: string | null
           tags?: string[] | null
@@ -184,7 +184,7 @@ export type Database = {
           notas?: string | null
           raw_json?: Json | null
           razao_social?: string
-          run_id?: string
+          run_id?: string | null
           score?: number | null
           situacao?: string | null
           tags?: string[] | null

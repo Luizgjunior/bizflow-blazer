@@ -1,15 +1,12 @@
 import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { Webhook, Copy, Check, Shield, ExternalLink } from 'lucide-react';
+import { Webhook, Copy, Check, Shield, Info } from 'lucide-react';
 import { toast } from 'sonner';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
 
 export default function WebhookPage() {
-  const { tenantId } = useAuth();
   const [copied, setCopied] = useState(false);
 
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
@@ -23,37 +20,26 @@ export default function WebhookPage() {
   };
 
   const examplePayload = JSON.stringify({
-    tenant_id: tenantId || "SEU_TENANT_ID",
-    cnpj: "12345678000190",
-    razao_social: "Empresa Exemplo LTDA",
-    uf: "SP",
-    municipio: "São Paulo",
-    cnae_principal: "6201500",
-    situacao: "ATIVA",
-    data_abertura: "2020-01-15",
-    tags: ["webhook", "parceiro"]
+    data_evento: "2025-06-13T11:15:42.000Z",
+    evento: [
+      {
+        cnpj: "33000167000101",
+        razao_social: "EMPRESA EXEMPLO S/A",
+        nome_fantasia: "EXEMPLO",
+        uf: "SP",
+        municipio: "SAO PAULO",
+        cnae_fiscal: 6201500,
+        situacao_cadastral: "ATIVA",
+        data_inicio_atividade: "2020-01-15"
+      }
+    ]
   }, null, 2);
-
-  const batchPayload = JSON.stringify([
-    {
-      tenant_id: tenantId || "SEU_TENANT_ID",
-      cnpj: "12345678000190",
-      razao_social: "Empresa 1 LTDA",
-      uf: "SP"
-    },
-    {
-      tenant_id: tenantId || "SEU_TENANT_ID",
-      cnpj: "98765432000199",
-      razao_social: "Empresa 2 LTDA",
-      uf: "RJ"
-    }
-  ], null, 2);
 
   return (
     <AppLayout>
       <PageHeader
         title="Webhook"
-        description="Receba leads automaticamente via integração externa"
+        description="Receba leads automaticamente da Casa dos Dados"
       />
 
       <div className="space-y-6 max-w-2xl">
@@ -61,10 +47,11 @@ export default function WebhookPage() {
         <div className="rounded-xl border border-border bg-card p-5 space-y-4">
           <div className="flex items-center gap-2">
             <Webhook className="w-5 h-5 text-primary" />
-            <h2 className="text-sm font-semibold text-foreground">Endpoint do Webhook</h2>
+            <h2 className="text-sm font-semibold text-foreground">URL do Webhook</h2>
           </div>
           <p className="text-xs text-muted-foreground">
-            Envie um POST para esta URL com os dados dos leads. Eles serão automaticamente deduplicados e inseridos.
+            Cole esta URL no painel da Casa dos Dados em <strong>Portal → API → Webhook</strong>. 
+            Os leads serão distribuídos automaticamente para todos os usuários do sistema.
           </p>
           <div className="flex gap-2">
             <Input value={webhookUrl} readOnly className="font-mono text-xs" />
@@ -75,63 +62,62 @@ export default function WebhookPage() {
           </div>
         </div>
 
+        {/* How it works */}
+        <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+          <div className="flex items-center gap-2">
+            <Info className="w-5 h-5 text-primary" />
+            <h2 className="text-sm font-semibold text-foreground">Como funciona</h2>
+          </div>
+          <ol className="text-xs text-muted-foreground space-y-2 list-decimal list-inside">
+            <li>A Casa dos Dados envia um POST com os CNPJs detectados</li>
+            <li>O sistema recebe e deduplica automaticamente por CNPJ</li>
+            <li>Os leads são inseridos para <strong>todos os usuários</strong> do sistema</li>
+            <li>Os dados aparecem no Dashboard e na página de Leads</li>
+          </ol>
+        </div>
+
         {/* Security */}
         <div className="rounded-xl border border-border bg-card p-5 space-y-4">
           <div className="flex items-center gap-2">
             <Shield className="w-5 h-5 text-primary" />
-            <h2 className="text-sm font-semibold text-foreground">Segurança</h2>
+            <h2 className="text-sm font-semibold text-foreground">Segurança (opcional)</h2>
           </div>
           <p className="text-xs text-muted-foreground">
-            Para proteger o endpoint, envie o header <code className="px-1 py-0.5 bg-muted rounded text-[11px]">x-webhook-secret</code> com o valor configurado no backend.
+            Se desejar proteger o endpoint, configure o secret <code className="px-1 py-0.5 bg-muted rounded text-[11px]">WEBHOOK_SECRET</code> no backend 
+            e envie o header <code className="px-1 py-0.5 bg-muted rounded text-[11px]">x-webhook-secret</code> nas requisições.
           </p>
-          <div className="rounded-lg bg-muted/50 p-3">
-            <code className="text-xs text-muted-foreground">
-              {`curl -X POST ${webhookUrl} \\`}<br />
-              {`  -H "Content-Type: application/json" \\`}<br />
-              {`  -H "x-webhook-secret: SEU_SECRET" \\`}<br />
-              {`  -d '${JSON.stringify({ tenant_id: "...", cnpj: "...", razao_social: "..." })}'`}
-            </code>
-          </div>
         </div>
 
-        {/* Single Payload */}
+        {/* Payload Example */}
         <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-          <h2 className="text-sm font-semibold text-foreground">Payload Único</h2>
+          <h2 className="text-sm font-semibold text-foreground">Formato do Payload (Casa dos Dados)</h2>
+          <p className="text-xs text-muted-foreground">
+            Este é o formato que a Casa dos Dados envia automaticamente:
+          </p>
           <pre className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground overflow-x-auto">
             {examplePayload}
           </pre>
         </div>
 
-        {/* Batch Payload */}
-        <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-          <h2 className="text-sm font-semibold text-foreground">Payload em Lote</h2>
-          <p className="text-xs text-muted-foreground">Envie um array para inserir múltiplos leads de uma vez.</p>
-          <pre className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground overflow-x-auto">
-            {batchPayload}
-          </pre>
-        </div>
-
         {/* Fields Reference */}
         <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-          <h2 className="text-sm font-semibold text-foreground">Campos Aceitos</h2>
+          <h2 className="text-sm font-semibold text-foreground">Mapeamento de Campos</h2>
+          <p className="text-xs text-muted-foreground">Campos recebidos da Casa dos Dados e como são armazenados:</p>
           <div className="space-y-1.5">
             {[
-              ['tenant_id', 'obrigatório', 'UUID do tenant'],
-              ['cnpj', 'obrigatório', 'CNPJ (com ou sem máscara)'],
-              ['razao_social', 'opcional', 'Nome da empresa'],
-              ['uf', 'opcional', 'Estado (ex: SP)'],
-              ['municipio', 'opcional', 'Cidade'],
-              ['cnae_principal', 'opcional', 'CNAE principal'],
-              ['situacao', 'opcional', 'Situação cadastral'],
-              ['data_abertura', 'opcional', 'Data de abertura (YYYY-MM-DD)'],
-              ['score', 'opcional', 'Score manual (0-100)'],
-              ['tags', 'opcional', 'Array de tags'],
-              ['raw_json', 'opcional', 'Dados extras em JSON'],
-            ].map(([field, req, desc]) => (
-              <div key={field} className="flex items-center gap-3 py-1.5 border-b border-border last:border-0">
-                <code className="text-[11px] font-mono text-foreground w-28">{field}</code>
-                <span className={`text-[10px] px-1.5 py-0.5 rounded ${req === 'obrigatório' ? 'bg-destructive/10 text-destructive' : 'bg-muted text-muted-foreground'}`}>{req}</span>
-                <span className="text-[11px] text-muted-foreground">{desc}</span>
+              ['cnpj', 'cnpj'],
+              ['razao_social', 'razao_social'],
+              ['uf', 'uf'],
+              ['municipio', 'municipio'],
+              ['cnae_fiscal', 'cnae_principal'],
+              ['situacao_cadastral', 'situacao'],
+              ['data_inicio_atividade', 'data_abertura'],
+              ['(objeto completo)', 'raw_json'],
+            ].map(([from, to]) => (
+              <div key={from} className="flex items-center gap-3 py-1.5 border-b border-border last:border-0">
+                <code className="text-[11px] font-mono text-foreground w-40">{from}</code>
+                <span className="text-[11px] text-muted-foreground">→</span>
+                <code className="text-[11px] font-mono text-primary">{to}</code>
               </div>
             ))}
           </div>
