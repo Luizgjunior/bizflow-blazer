@@ -13,6 +13,7 @@ import {
   Menu,
   X,
   Activity,
+  Shield,
 } from 'lucide-react';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -31,8 +32,12 @@ const bottomNavItems = navItems.slice(0, 5);
 export default function AppLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile, role, signOut } = useAuth();
+  const { profile, role, signOut, isAdmin } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  const allNavItems = isAdmin
+    ? [...navItems, { path: '/backoffice', label: 'Backoffice', icon: Shield }]
+    : navItems;
 
   const handleSignOut = async () => {
     await signOut();
@@ -56,7 +61,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         </div>
 
         <nav className="flex-1 p-3 space-y-0.5">
-          {navItems.map((item) => {
+          {allNavItems.map((item) => {
             const isActive = location.pathname === item.path;
             return (
               <Link
@@ -132,7 +137,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               className="lg:hidden fixed right-0 top-14 bottom-0 w-64 bg-card border-l border-border z-50 p-4"
             >
               <nav className="space-y-1">
-                {navItems.map((item) => {
+                {allNavItems.map((item) => {
                   const isActive = location.pathname === item.path;
                   return (
                     <Link

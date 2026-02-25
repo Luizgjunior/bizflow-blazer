@@ -11,6 +11,7 @@ import RunsPage from "./pages/RunsPage";
 import LeadsPage from "./pages/LeadsPage";
 import ExportsPage from "./pages/ExportsPage";
 import AutomacaoPage from "./pages/AutomacaoPage";
+import BackofficePage from "./pages/BackofficePage";
 import LoginPage from "./pages/LoginPage";
 import NotFound from "./pages/NotFound";
 
@@ -31,6 +32,7 @@ const App = () => (
             <Route path="/leads" element={<ProtectedRoute><LeadsPage /></ProtectedRoute>} />
             <Route path="/exports" element={<ProtectedRoute><ExportsPage /></ProtectedRoute>} />
             <Route path="/automacao" element={<ProtectedRoute><AutomacaoPage /></ProtectedRoute>} />
+            <Route path="/backoffice" element={<ProtectedRoute><BackofficePage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
