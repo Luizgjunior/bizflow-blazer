@@ -11,3 +11,9 @@ verify_jwt = false
 
 [functions.run-automations]
 verify_jwt = false
+
+[functions.webhook-cnpj]
+verify_jwt = false
+
+[functions.enrich-leads]
+verify_jwt = false
