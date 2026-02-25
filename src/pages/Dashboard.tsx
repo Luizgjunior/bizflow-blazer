@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Users, Target, Play, TrendingUp, AlertTriangle, ArrowRight, Loader2, Webhook, Search, Calendar, X, Building2, MapPin, FileText, Hash } from 'lucide-react';
+import { Users, Target, Play, TrendingUp, AlertTriangle, ArrowRight, Loader2, Webhook, Search, Calendar, X, Building2, MapPin, FileText, Hash, BarChart3 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
 import StatCard from '@/components/StatCard';
@@ -12,6 +13,7 @@ import ScoreBadge from '@/components/ScoreBadge';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useAuth } from '@/contexts/AuthContext';
+import { Progress } from '@/components/ui/progress';
 
 // Labels amigáveis para campos do raw_json
 const fieldLabels: Record<string, string> = {
@@ -78,6 +80,8 @@ export default function Dashboard() {
           queryClient.invalidateQueries({ queryKey: ['search-leads'] });
           queryClient.invalidateQueries({ queryKey: ['webhook-leads-today'] });
           queryClient.invalidateQueries({ queryKey: ['api-leads-count'] });
+          queryClient.invalidateQueries({ queryKey: ['leads-evolution'] });
+          queryClient.invalidateQueries({ queryKey: ['tenant-usage'] });
         }
       )
       .subscribe();
@@ -174,10 +178,79 @@ export default function Dashboard() {
     },
   });
 
+  // Evolução de leads nos últimos 7 dias
+  const { data: leadsEvolution = [] } = useQuery({
+    queryKey: ['leads-evolution', tenantId],
+    queryFn: async () => {
+      const days = 7;
+      const result = [];
+      for (let i = days - 1; i >= 0; i--) {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        const dayStart = new Date(date);
+        dayStart.setHours(0, 0, 0, 0);
+        const dayEnd = new Date(date);
+        dayEnd.setHours(23, 59, 59, 999);
+
+        const { count: webhookCount } = await supabase
+          .from('leads')
+          .select('*', { count: 'exact', head: true })
+          .contains('tags', ['webhook'])
+          .gte('created_at', dayStart.toISOString())
+          .lte('created_at', dayEnd.toISOString());
+
+        const { count: apiCount } = await supabase
+          .from('leads')
+          .select('*', { count: 'exact', head: true })
+          .not('tags', 'cs', '{"webhook"}')
+          .gte('created_at', dayStart.toISOString())
+          .lte('created_at', dayEnd.toISOString());
+
+        result.push({
+          dia: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+          webhook: webhookCount ?? 0,
+          api: apiCount ?? 0,
+        });
+      }
+      return result;
+    },
+  });
+
+  // Consumo do tenant
+  const { data: tenantUsage } = useQuery({
+    queryKey: ['tenant-usage', tenantId],
+    queryFn: async () => {
+      if (!tenantId) return null;
+      const { data: tenant } = await supabase
+        .from('tenants')
+        .select('limites_consulta, nome, plano')
+        .eq('id', tenantId)
+        .maybeSingle();
+      const { count: totalLeads } = await supabase
+        .from('leads')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId);
+      const { count: totalRuns } = await supabase
+        .from('runs')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId);
+      const { count: totalExports } = await supabase
+        .from('exports')
+        .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId);
+      return {
+        limite: tenant?.limites_consulta ?? 1000,
+        plano: tenant?.plano ?? 'starter',
+        leads: totalLeads ?? 0,
+        runs: totalRuns ?? 0,
+        exports: totalExports ?? 0,
+      };
+    },
+    enabled: !!tenantId,
+  });
 
   const activeRuns = runs.filter((r: any) => r.status === 'running' || r.status === 'queued').length;
   const errorRuns = runs.filter((r: any) => r.status === 'error');
-
 
   // Extrair todos os campos do raw_json para exibição
   const getLeadDetails = (lead: any): Array<{ key: string; label: string; value: string }> => {
@@ -196,7 +269,7 @@ export default function Dashboard() {
     }
 
     // Campos adicionais do raw_json (excluindo os que já mostramos)
-    const shownKeys = new Set(['cnpj', 'razao_social', 'uf', 'municipio', 'situacao', 'situacao_cadastral', 'data_inicio_atividade', 'cnae_fiscal']);
+    const shownKeys = new Set(['cnpj', 'razao_social', 'uf', 'municipio', 'situacao', 'situacao_cadastral', 'data_inicio_atividade', 'cnae_fiscal', 'score_breakdown']);
     for (const [key, value] of Object.entries(raw)) {
       if (shownKeys.has(key)) continue;
       if (value === null || value === undefined || value === '') continue;
@@ -206,6 +279,8 @@ export default function Dashboard() {
 
     return details;
   };
+
+  const usagePercent = tenantUsage ? Math.min(100, (tenantUsage.leads / tenantUsage.limite) * 100) : 0;
 
   return (
     <AppLayout>
@@ -219,6 +294,78 @@ export default function Dashboard() {
           <StatCard title="ICPs Ativos" value={icpsCount} icon={Target} />
           <StatCard title="Execuções" value={runs.length} icon={TrendingUp} variant="accent" />
         </div>
+
+        {/* Consumo do tenant */}
+        {tenantUsage && (
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">Consumo do Plano</h2>
+                <p className="text-[11px] text-muted-foreground">
+                  Plano <span className="capitalize font-medium">{tenantUsage.plano}</span> • {tenantUsage.leads.toLocaleString()} / {tenantUsage.limite.toLocaleString()} leads
+                </p>
+              </div>
+              <Badge variant={usagePercent > 90 ? 'destructive' : usagePercent > 70 ? 'outline' : 'secondary'} className="text-[10px]">
+                {Math.round(usagePercent)}% usado
+              </Badge>
+            </div>
+            <Progress value={usagePercent} className="h-2" />
+            <div className="grid grid-cols-3 gap-4 mt-3">
+              <div className="text-center">
+                <p className="text-lg font-bold text-foreground">{tenantUsage.leads.toLocaleString()}</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Leads</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-bold text-foreground">{tenantUsage.runs}</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Runs</p>
+              </div>
+              <div className="text-center">
+                <p className="text-lg font-bold text-foreground">{tenantUsage.exports}</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Exports</p>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Gráfico de Evolução */}
+        {leadsEvolution.length > 0 && (
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <BarChart3 className="w-4 h-4 text-primary" />
+              <h2 className="text-sm font-semibold text-foreground">Evolução de Leads (7 dias)</h2>
+            </div>
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={leadsEvolution}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis dataKey="dia" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
+                  <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '8px',
+                      fontSize: '12px',
+                    }}
+                    labelStyle={{ color: 'hsl(var(--foreground))' }}
+                  />
+                  <Bar dataKey="webhook" name="Webhook" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="api" name="API/Runs" fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div className="flex items-center justify-center gap-4 mt-2">
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-sm bg-primary" />
+                <span className="text-[11px] text-muted-foreground">Webhook</span>
+              </div>
+              <div className="flex items-center gap-1.5">
+                <div className="w-3 h-3 rounded-sm bg-muted-foreground" />
+                <span className="text-[11px] text-muted-foreground">API/Runs</span>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Two Origin Sections */}
         <div className="grid lg:grid-cols-2 gap-4 lg:gap-6">
@@ -271,7 +418,10 @@ export default function Dashboard() {
                         )}
                       </div>
                     </div>
-                    <Badge variant="outline" className="text-[10px] shrink-0">{lead.situacao}</Badge>
+                    <div className="flex items-center gap-2">
+                      <ScoreBadge score={lead.score ?? 0} />
+                      <Badge variant="outline" className="text-[10px] shrink-0">{lead.situacao}</Badge>
+                    </div>
                   </div>
                 ))
               )}
@@ -297,7 +447,7 @@ export default function Dashboard() {
 
             <div className="grid grid-cols-2 gap-px bg-border">
               <div className="bg-card p-3 text-center">
-                <p className="text-lg font-bold text-foreground">{searchLeads.length}</p>
+                <p className="text-lg font-bold text-foreground">{totalLeadsCount}</p>
                 <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Total</p>
               </div>
               <div className="bg-card p-3 text-center">
@@ -362,9 +512,7 @@ export default function Dashboard() {
             <AlertTriangle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
             <div>
               <p className="text-sm font-medium text-foreground">Execução com erro</p>
-              <p className="text-xs text-muted-foreground mt-0.5">
-                {errorRuns.length} execução(ões) com erro
-              </p>
+              <p className="text-xs text-muted-foreground mt-0.5">{errorRuns.length} execução(ões) com erro</p>
             </div>
           </div>
         )}
@@ -376,6 +524,7 @@ export default function Dashboard() {
           {selectedLead && (() => {
             const details = getLeadDetails(selectedLead);
             const isWebhook = (selectedLead.tags || []).includes('webhook');
+            const scoreBreakdown = (selectedLead.raw_json as any)?.score_breakdown;
             return (
               <>
                 <SheetHeader>
@@ -391,21 +540,36 @@ export default function Dashboard() {
                   <ScoreBadge score={selectedLead.score ?? 0} />
                 </div>
 
-                <div className="mt-6 space-y-1">
+                {/* Score Breakdown */}
+                {scoreBreakdown && (
+                  <div className="mt-4 rounded-lg border border-border bg-muted/30 p-3 space-y-2">
+                    <p className="text-xs font-semibold text-foreground">Detalhamento do Score</p>
+                    <div className="space-y-1.5">
+                      {Object.entries(scoreBreakdown).map(([key, value]) => (
+                        <div key={key} className="flex items-center justify-between">
+                          <span className="text-[11px] text-muted-foreground capitalize">{key.replace(/_/g, ' ')}</span>
+                          <span className={`text-[11px] font-medium ${(value as number) > 0 ? 'text-primary' : 'text-muted-foreground'}`}>+{value as number}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-4 space-y-1">
                   {details.map(({ key, label, value }) => (
                     <div key={key} className="flex justify-between py-2.5 border-b border-border">
                       <span className="text-xs text-muted-foreground">{label}</span>
-                      <span className="text-sm font-medium text-foreground text-right max-w-[60%] break-words">{value}</span>
+                      <span className="text-xs font-medium text-foreground text-right max-w-[60%] break-words">{value}</span>
                     </div>
                   ))}
                 </div>
 
-                {selectedLead.tags && selectedLead.tags.length > 0 && (
-                  <div className="mt-5">
-                    <p className="text-xs font-medium text-muted-foreground mb-2">Tags</p>
+                {(selectedLead.tags || []).length > 0 && (
+                  <div className="mt-4">
+                    <p className="text-xs font-semibold text-foreground mb-2">Tags</p>
                     <div className="flex flex-wrap gap-1.5">
-                      {selectedLead.tags.map((tag: string) => (
-                        <Badge key={tag} variant="outline">{tag}</Badge>
+                      {(selectedLead.tags || []).map((tag: string) => (
+                        <Badge key={tag} variant="secondary" className="text-[10px]">{tag}</Badge>
                       ))}
                     </div>
                   </div>
