@@ -168,8 +168,11 @@ export default function ICPsPage() {
     },
   });
 
+  const [executingIcpId, setExecutingIcpId] = useState<string | null>(null);
+
   const executeIcp = useMutation({
     mutationFn: async (icpId: string) => {
+      setExecutingIcpId(icpId);
       const { data, error } = await supabase.functions.invoke('run-icp', {
         body: { icp_id: icpId },
       });
@@ -178,11 +181,15 @@ export default function ICPsPage() {
       return data;
     },
     onSuccess: (data) => {
+      setExecutingIcpId(null);
       queryClient.invalidateQueries({ queryKey: ['runs'] });
       queryClient.invalidateQueries({ queryKey: ['recent-runs'] });
       toast.success(`Run criada! ${data.message || ''}`);
     },
-    onError: (e: any) => toast.error(`Erro ao executar: ${e.message}`),
+    onError: (e: any) => {
+      setExecutingIcpId(null);
+      toast.error(`Erro ao executar: ${e.message}`);
+    },
   });
 
   const filtered = icps.filter((icp: any) =>
@@ -418,10 +425,10 @@ export default function ICPsPage() {
                   size="sm"
                   variant="outline"
                   className="w-full gap-1.5"
-                  disabled={executeIcp.isPending}
+                  disabled={executingIcpId !== null}
                   onClick={() => executeIcp.mutate(icp.id)}
                 >
-                  {executeIcp.isPending ? (
+                  {executingIcpId === icp.id ? (
                     <><Loader2 className="w-3.5 h-3.5 animate-spin" /> Executando...</>
                   ) : (
                     <><Play className="w-3.5 h-3.5" /> Executar</>
