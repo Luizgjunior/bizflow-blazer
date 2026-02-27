@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
     const payload = icp.payload_json as Record<string, any>;
     const pesquisa: Record<string, any> = {};
 
-    if (payload.cnaes?.length) pesquisa.codigo_atividade_principal = payload.cnaes;
+    if (payload.cnaes?.length) pesquisa.codigo_atividade_principal = payload.cnaes.map((c: string) => c.replace(/[^\d]/g, ""));
     if (payload.uf) pesquisa.uf = [payload.uf.toLowerCase()];
     if (payload.municipio) pesquisa.municipio = [payload.municipio.toLowerCase()];
     if (payload.bairro) pesquisa.bairro = [payload.bairro.toLowerCase()];
