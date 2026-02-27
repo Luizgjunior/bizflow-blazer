@@ -6,7 +6,7 @@ import { Navigate } from 'react-router-dom';
 import {
   Building2, Users, Plus, Trash2, Loader2, Shield, BarChart3,
   Target, Play, FileText, Activity, Webhook, Copy, Check, Info,
-  Edit, TrendingUp, AlertTriangle, Save,
+  Edit, TrendingUp, AlertTriangle, Save, CreditCard,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
@@ -45,6 +45,7 @@ export default function BackofficePage() {
           <TabsTrigger value="consumo" className="text-xs">Consumo</TabsTrigger>
           <TabsTrigger value="users" className="text-xs">Usuários</TabsTrigger>
           <TabsTrigger value="webhook" className="text-xs">Webhook</TabsTrigger>
+          <TabsTrigger value="cakto" className="text-xs">Cakto</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview"><OverviewTab /></TabsContent>
@@ -52,6 +53,7 @@ export default function BackofficePage() {
         <TabsContent value="consumo"><ConsumoTab /></TabsContent>
         <TabsContent value="users"><UsersTab /></TabsContent>
         <TabsContent value="webhook"><WebhookTab /></TabsContent>
+        <TabsContent value="cakto"><CaktoTab /></TabsContent>
       </Tabs>
     </AppLayout>
   );
@@ -563,6 +565,103 @@ function WebhookTab() {
             </div>
           ))}
         </div>
+      </div>
+    </div>
+  );
+}
+
+function CaktoTab() {
+  const [copied, setCopied] = useState(false);
+  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+  const webhookUrl = `https://${projectId}.supabase.co/functions/v1/webhook-cakto`;
+
+  const copyUrl = () => {
+    navigator.clipboard.writeText(webhookUrl);
+    setCopied(true);
+    toast.success('URL copiada!');
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const examplePayload = JSON.stringify({
+    secret: "seu-secret-aqui",
+    event: "purchase_approved",
+    data: {
+      customer: { name: "João Silva", email: "joao@empresa.com" },
+      offer: { name: "Plano Pro", price: 97.00 },
+      product: { name: "LeadFlow", type: "subscription" },
+      status: "paid",
+      amount: 97.00
+    }
+  }, null, 2);
+
+  return (
+    <div className="space-y-6 max-w-2xl">
+      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <CreditCard className="w-5 h-5 text-primary" />
+          <h2 className="text-sm font-semibold text-foreground">URL do Webhook Cakto</h2>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          Cole esta URL no painel da Cakto em <strong>Apps → Webhooks → Adicionar</strong>.
+          Selecione os eventos: <strong>Compra aprovada</strong>, <strong>Reembolso</strong>, <strong>Chargeback</strong>.
+        </p>
+        <div className="flex gap-2">
+          <Input value={webhookUrl} readOnly className="font-mono text-xs" />
+          <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={copyUrl}>
+            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+            {copied ? 'Copiado' : 'Copiar'}
+          </Button>
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+        <div className="flex items-center gap-2">
+          <Info className="w-5 h-5 text-primary" />
+          <h2 className="text-sm font-semibold text-foreground">Como funciona</h2>
+        </div>
+        <ol className="text-xs text-muted-foreground space-y-2 list-decimal list-inside">
+          <li>Cliente compra na Cakto → webhook é disparado</li>
+          <li>O sistema cria automaticamente a <strong>conta + tenant</strong> com o email do cliente</li>
+          <li>O cliente acessa o LeadFlow via <strong>"Primeiro Acesso"</strong> e define sua senha</li>
+          <li>Em caso de <strong>reembolso/cancelamento</strong>, o acesso é bloqueado automaticamente</li>
+        </ol>
+      </div>
+
+      <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-5 space-y-3">
+        <div className="flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5 text-yellow-500" />
+          <h2 className="text-sm font-semibold text-foreground">Importante</h2>
+        </div>
+        <p className="text-xs text-muted-foreground">
+          O <strong>email do cliente na Cakto</strong> será usado para criar a conta no LeadFlow.
+          O cliente usará esse email no "Primeiro Acesso" para definir sua senha.
+        </p>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+        <h2 className="text-sm font-semibold text-foreground">Eventos Suportados</h2>
+        <div className="space-y-1.5">
+          {[
+            ['purchase_approved', 'Compra aprovada', '✅ Cria conta + ativa'],
+            ['subscription_renewed', 'Renovação', '✅ Mantém acesso'],
+            ['subscription_canceled', 'Cancelamento', '🚫 Bloqueia acesso'],
+            ['refund', 'Reembolso', '🚫 Bloqueia acesso'],
+            ['chargeback', 'Chargeback', '🚫 Bloqueia acesso'],
+          ].map(([event, label, action]) => (
+            <div key={event} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
+              <code className="text-[11px] font-mono text-foreground w-44">{event}</code>
+              <span className="text-[11px] text-muted-foreground flex-1">{label}</span>
+              <span className="text-[11px]">{action}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
+        <h2 className="text-sm font-semibold text-foreground">Exemplo de Payload</h2>
+        <pre className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground overflow-x-auto">
+          {examplePayload}
+        </pre>
       </div>
     </div>
   );

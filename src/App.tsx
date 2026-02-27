@@ -11,10 +11,10 @@ import RunsPage from "./pages/RunsPage";
 import LeadsPage from "./pages/LeadsPage";
 import ExportsPage from "./pages/ExportsPage";
 import AutomacaoPage from "./pages/AutomacaoPage";
-import CaktoWebhookPage from "./pages/CaktoWebhookPage";
 
 import BackofficePage from "./pages/BackofficePage";
 import LoginPage from "./pages/LoginPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -28,13 +28,13 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<LoginPage />} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/icps" element={<ProtectedRoute><ICPsPage /></ProtectedRoute>} />
             <Route path="/runs" element={<ProtectedRoute><RunsPage /></ProtectedRoute>} />
             <Route path="/leads" element={<ProtectedRoute><LeadsPage /></ProtectedRoute>} />
             <Route path="/exports" element={<ProtectedRoute><ExportsPage /></ProtectedRoute>} />
             <Route path="/automacao" element={<ProtectedRoute><AutomacaoPage /></ProtectedRoute>} />
-            <Route path="/cakto" element={<ProtectedRoute><CaktoWebhookPage /></ProtectedRoute>} />
             
             <Route path="/backoffice" element={<ProtectedRoute><BackofficePage /></ProtectedRoute>} />
             <Route path="*" element={<NotFound />} />

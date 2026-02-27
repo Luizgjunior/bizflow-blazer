@@ -26,7 +26,6 @@ const navItems = [
   { path: '/leads', label: 'Leads', icon: Users },
   { path: '/exports', label: 'Exports', icon: Download },
   { path: '/automacao', label: 'Automação', icon: Zap },
-  { path: '/cakto', label: 'Cakto', icon: Webhook },
 ];
 
 const bottomNavItems = navItems.slice(0, 5);

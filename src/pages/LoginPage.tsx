@@ -1,50 +1,54 @@
 import { useState } from 'react';
-import { Activity, Mail, Lock, ArrowRight, User, Building2 } from 'lucide-react';
+import { Activity, Mail, Lock, ArrowRight, KeyRound } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+
+type Mode = 'login' | 'first-access';
 
 export default function LoginPage() {
   const navigate = useNavigate();
-  const { signIn, signUp, session } = useAuth();
+  const { session } = useAuth();
   const [loading, setLoading] = useState(false);
-  const [isSignUp, setIsSignUp] = useState(false);
+  const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [nome, setNome] = useState('');
-  const [empresaNome, setEmpresaNome] = useState('');
-  const [plano, setPlano] = useState('starter');
 
-  // Redirect if already logged in
   if (session) {
     navigate('/', { replace: true });
     return null;
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      if (isSignUp) {
-        const { error } = await signUp(email, password, nome, empresaNome, plano);
-        if (error) {
-          toast.error(error.message);
-        } else {
-          toast.success('Conta criada! Entrando...');
-          navigate('/');
-        }
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) {
+        toast.error('Email ou senha incorretos');
       } else {
-        const { error } = await signIn(email, password);
-        if (error) {
-          toast.error('Email ou senha incorretos');
-        } else {
-          navigate('/');
-        }
+        navigate('/');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFirstAccess = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/reset-password`,
+      });
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success('Email enviado! Verifique sua caixa de entrada para definir sua senha.');
       }
     } finally {
       setLoading(false);
@@ -63,104 +67,68 @@ export default function LoginPage() {
         </div>
 
         <div className="rounded-xl border border-border bg-card p-6">
-          <h2 className="text-lg font-semibold text-foreground mb-1">
-            {isSignUp ? 'Criar Conta' : 'Entrar'}
-          </h2>
-          <p className="text-sm text-muted-foreground mb-6">
-            {isSignUp ? 'Crie sua conta para começar' : 'Acesse sua conta para continuar'}
-          </p>
+          {mode === 'login' ? (
+            <>
+              <h2 className="text-lg font-semibold text-foreground mb-1">Entrar</h2>
+              <p className="text-sm text-muted-foreground mb-6">Acesse sua conta para continuar</p>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {isSignUp && (
-              <>
+              <form onSubmit={handleLogin} className="space-y-4">
                 <div>
-                  <Label htmlFor="nome">Seu Nome</Label>
+                  <Label htmlFor="email">Email</Label>
                   <div className="relative mt-1.5">
-                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="nome"
-                      type="text"
-                      placeholder="Seu nome"
-                      className="pl-9"
-                      value={nome}
-                      onChange={(e) => setNome(e.target.value)}
-                      required
-                    />
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input id="email" type="email" placeholder="seu@email.com" className="pl-9" value={email} onChange={(e) => setEmail(e.target.value)} required />
                   </div>
                 </div>
                 <div>
-                  <Label htmlFor="empresa">Nome da Empresa</Label>
+                  <Label htmlFor="password">Senha</Label>
                   <div className="relative mt-1.5">
-                    <Building2 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      id="empresa"
-                      type="text"
-                      placeholder="Nome da sua empresa"
-                      className="pl-9"
-                      value={empresaNome}
-                      onChange={(e) => setEmpresaNome(e.target.value)}
-                      required
-                    />
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input id="password" type="password" placeholder="••••••••" className="pl-9" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
                   </div>
                 </div>
-                <div>
-                  <Label>Plano</Label>
-                  <Select value={plano} onValueChange={setPlano}>
-                    <SelectTrigger className="mt-1.5">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="starter">Starter — Gratuito</SelectItem>
-                      <SelectItem value="pro">Pro</SelectItem>
-                      <SelectItem value="enterprise">Enterprise</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </>
-            )}
-            <div>
-              <Label htmlFor="email">Email</Label>
-              <div className="relative mt-1.5">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="seu@email.com"
-                  className="pl-9"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-            </div>
-            <div>
-              <Label htmlFor="password">Senha</Label>
-              <div className="relative mt-1.5">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  className="pl-9"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                />
-              </div>
-            </div>
-            <Button type="submit" className="w-full gap-2" disabled={loading}>
-              {loading ? 'Aguarde...' : isSignUp ? 'Criar Conta' : 'Entrar'}
-              {!loading && <ArrowRight className="w-4 h-4" />}
-            </Button>
-          </form>
+                <Button type="submit" className="w-full gap-2" disabled={loading}>
+                  {loading ? 'Aguarde...' : 'Entrar'}
+                  {!loading && <ArrowRight className="w-4 h-4" />}
+                </Button>
+              </form>
 
-          <button
-            onClick={() => setIsSignUp(!isSignUp)}
-            className="w-full mt-4 text-sm text-muted-foreground hover:text-primary transition-colors text-center"
-          >
-            {isSignUp ? 'Já tem conta? Entrar' : 'Não tem conta? Criar'}
-          </button>
+              <button
+                onClick={() => { setMode('first-access'); setEmail(''); }}
+                className="w-full mt-4 text-sm text-muted-foreground hover:text-primary transition-colors text-center"
+              >
+                Primeiro acesso? Definir senha
+              </button>
+            </>
+          ) : (
+            <>
+              <h2 className="text-lg font-semibold text-foreground mb-1">Primeiro Acesso</h2>
+              <p className="text-sm text-muted-foreground mb-6">
+                Informe o email que você usou na compra. Enviaremos um link para definir sua senha.
+              </p>
+
+              <form onSubmit={handleFirstAccess} className="space-y-4">
+                <div>
+                  <Label htmlFor="email-first">Email de compra</Label>
+                  <div className="relative mt-1.5">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input id="email-first" type="email" placeholder="email@usado-na-compra.com" className="pl-9" value={email} onChange={(e) => setEmail(e.target.value)} required />
+                  </div>
+                </div>
+                <Button type="submit" className="w-full gap-2" disabled={loading}>
+                  {loading ? 'Enviando...' : 'Enviar link de acesso'}
+                  {!loading && <KeyRound className="w-4 h-4" />}
+                </Button>
+              </form>
+
+              <button
+                onClick={() => { setMode('login'); setEmail(''); setPassword(''); }}
+                className="w-full mt-4 text-sm text-muted-foreground hover:text-primary transition-colors text-center"
+              >
+                Já tem senha? Entrar
+              </button>
+            </>
+          )}
         </div>
 
         <p className="text-xs text-muted-foreground text-center mt-6">
