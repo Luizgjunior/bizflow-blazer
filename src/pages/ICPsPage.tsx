@@ -176,7 +176,14 @@ export default function ICPsPage() {
       const { data, error } = await supabase.functions.invoke('run-icp', {
         body: { icp_id: icpId },
       });
-      if (error) throw error;
+      if (error) {
+        // Try to parse the error body for friendly message
+        try {
+          const body = JSON.parse(error.message || '{}');
+          if (body.error) throw new Error(body.error);
+        } catch { /* fall through */ }
+        throw error;
+      }
       if (data?.error) throw new Error(data.error);
       return data;
     },
@@ -188,7 +195,14 @@ export default function ICPsPage() {
     },
     onError: (e: any) => {
       setExecutingIcpId(null);
-      toast.error(`Erro ao executar: ${e.message}`);
+      const msg = e.message || 'Erro desconhecido';
+      if (msg.includes('saldo') || msg.includes('Recarregue')) {
+        toast.error('💰 ' + msg, { duration: 8000 });
+      } else if (msg.includes('Nenhuma empresa')) {
+        toast.warning('🔍 ' + msg, { duration: 6000 });
+      } else {
+        toast.error(`Erro ao executar: ${msg}`);
+      }
     },
   });
 

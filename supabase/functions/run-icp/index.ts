@@ -189,18 +189,29 @@ Deno.serve(async (req) => {
     if (!cdResponse.ok) {
       const errorText = await cdResponse.text();
       console.error("Casa dos Dados error:", cdResponse.status, errorText);
+
+      // Detect specific error types for friendly messages
+      const isNoBalance = errorText.includes("Sem saldo");
+      const isZeroResults = errorText.includes("0 empresas");
+
+      const friendlyError = isNoBalance
+        ? "Seu saldo na Casa dos Dados acabou. Recarregue em casadosdados.com.br para continuar."
+        : isZeroResults
+        ? "Nenhuma empresa encontrada com os filtros deste ICP. Tente ajustar os critérios."
+        : `Erro na API Casa dos Dados (${cdResponse.status})`;
+
       await supabase
         .from("runs")
         .update({
           status: "error",
-          error_json: { message: `API error: ${cdResponse.status}`, detail: errorText },
+          error_json: { message: friendlyError, detail: errorText },
           finished_at: new Date().toISOString(),
         })
         .eq("id", run.id);
 
       return new Response(
-        JSON.stringify({ error: "Erro na API Casa dos Dados", detail: errorText }),
-        { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        JSON.stringify({ error: friendlyError, code: isNoBalance ? "NO_BALANCE" : isZeroResults ? "NO_RESULTS" : "API_ERROR" }),
+        { status: isNoBalance ? 402 : 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
