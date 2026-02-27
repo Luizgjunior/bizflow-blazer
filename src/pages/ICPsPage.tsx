@@ -177,12 +177,16 @@ export default function ICPsPage() {
         body: { icp_id: icpId },
       });
       if (error) {
-        // Try to parse the error body for friendly message
+        // Supabase SDK puts non-2xx response body in error.context
+        let friendlyMsg = error.message;
         try {
-          const body = JSON.parse(error.message || '{}');
-          if (body.error) throw new Error(body.error);
-        } catch { /* fall through */ }
-        throw error;
+          const ctx = (error as any).context;
+          if (ctx && typeof ctx.json === 'function') {
+            const body = await ctx.json();
+            if (body?.error) friendlyMsg = body.error;
+          }
+        } catch { /* ignore parse errors */ }
+        throw new Error(friendlyMsg);
       }
       if (data?.error) throw new Error(data.error);
       return data;
