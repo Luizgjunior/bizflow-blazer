@@ -195,10 +195,10 @@ Deno.serve(async (req) => {
       const isZeroResults = errorText.includes("0 empresas");
 
       const friendlyError = isNoBalance
-        ? "Seu saldo na Casa dos Dados acabou. Recarregue em casadosdados.com.br para continuar."
+        ? "Seu saldo acabou. Recarregue para continuar."
         : isZeroResults
         ? "Nenhuma empresa encontrada com os filtros deste ICP. Tente ajustar os critérios."
-        : `Erro na API Casa dos Dados (${cdResponse.status})`;
+        : `Erro na API (${cdResponse.status})`;
 
       await supabase
         .from("runs")
