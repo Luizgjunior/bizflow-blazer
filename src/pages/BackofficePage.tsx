@@ -6,8 +6,10 @@ import { Navigate } from 'react-router-dom';
 import {
   Building2, Users, Plus, Trash2, Loader2, Shield, BarChart3,
   Target, Play, FileText, Activity, Webhook, Copy, Check, Info,
-  Edit, TrendingUp, AlertTriangle, Save, CreditCard,
+  Edit, TrendingUp, AlertTriangle, Save, CreditCard, DollarSign,
+  TrendingDown, CalendarDays, Receipt,
 } from 'lucide-react';
+import { LineChart, Line } from 'recharts';
 import { motion } from 'framer-motion';
 import { toast } from 'sonner';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -45,7 +47,7 @@ export default function BackofficePage() {
           <TabsTrigger value="consumo" className="text-xs">Consumo</TabsTrigger>
           <TabsTrigger value="users" className="text-xs">Usuários</TabsTrigger>
           <TabsTrigger value="webhook" className="text-xs">Webhook</TabsTrigger>
-          <TabsTrigger value="assinaturas" className="text-xs">Assinaturas</TabsTrigger>
+          <TabsTrigger value="assinaturas" className="text-xs">Financeiro</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview"><OverviewTab /></TabsContent>
@@ -571,8 +573,19 @@ function WebhookTab() {
 }
 
 function AssinaturasTab() {
-  const { data: tenants = [], isLoading } = useQuery({
-    queryKey: ['backoffice-assinaturas'],
+  const { data: financial, isLoading } = useQuery({
+    queryKey: ['backoffice-financial'],
+    queryFn: async () => {
+      const { data, error } = await supabase.functions.invoke('stripe-financial');
+      if (error) throw error;
+      return data;
+    },
+    refetchInterval: 120000,
+  });
+
+  // Also fetch local tenants for cross-reference
+  const { data: tenants = [] } = useQuery({
+    queryKey: ['backoffice-assinaturas-tenants'],
     queryFn: async () => {
       const { data, error } = await supabase.from('tenants').select('*').order('nome');
       if (error) throw error;
@@ -581,6 +594,16 @@ function AssinaturasTab() {
   });
 
   if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>;
+
+  if (!financial) return <p className="text-sm text-muted-foreground text-center py-8">Erro ao carregar dados financeiros.</p>;
+
+  const planColors: Record<string, string> = {
+    pro: 'hsl(var(--primary))',
+    premium: 'hsl(210, 100%, 60%)',
+    enterprise: 'hsl(280, 70%, 60%)',
+  };
+
+  const PLAN_COLORS_ARRAY = ['hsl(var(--primary))', 'hsl(210, 100%, 60%)', 'hsl(280, 70%, 60%)'];
 
   const statusColor = (status: string | null) => {
     if (status === 'active') return 'default';
@@ -596,72 +619,299 @@ function AssinaturasTab() {
   };
 
   return (
-    <div className="space-y-4">
-      <div className="flex items-center gap-2 mb-2">
-        <CreditCard className="w-5 h-5 text-primary" />
-        <h2 className="text-sm font-semibold text-foreground">Status das Assinaturas Stripe</h2>
+    <div className="space-y-6">
+      {/* KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+        <StatCard
+          title="MRR"
+          value={`R$ ${financial.mrr?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+          icon={DollarSign}
+          variant="primary"
+        />
+        <StatCard
+          title="ARR Projetado"
+          value={`R$ ${financial.arr?.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`}
+          icon={TrendingUp}
+        />
+        <StatCard
+          title="Assinantes Ativos"
+          value={financial.active_subscribers ?? 0}
+          icon={Users}
+          variant="accent"
+        />
+        <StatCard
+          title="Churn 30d"
+          value={`${financial.churn_rate_30d ?? 0}%`}
+          icon={TrendingDown}
+          variant={financial.churn_rate_30d > 5 ? 'warning' : 'primary'}
+        />
       </div>
 
-      {tenants.length === 0 ? (
-        <p className="text-sm text-muted-foreground text-center py-8">Nenhum tenant.</p>
-      ) : (
-        <>
-          <div className="hidden lg:block rounded-xl border border-border bg-card overflow-hidden">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border bg-muted/30">
-                  <th className="text-left text-xs font-medium text-muted-foreground p-3 pl-4">Tenant</th>
-                  <th className="text-left text-xs font-medium text-muted-foreground p-3">Plano</th>
-                  <th className="text-left text-xs font-medium text-muted-foreground p-3">Status Stripe</th>
-                  <th className="text-left text-xs font-medium text-muted-foreground p-3">Ativo</th>
-                  <th className="text-left text-xs font-medium text-muted-foreground p-3">Stripe Customer</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-border">
-                {tenants.map((t: any) => (
-                  <tr key={t.id} className="hover:bg-muted/20 transition-colors">
-                    <td className="p-3 pl-4 text-sm font-medium text-foreground">{t.nome}</td>
-                    <td className="p-3"><Badge variant="secondary" className="text-[10px] capitalize">{t.plano}</Badge></td>
-                    <td className="p-3">
-                      <Badge variant={statusColor(t.stripe_status)} className="text-[10px]">
-                        {statusLabel(t.stripe_status)}
-                      </Badge>
-                    </td>
-                    <td className="p-3">
-                      <Badge variant={t.ativo ? 'default' : 'destructive'} className="text-[10px]">
-                        {t.ativo ? 'Sim' : 'Não'}
-                      </Badge>
-                    </td>
-                    <td className="p-3 text-xs text-muted-foreground font-mono">{t.stripe_customer_id || '—'}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="lg:hidden space-y-3">
-            {tenants.map((t: any) => (
-              <div key={t.id} className="rounded-xl border border-border bg-card p-4">
-                <div className="flex items-start justify-between mb-2">
-                  <p className="text-sm font-semibold text-foreground">{t.nome}</p>
-                  <Badge variant={t.ativo ? 'default' : 'destructive'} className="text-[10px]">
-                    {t.ativo ? 'Ativo' : 'Inativo'}
-                  </Badge>
-                </div>
-                <div className="flex gap-2 mb-2">
-                  <Badge variant="secondary" className="text-[10px] capitalize">{t.plano}</Badge>
-                  <Badge variant={statusColor(t.stripe_status)} className="text-[10px]">
-                    {statusLabel(t.stripe_status)}
-                  </Badge>
-                </div>
-                {t.stripe_customer_id && (
-                  <p className="text-[10px] text-muted-foreground font-mono">{t.stripe_customer_id}</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </>
+      {/* Alerts */}
+      {(financial.overdue_invoices > 0 || financial.churn_rate_30d > 10) && (
+        <div className="flex flex-wrap gap-3">
+          {financial.overdue_invoices > 0 && (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-destructive/10 border border-destructive/20">
+              <AlertTriangle className="w-4 h-4 text-destructive" />
+              <p className="text-xs text-destructive font-medium">
+                {financial.overdue_invoices} fatura{financial.overdue_invoices > 1 ? 's' : ''} em atraso
+              </p>
+            </div>
+          )}
+          {financial.churn_rate_30d > 10 && (
+            <div className="flex items-center gap-2 p-3 rounded-xl bg-destructive/10 border border-destructive/20">
+              <TrendingDown className="w-4 h-4 text-destructive" />
+              <p className="text-xs text-destructive font-medium">
+                Churn alto: {financial.churn_rate_30d}% nos últimos 30 dias
+              </p>
+            </div>
+          )}
+        </div>
       )}
+
+      {/* Charts row */}
+      <div className="grid lg:grid-cols-2 gap-4">
+        {/* Monthly Revenue */}
+        {financial.monthly_revenue?.length > 0 && (
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <BarChart3 className="w-4 h-4 text-primary" />
+              <h2 className="text-sm font-semibold text-foreground">Receita Mensal</h2>
+            </div>
+            <div className="h-48">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={financial.monthly_revenue}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis
+                    dataKey="month"
+                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                    tickFormatter={(v: string) => {
+                      const [y, m] = v.split('-');
+                      return `${m}/${y.slice(2)}`;
+                    }}
+                  />
+                  <YAxis tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} tickFormatter={(v) => `R$${v}`} />
+                  <Tooltip
+                    contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
+                    formatter={(value: number) => [`R$ ${value.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`, 'Receita']}
+                  />
+                  <Bar dataKey="amount" name="Receita" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        )}
+
+        {/* Plan Breakdown */}
+        {financial.plan_breakdown?.length > 0 && (
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="flex items-center gap-2 mb-4">
+              <CreditCard className="w-4 h-4 text-primary" />
+              <h2 className="text-sm font-semibold text-foreground">Distribuição por Plano</h2>
+            </div>
+            <div className="h-48 flex items-center">
+              <ResponsiveContainer width="50%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={financial.plan_breakdown.filter((p: any) => p.count > 0)}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={35}
+                    outerRadius={65}
+                    dataKey="count"
+                    nameKey="plan"
+                  >
+                    {financial.plan_breakdown.map((_: any, i: number) => (
+                      <Cell key={i} fill={PLAN_COLORS_ARRAY[i % PLAN_COLORS_ARRAY.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{ backgroundColor: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: '8px', fontSize: '12px' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="flex-1 space-y-3">
+                {financial.plan_breakdown.map((p: any, i: number) => (
+                  <div key={p.plan} className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: PLAN_COLORS_ARRAY[i] }} />
+                      <span className="text-xs font-medium text-foreground capitalize">{p.plan}</span>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-bold text-foreground">{p.count} assinante{p.count !== 1 ? 's' : ''}</p>
+                      <p className="text-[10px] text-muted-foreground">R$ {p.revenue.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Extra metrics row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="rounded-xl border border-border bg-card p-4 text-center">
+          <Receipt className="w-5 h-5 text-muted-foreground mx-auto mb-2" />
+          <p className="text-xl font-bold text-foreground">{financial.canceled_last_90d ?? 0}</p>
+          <p className="text-[10px] text-muted-foreground uppercase">Cancelados (90d)</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4 text-center">
+          <AlertTriangle className="w-5 h-5 text-muted-foreground mx-auto mb-2" />
+          <p className="text-xl font-bold text-foreground">{financial.overdue_invoices ?? 0}</p>
+          <p className="text-[10px] text-muted-foreground uppercase">Faturas em Atraso</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4 text-center">
+          <CalendarDays className="w-5 h-5 text-muted-foreground mx-auto mb-2" />
+          <p className="text-xl font-bold text-foreground">
+            R$ {financial.active_subscribers > 0 ? (financial.mrr / financial.active_subscribers).toFixed(0) : '0'}
+          </p>
+          <p className="text-[10px] text-muted-foreground uppercase">Ticket Médio</p>
+        </div>
+        <div className="rounded-xl border border-border bg-card p-4 text-center">
+          <DollarSign className="w-5 h-5 text-muted-foreground mx-auto mb-2" />
+          <p className="text-xl font-bold text-foreground">
+            R$ {(financial.mrr * 12).toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}
+          </p>
+          <p className="text-[10px] text-muted-foreground uppercase">Projeção Anual</p>
+        </div>
+      </div>
+
+      {/* Subscribers table */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <CreditCard className="w-5 h-5 text-primary" />
+          <h2 className="text-sm font-semibold text-foreground">Assinantes Ativos</h2>
+        </div>
+
+        {financial.subscribers?.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">Nenhum assinante ativo.</p>
+        ) : (
+          <>
+            {/* Desktop table */}
+            <div className="hidden lg:block rounded-xl border border-border bg-card overflow-hidden">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30">
+                    <th className="text-left text-xs font-medium text-muted-foreground p-3 pl-4">Cliente</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground p-3">Email</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground p-3">Plano</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground p-3">Valor</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground p-3">Próxima Cobrança</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground p-3">Desde</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {financial.subscribers?.map((s: any) => (
+                    <tr key={s.customer_id} className="hover:bg-muted/20 transition-colors">
+                      <td className="p-3 pl-4 text-sm font-medium text-foreground">{s.customer_name}</td>
+                      <td className="p-3 text-sm text-muted-foreground">{s.customer_email}</td>
+                      <td className="p-3">
+                        <Badge variant="secondary" className="text-[10px] capitalize">{s.plan}</Badge>
+                      </td>
+                      <td className="p-3 text-sm font-medium text-foreground">
+                        R$ {s.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}
+                      </td>
+                      <td className="p-3 text-sm text-muted-foreground">
+                        {new Date(s.current_period_end).toLocaleDateString('pt-BR')}
+                      </td>
+                      <td className="p-3 text-sm text-muted-foreground">
+                        {new Date(s.created).toLocaleDateString('pt-BR')}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Mobile cards */}
+            <div className="lg:hidden space-y-3">
+              {financial.subscribers?.map((s: any) => (
+                <div key={s.customer_id} className="rounded-xl border border-border bg-card p-4">
+                  <div className="flex items-start justify-between mb-1">
+                    <p className="text-sm font-semibold text-foreground">{s.customer_name}</p>
+                    <Badge variant="secondary" className="text-[10px] capitalize">{s.plan}</Badge>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground">{s.customer_email}</p>
+                  <div className="flex items-center justify-between mt-2">
+                    <p className="text-sm font-bold text-foreground">R$ {s.amount.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}/mês</p>
+                    <p className="text-[10px] text-muted-foreground">Renova: {new Date(s.current_period_end).toLocaleDateString('pt-BR')}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
+
+      {/* Local tenants status */}
+      <div className="space-y-3">
+        <div className="flex items-center gap-2">
+          <Building2 className="w-5 h-5 text-primary" />
+          <h2 className="text-sm font-semibold text-foreground">Status dos Tenants (Local)</h2>
+        </div>
+
+        {tenants.length === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-8">Nenhum tenant.</p>
+        ) : (
+          <>
+            <div className="hidden lg:block rounded-xl border border-border bg-card overflow-hidden">
+              <table className="w-full">
+                <thead>
+                  <tr className="border-b border-border bg-muted/30">
+                    <th className="text-left text-xs font-medium text-muted-foreground p-3 pl-4">Tenant</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground p-3">Plano</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground p-3">Status Stripe</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground p-3">Ativo</th>
+                    <th className="text-left text-xs font-medium text-muted-foreground p-3">Stripe Customer</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {tenants.map((t: any) => (
+                    <tr key={t.id} className="hover:bg-muted/20 transition-colors">
+                      <td className="p-3 pl-4 text-sm font-medium text-foreground">{t.nome}</td>
+                      <td className="p-3"><Badge variant="secondary" className="text-[10px] capitalize">{t.plano}</Badge></td>
+                      <td className="p-3">
+                        <Badge variant={statusColor(t.stripe_status)} className="text-[10px]">
+                          {statusLabel(t.stripe_status)}
+                        </Badge>
+                      </td>
+                      <td className="p-3">
+                        <Badge variant={t.ativo ? 'default' : 'destructive'} className="text-[10px]">
+                          {t.ativo ? 'Sim' : 'Não'}
+                        </Badge>
+                      </td>
+                      <td className="p-3 text-xs text-muted-foreground font-mono">{t.stripe_customer_id || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="lg:hidden space-y-3">
+              {tenants.map((t: any) => (
+                <div key={t.id} className="rounded-xl border border-border bg-card p-4">
+                  <div className="flex items-start justify-between mb-2">
+                    <p className="text-sm font-semibold text-foreground">{t.nome}</p>
+                    <Badge variant={t.ativo ? 'default' : 'destructive'} className="text-[10px]">
+                      {t.ativo ? 'Ativo' : 'Inativo'}
+                    </Badge>
+                  </div>
+                  <div className="flex gap-2 mb-2">
+                    <Badge variant="secondary" className="text-[10px] capitalize">{t.plano}</Badge>
+                    <Badge variant={statusColor(t.stripe_status)} className="text-[10px]">
+                      {statusLabel(t.stripe_status)}
+                    </Badge>
+                  </div>
+                  {t.stripe_customer_id && (
+                    <p className="text-[10px] text-muted-foreground font-mono">{t.stripe_customer_id}</p>
+                  )}
+                </div>
+              ))}
+            </div>
+          </>
+        )}
+      </div>
     </div>
   );
 }
