@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { createContext, useContext, useEffect, useState, ReactNode, useCallback } from 'react';
 import { Session, User } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
@@ -12,6 +12,12 @@ interface Profile {
   email: string;
 }
 
+interface SubscriptionInfo {
+  subscribed: boolean;
+  plano: string | null;
+  subscription_end: string | null;
+}
+
 interface AuthContextType {
   session: Session | null;
   user: User | null;
@@ -20,6 +26,8 @@ interface AuthContextType {
   tenantId: string | null;
   isAdmin: boolean;
   loading: boolean;
+  subscription: SubscriptionInfo;
+  checkSubscription: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, nome: string, empresaNome?: string, plano?: string) => Promise<{ error: any }>;
   signOut: () => Promise<void>;
@@ -33,6 +41,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const [subscription, setSubscription] = useState<SubscriptionInfo>({
+    subscribed: false,
+    plano: null,
+    subscription_end: null,
+  });
 
   const fetchProfileAndRole = async (userId: string) => {
     const [profileRes, roleRes] = await Promise.all([
@@ -44,17 +57,37 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (roleRes.data) setRole(roleRes.data.role);
   };
 
+  const checkSubscription = useCallback(async () => {
+    if (!session) return;
+    try {
+      const { data, error } = await supabase.functions.invoke('check-subscription');
+      if (error) {
+        console.error('Error checking subscription:', error);
+        return;
+      }
+      if (data) {
+        setSubscription({
+          subscribed: data.subscribed ?? false,
+          plano: data.plano ?? null,
+          subscription_end: data.subscription_end ?? null,
+        });
+      }
+    } catch (err) {
+      console.error('Error checking subscription:', err);
+    }
+  }, [session]);
+
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange(async (event, session) => {
       setSession(session);
       setUser(session?.user ?? null);
 
       if (session?.user) {
-        // Use setTimeout to avoid Supabase auth deadlock
         setTimeout(() => fetchProfileAndRole(session.user.id), 0);
       } else {
         setProfile(null);
         setRole(null);
+        setSubscription({ subscribed: false, plano: null, subscription_end: null });
       }
       setLoading(false);
     });
@@ -68,8 +101,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     });
 
-    return () => subscription.unsubscribe();
+    return () => authSub.unsubscribe();
   }, []);
+
+  // Check subscription on login and periodically
+  useEffect(() => {
+    if (session) {
+      checkSubscription();
+      const interval = setInterval(checkSubscription, 60000);
+      return () => clearInterval(interval);
+    }
+  }, [session, checkSubscription]);
 
   const signIn = async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -92,6 +134,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setProfile(null);
     setRole(null);
+    setSubscription({ subscribed: false, plano: null, subscription_end: null });
   };
 
   return (
@@ -104,6 +147,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         tenantId: profile?.tenant_id ?? null,
         isAdmin: role === 'admin_global',
         loading,
+        subscription,
+        checkSubscription,
         signIn,
         signUp,
         signOut,

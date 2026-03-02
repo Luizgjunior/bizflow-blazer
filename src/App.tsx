@@ -15,6 +15,7 @@ import AutomacaoPage from "./pages/AutomacaoPage";
 import BackofficePage from "./pages/BackofficePage";
 import LoginPage from "./pages/LoginPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
+import PlanosPage from "./pages/PlanosPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +30,7 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<LoginPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
+            <Route path="/planos" element={<PlanosPage />} />
             <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
             <Route path="/icps" element={<ProtectedRoute><ICPsPage /></ProtectedRoute>} />
             <Route path="/runs" element={<ProtectedRoute><RunsPage /></ProtectedRoute>} />

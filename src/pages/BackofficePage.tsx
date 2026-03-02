@@ -45,7 +45,7 @@ export default function BackofficePage() {
           <TabsTrigger value="consumo" className="text-xs">Consumo</TabsTrigger>
           <TabsTrigger value="users" className="text-xs">Usuários</TabsTrigger>
           <TabsTrigger value="webhook" className="text-xs">Webhook</TabsTrigger>
-          <TabsTrigger value="cakto" className="text-xs">Cakto</TabsTrigger>
+          <TabsTrigger value="assinaturas" className="text-xs">Assinaturas</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview"><OverviewTab /></TabsContent>
@@ -53,7 +53,7 @@ export default function BackofficePage() {
         <TabsContent value="consumo"><ConsumoTab /></TabsContent>
         <TabsContent value="users"><UsersTab /></TabsContent>
         <TabsContent value="webhook"><WebhookTab /></TabsContent>
-        <TabsContent value="cakto"><CaktoTab /></TabsContent>
+        <TabsContent value="assinaturas"><AssinaturasTab /></TabsContent>
       </Tabs>
     </AppLayout>
   );
@@ -231,7 +231,7 @@ function TenantsTab() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTenant, setEditingTenant] = useState<any>(null);
   const [nome, setNome] = useState('');
-  const [plano, setPlano] = useState('starter');
+  const [plano, setPlano] = useState('pro');
   const [limites, setLimites] = useState('1000');
 
   const { data: tenants = [], isLoading } = useQuery({
@@ -244,7 +244,7 @@ function TenantsTab() {
   });
 
   const resetForm = () => {
-    setNome(''); setPlano('starter'); setLimites('1000'); setEditingTenant(null);
+    setNome(''); setPlano('pro'); setLimites('1000'); setEditingTenant(null);
   };
 
   const openEdit = (tenant: any) => {
@@ -306,14 +306,14 @@ function TenantsTab() {
               <div><Label>Nome</Label><Input className="mt-1.5" value={nome} onChange={e => setNome(e.target.value)} placeholder="Nome da empresa" /></div>
               <div>
                 <Label>Plano</Label>
-                <Select value={plano} onValueChange={setPlano}>
-                  <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="starter">Starter</SelectItem>
-                    <SelectItem value="pro">Pro</SelectItem>
-                    <SelectItem value="enterprise">Enterprise</SelectItem>
-                  </SelectContent>
-                </Select>
+                 <Select value={plano} onValueChange={setPlano}>
+                   <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                   <SelectContent>
+                     <SelectItem value="pro">Pro</SelectItem>
+                     <SelectItem value="premium">Premium</SelectItem>
+                     <SelectItem value="enterprise">Enterprise</SelectItem>
+                   </SelectContent>
+                 </Select>
               </div>
               <div><Label>Limite de Consultas</Label><Input type="number" className="mt-1.5" value={limites} onChange={e => setLimites(e.target.value)} /></div>
               <Button className="w-full gap-1.5" onClick={() => saveTenant.mutate()} disabled={!nome || saveTenant.isPending}>
@@ -570,99 +570,98 @@ function WebhookTab() {
   );
 }
 
-function CaktoTab() {
-  const [copied, setCopied] = useState(false);
-  const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-  const webhookUrl = `https://${projectId}.supabase.co/functions/v1/webhook-cakto`;
+function AssinaturasTab() {
+  const { data: tenants = [], isLoading } = useQuery({
+    queryKey: ['backoffice-assinaturas'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('tenants').select('*').order('nome');
+      if (error) throw error;
+      return data;
+    },
+  });
 
-  const copyUrl = () => {
-    navigator.clipboard.writeText(webhookUrl);
-    setCopied(true);
-    toast.success('URL copiada!');
-    setTimeout(() => setCopied(false), 2000);
+  if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>;
+
+  const statusColor = (status: string | null) => {
+    if (status === 'active') return 'default';
+    if (status === 'payment_failed') return 'destructive';
+    return 'secondary';
   };
 
-  const examplePayload = JSON.stringify({
-    secret: "seu-secret-aqui",
-    event: "purchase_approved",
-    data: {
-      customer: { name: "João Silva", email: "joao@empresa.com" },
-      offer: { name: "Plano Pro", price: 97.00 },
-      product: { name: "LeadFlow", type: "subscription" },
-      status: "paid",
-      amount: 97.00
-    }
-  }, null, 2);
+  const statusLabel = (status: string | null) => {
+    if (status === 'active') return 'Ativo';
+    if (status === 'payment_failed') return 'Pagamento falhou';
+    if (status === 'canceled') return 'Cancelado';
+    return status || 'Sem assinatura';
+  };
 
   return (
-    <div className="space-y-6 max-w-2xl">
-      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-        <div className="flex items-center gap-2">
-          <CreditCard className="w-5 h-5 text-primary" />
-          <h2 className="text-sm font-semibold text-foreground">URL do Webhook Cakto</h2>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Cole esta URL no painel da Cakto em <strong>Apps → Webhooks → Adicionar</strong>.
-          Selecione os eventos: <strong>Compra aprovada</strong>, <strong>Reembolso</strong>, <strong>Chargeback</strong>.
-        </p>
-        <div className="flex gap-2">
-          <Input value={webhookUrl} readOnly className="font-mono text-xs" />
-          <Button size="sm" variant="outline" className="gap-1.5 shrink-0" onClick={copyUrl}>
-            {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
-            {copied ? 'Copiado' : 'Copiar'}
-          </Button>
-        </div>
+    <div className="space-y-4">
+      <div className="flex items-center gap-2 mb-2">
+        <CreditCard className="w-5 h-5 text-primary" />
+        <h2 className="text-sm font-semibold text-foreground">Status das Assinaturas Stripe</h2>
       </div>
 
-      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-        <div className="flex items-center gap-2">
-          <Info className="w-5 h-5 text-primary" />
-          <h2 className="text-sm font-semibold text-foreground">Como funciona</h2>
-        </div>
-        <ol className="text-xs text-muted-foreground space-y-2 list-decimal list-inside">
-          <li>Cliente compra na Cakto → webhook é disparado</li>
-          <li>O sistema cria automaticamente a <strong>conta + tenant</strong> com o email do cliente</li>
-          <li>O cliente acessa o LeadFlow via <strong>"Primeiro Acesso"</strong> e define sua senha</li>
-          <li>Em caso de <strong>reembolso/cancelamento</strong>, o acesso é bloqueado automaticamente</li>
-        </ol>
-      </div>
+      {tenants.length === 0 ? (
+        <p className="text-sm text-muted-foreground text-center py-8">Nenhum tenant.</p>
+      ) : (
+        <>
+          <div className="hidden lg:block rounded-xl border border-border bg-card overflow-hidden">
+            <table className="w-full">
+              <thead>
+                <tr className="border-b border-border bg-muted/30">
+                  <th className="text-left text-xs font-medium text-muted-foreground p-3 pl-4">Tenant</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground p-3">Plano</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground p-3">Status Stripe</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground p-3">Ativo</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground p-3">Stripe Customer</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {tenants.map((t: any) => (
+                  <tr key={t.id} className="hover:bg-muted/20 transition-colors">
+                    <td className="p-3 pl-4 text-sm font-medium text-foreground">{t.nome}</td>
+                    <td className="p-3"><Badge variant="secondary" className="text-[10px] capitalize">{t.plano}</Badge></td>
+                    <td className="p-3">
+                      <Badge variant={statusColor(t.stripe_status)} className="text-[10px]">
+                        {statusLabel(t.stripe_status)}
+                      </Badge>
+                    </td>
+                    <td className="p-3">
+                      <Badge variant={t.ativo ? 'default' : 'destructive'} className="text-[10px]">
+                        {t.ativo ? 'Sim' : 'Não'}
+                      </Badge>
+                    </td>
+                    <td className="p-3 text-xs text-muted-foreground font-mono">{t.stripe_customer_id || '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
 
-      <div className="rounded-xl border border-yellow-500/30 bg-yellow-500/5 p-5 space-y-3">
-        <div className="flex items-center gap-2">
-          <AlertTriangle className="w-5 h-5 text-yellow-500" />
-          <h2 className="text-sm font-semibold text-foreground">Importante</h2>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          O <strong>email do cliente na Cakto</strong> será usado para criar a conta no LeadFlow.
-          O cliente usará esse email no "Primeiro Acesso" para definir sua senha.
-        </p>
-      </div>
-
-      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-foreground">Eventos Suportados</h2>
-        <div className="space-y-1.5">
-          {[
-            ['purchase_approved', 'Compra aprovada', '✅ Cria conta + ativa'],
-            ['subscription_renewed', 'Renovação', '✅ Mantém acesso'],
-            ['subscription_canceled', 'Cancelamento', '🚫 Bloqueia acesso'],
-            ['refund', 'Reembolso', '🚫 Bloqueia acesso'],
-            ['chargeback', 'Chargeback', '🚫 Bloqueia acesso'],
-          ].map(([event, label, action]) => (
-            <div key={event} className="flex items-center gap-3 py-2 border-b border-border last:border-0">
-              <code className="text-[11px] font-mono text-foreground w-44">{event}</code>
-              <span className="text-[11px] text-muted-foreground flex-1">{label}</span>
-              <span className="text-[11px]">{action}</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div className="rounded-xl border border-border bg-card p-5 space-y-4">
-        <h2 className="text-sm font-semibold text-foreground">Exemplo de Payload</h2>
-        <pre className="rounded-lg bg-muted/50 p-3 text-xs text-muted-foreground overflow-x-auto">
-          {examplePayload}
-        </pre>
-      </div>
+          <div className="lg:hidden space-y-3">
+            {tenants.map((t: any) => (
+              <div key={t.id} className="rounded-xl border border-border bg-card p-4">
+                <div className="flex items-start justify-between mb-2">
+                  <p className="text-sm font-semibold text-foreground">{t.nome}</p>
+                  <Badge variant={t.ativo ? 'default' : 'destructive'} className="text-[10px]">
+                    {t.ativo ? 'Ativo' : 'Inativo'}
+                  </Badge>
+                </div>
+                <div className="flex gap-2 mb-2">
+                  <Badge variant="secondary" className="text-[10px] capitalize">{t.plano}</Badge>
+                  <Badge variant={statusColor(t.stripe_status)} className="text-[10px]">
+                    {statusLabel(t.stripe_status)}
+                  </Badge>
+                </div>
+                {t.stripe_customer_id && (
+                  <p className="text-[10px] text-muted-foreground font-mono">{t.stripe_customer_id}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }
