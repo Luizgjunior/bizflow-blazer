@@ -14,7 +14,6 @@ const PLANS = [
     name: 'Pro',
     price: 47,
     leads: 6000,
-    price_id: 'price_1T6Wu13j4H2XXSTTlIR84BiV',
     icon: Zap,
     features: ['6.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'Suporte por email'],
   },
@@ -23,7 +22,6 @@ const PLANS = [
     name: 'Premium',
     price: 97,
     leads: 14000,
-    price_id: 'price_1T6WuC3j4H2XXSTTpt0ZgrG1',
     icon: Crown,
     popular: true,
     features: ['14.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'Automações', 'Suporte prioritário'],
@@ -33,7 +31,6 @@ const PLANS = [
     name: 'Enterprise',
     price: 197,
     leads: 32000,
-    price_id: 'price_1T6WuD3j4H2XXSTTuhwL1f8k',
     icon: Rocket,
     features: ['32.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'Automações', 'Webhook personalizado', 'Suporte dedicado'],
   },
@@ -44,7 +41,7 @@ export default function PlanosPage() {
   const { session } = useAuth();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
-  const handleSubscribe = async (priceId: string, planId: string) => {
+  const handleSubscribe = async (planId: string) => {
     if (!session) {
       toast.error('Faça login para assinar um plano');
       return;
@@ -53,7 +50,7 @@ export default function PlanosPage() {
     setLoadingPlan(planId);
     try {
       const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { price_id: priceId },
+        body: { plan_id: planId },
       });
 
       if (error) throw error;
@@ -116,7 +113,7 @@ export default function PlanosPage() {
                 <Button
                   className="w-full gap-2"
                   variant={plan.popular ? 'default' : 'outline'}
-                  onClick={() => handleSubscribe(plan.price_id, plan.id)}
+                  onClick={() => handleSubscribe(plan.id)}
                   disabled={loadingPlan !== null}
                 >
                   {loadingPlan === plan.id ? (
