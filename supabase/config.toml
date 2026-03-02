@@ -32,3 +32,6 @@ verify_jwt = false
 
 [functions.webhook-cakto]
 verify_jwt = false
+
+[functions.stripe-financial]
+verify_jwt = false
