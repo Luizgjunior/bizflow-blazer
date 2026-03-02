@@ -26,6 +26,7 @@ interface AuthContextType {
   tenantId: string | null;
   isAdmin: boolean;
   loading: boolean;
+  profileLoading: boolean;
   subscription: SubscriptionInfo;
   checkSubscription: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
@@ -41,6 +42,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const [profileLoading, setProfileLoading] = useState(true);
   const [subscription, setSubscription] = useState<SubscriptionInfo>({
     subscribed: false,
     plano: null,
@@ -48,13 +50,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const fetchProfileAndRole = async (userId: string) => {
-    const [profileRes, roleRes] = await Promise.all([
-      supabase.from('profiles').select('id, tenant_id, nome, email').eq('id', userId).single(),
-      supabase.from('user_roles').select('role').eq('user_id', userId).single(),
-    ]);
+    setProfileLoading(true);
+    try {
+      const [profileRes, roleRes] = await Promise.all([
+        supabase.from('profiles').select('id, tenant_id, nome, email').eq('id', userId).single(),
+        supabase.from('user_roles').select('role').eq('user_id', userId).single(),
+      ]);
 
-    if (profileRes.data) setProfile(profileRes.data);
-    if (roleRes.data) setRole(roleRes.data.role);
+      if (profileRes.data) setProfile(profileRes.data);
+      if (roleRes.data) setRole(roleRes.data.role);
+    } finally {
+      setProfileLoading(false);
+    }
   };
 
   const checkSubscription = useCallback(async () => {
@@ -87,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setProfile(null);
         setRole(null);
+        setProfileLoading(false);
         setSubscription({ subscribed: false, plano: null, subscription_end: null });
       }
       setLoading(false);
@@ -147,6 +155,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         tenantId: profile?.tenant_id ?? null,
         isAdmin: role === 'admin_global',
         loading,
+        profileLoading,
         subscription,
         checkSubscription,
         signIn,

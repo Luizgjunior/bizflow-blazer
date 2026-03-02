@@ -4,9 +4,9 @@ import { ReactNode } from 'react';
 import { Loader2 } from 'lucide-react';
 
 export default function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { session, loading, isAdmin, subscription } = useAuth();
+  const { session, loading, profileLoading, isAdmin, subscription } = useAuth();
 
-  if (loading) {
+  if (loading || profileLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="w-6 h-6 text-primary animate-spin" />
