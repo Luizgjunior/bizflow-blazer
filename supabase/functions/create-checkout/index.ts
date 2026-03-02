@@ -7,6 +7,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+// Price IDs ficam apenas no backend — nunca expostos no frontend
+const PLAN_PRICE_MAP: Record<string, string> = {
+  pro: "price_1T6Wu13j4H2XXSTTlIR84BiV",
+  premium: "price_1T6WuC3j4H2XXSTTpt0ZgrG1",
+  enterprise: "price_1T6WuD3j4H2XXSTTuhwL1f8k",
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -24,8 +31,11 @@ serve(async (req) => {
     const user = data.user;
     if (!user?.email) throw new Error("User not authenticated");
 
-    const { price_id } = await req.json();
-    if (!price_id) throw new Error("price_id is required");
+    const { plan_id } = await req.json();
+    if (!plan_id) throw new Error("plan_id is required");
+
+    const price_id = PLAN_PRICE_MAP[plan_id];
+    if (!price_id) throw new Error("Invalid plan_id");
 
     const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
       apiVersion: "2025-08-27.basil",
