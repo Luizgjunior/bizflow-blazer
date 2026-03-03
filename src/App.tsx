@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
-import LandingPage from "./pages/LandingPage";
+import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import ICPsPage from "./pages/ICPsPage";
 import RunsPage from "./pages/RunsPage";
@@ -32,8 +32,8 @@ const App = () => (
             <Route path="/login" element={<LoginPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/planos" element={<PlanosPage />} />
-            <Route path="/landing" element={<LandingPage />} />
-            <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/" element={<Index />} />
             <Route path="/icps" element={<ProtectedRoute><ICPsPage /></ProtectedRoute>} />
             <Route path="/runs" element={<ProtectedRoute><RunsPage /></ProtectedRoute>} />
             <Route path="/leads" element={<ProtectedRoute><LeadsPage /></ProtectedRoute>} />
