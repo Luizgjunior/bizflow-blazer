@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Activity, Mail, Lock, ArrowRight, KeyRound } from 'lucide-react';
+import { Mail, Lock, ArrowRight, KeyRound } from 'lucide-react';
+import logoImg from '@/assets/logo.png';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -59,9 +60,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="w-12 h-12 rounded-xl gradient-primary flex items-center justify-center mx-auto mb-4">
-            <Activity className="w-6 h-6 text-primary-foreground" />
-          </div>
+          <img src={logoImg} alt="LeadFlow" className="w-12 h-12 rounded-xl object-cover mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-foreground tracking-tight">LeadFlow</h1>
           <p className="text-xs text-muted-foreground font-medium uppercase tracking-widest mt-1">Intelligence</p>
         </div>

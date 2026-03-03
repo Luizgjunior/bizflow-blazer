@@ -3,11 +3,12 @@ import { useNavigate } from 'react-router-dom';
 import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
 import {
-  Activity, ArrowRight, BarChart3, Bot, CheckCircle2, ChevronDown,
+  ArrowRight, BarChart3, Bot, CheckCircle2, ChevronDown,
   Crown, Database, Download, Filter, Globe, Layers, LineChart,
   Lock, Rocket, Search, Shield, Sparkles, Target, Users, Zap,
   Webhook, Clock, TrendingUp, Mail
 } from 'lucide-react';
+import logoImg from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import useDocumentTitle from '@/hooks/useDocumentTitle';
@@ -119,9 +120,7 @@ export default function LandingPage() {
       <nav className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border/50">
         <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-              <Activity className="w-4 h-4 text-primary-foreground" />
-            </div>
+            <img src={logoImg} alt="LeadFlow" className="w-8 h-8 rounded-lg object-cover" />
             <span className="font-bold text-foreground text-sm">LeadFlow</span>
           </div>
           <div className="flex items-center gap-2">
@@ -420,9 +419,7 @@ export default function LandingPage() {
         <div className="max-w-5xl mx-auto">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg gradient-primary flex items-center justify-center">
-                <Activity className="w-3.5 h-3.5 text-primary-foreground" />
-              </div>
+              <img src={logoImg} alt="LeadFlow" className="w-7 h-7 rounded-lg object-cover" />
               <span className="font-bold text-foreground text-sm">LeadFlow Intelligence</span>
             </div>
             <div className="flex items-center gap-6">

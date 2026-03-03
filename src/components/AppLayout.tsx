@@ -13,9 +13,9 @@ import {
   LogOut,
   Menu,
   X,
-  Activity,
   Shield,
 } from 'lucide-react';
+import logoImg from '@/assets/logo.png';
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -51,9 +51,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       <aside className="hidden lg:flex flex-col w-64 bg-sidebar border-r border-sidebar-border fixed h-full z-30">
         <div className="p-5 border-b border-sidebar-border">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg gradient-primary flex items-center justify-center">
-              <Activity className="w-4 h-4 text-primary-foreground" />
-            </div>
+            <img src={logoImg} alt="LeadFlow" className="w-8 h-8 rounded-lg object-cover" />
             <div>
               <h1 className="text-sm font-bold text-foreground tracking-tight">LeadFlow</h1>
               <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-widest">Intelligence</p>
@@ -109,9 +107,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       {/* Mobile Header */}
       <header className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-card/90 backdrop-blur-lg border-b border-border z-40 flex items-center justify-between px-4">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg gradient-primary flex items-center justify-center">
-            <Activity className="w-3.5 h-3.5 text-primary-foreground" />
-          </div>
+          <img src={logoImg} alt="LeadFlow" className="w-7 h-7 rounded-lg object-cover" />
           <span className="text-sm font-bold text-foreground">LeadFlow</span>
         </div>
         <button onClick={() => setSidebarOpen(!sidebarOpen)} className="p-2 text-muted-foreground">
