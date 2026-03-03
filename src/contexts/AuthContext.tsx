@@ -57,6 +57,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         supabase.from('user_roles').select('role').eq('user_id', userId).single(),
       ]);
 
+      // If profile doesn't exist, the user was deleted — sign out
+      if (profileRes.error && profileRes.error.code === 'PGRST116') {
+        console.warn('Profile not found for user, signing out stale session');
+        await supabase.auth.signOut();
+        setSession(null);
+        setUser(null);
+        setProfile(null);
+        setRole(null);
+        setProfileLoading(false);
+        return;
+      }
+
       if (profileRes.data) setProfile(profileRes.data);
       if (roleRes.data) setRole(roleRes.data.role);
     } finally {
