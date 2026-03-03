@@ -1,12 +1,14 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
-import { CreditCard, Zap, Crown, Rocket, Loader2, ExternalLink } from 'lucide-react';
+import { Zap, Crown, Rocket, Loader2, ExternalLink, ArrowLeft } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import useDocumentTitle from '@/hooks/useDocumentTitle';
+import logoImg from '@/assets/logo.png';
 
 const PLANS = [
   {
@@ -38,12 +40,24 @@ const PLANS = [
 
 export default function PlanosPage() {
   useDocumentTitle('Planos');
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { session } = useAuth();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
+  const selectedPlan = searchParams.get('selected');
+
+  // Auto-trigger checkout if user just logged in/signed up with a plan selection
+  useEffect(() => {
+    if (session && selectedPlan) {
+      handleSubscribe(selectedPlan);
+    }
+  }, [session, selectedPlan]);
+
   const handleSubscribe = async (planId: string) => {
+    // If not logged in, redirect to signup with plan context
     if (!session) {
-      toast.error('Faça login para assinar um plano');
+      navigate(`/login?plan=${planId}`);
       return;
     }
 
@@ -67,6 +81,17 @@ export default function PlanosPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-5xl mx-auto px-4 py-12">
+        {/* Header with back button */}
+        <div className="flex items-center gap-3 mb-8">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+            <ArrowLeft className="w-4 h-4" />
+          </Button>
+          <div className="flex items-center gap-2">
+            <img src={logoImg} alt="LeadFlow" className="w-7 h-7 rounded-lg object-cover" />
+            <span className="font-bold text-foreground text-sm">LeadFlow</span>
+          </div>
+        </div>
+
         <div className="text-center mb-12">
           <h1 className="text-3xl font-bold text-foreground mb-3">Escolha seu plano</h1>
           <p className="text-muted-foreground">Assinatura mensal via cartão de crédito. Cancele quando quiser.</p>
