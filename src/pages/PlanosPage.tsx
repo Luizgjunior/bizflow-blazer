@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
@@ -41,21 +41,24 @@ const PLANS = [
 export default function PlanosPage() {
   useDocumentTitle('Planos');
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { session } = useAuth();
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
+  const autoCheckoutDone = useRef(false);
 
   const selectedPlan = searchParams.get('selected');
 
-  // Auto-trigger checkout if user just logged in/signed up with a plan selection
+  // Auto-trigger checkout ONCE if user just logged in/signed up with a plan selection
   useEffect(() => {
-    if (session && selectedPlan) {
+    if (session && selectedPlan && !autoCheckoutDone.current) {
+      autoCheckoutDone.current = true;
+      // Clear the selected param to prevent re-triggers
+      setSearchParams({}, { replace: true });
       handleSubscribe(selectedPlan);
     }
   }, [session, selectedPlan]);
 
   const handleSubscribe = async (planId: string) => {
-    // If not logged in, redirect to signup with plan context
     if (!session) {
       navigate(`/login?plan=${planId}`);
       return;
@@ -81,7 +84,6 @@ export default function PlanosPage() {
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-5xl mx-auto px-4 py-12">
-        {/* Header with back button */}
         <div className="flex items-center gap-3 mb-8">
           <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
             <ArrowLeft className="w-4 h-4" />
