@@ -84,6 +84,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         console.error('Error checking subscription:', error);
         return;
       }
+      if (data?.error) {
+        // User was deleted from auth — sign out stale session
+        if (typeof data.error === 'string' && data.error.includes('does not exist')) {
+          console.warn('User no longer exists, signing out');
+          await supabase.auth.signOut();
+          setSession(null);
+          setUser(null);
+          setProfile(null);
+          setRole(null);
+          setSubscription({ subscribed: false, plano: null, subscription_end: null });
+          return;
+        }
+        console.error('Subscription check error:', data.error);
+        return;
+      }
       if (data) {
         setSubscription({
           subscribed: data.subscribed ?? false,
