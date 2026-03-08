@@ -161,7 +161,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       {/* Main Content */}
       <main className="flex-1 lg:ml-64 pt-14 lg:pt-0 pb-20 lg:pb-0">
         <div className="p-4 lg:p-6 max-w-7xl mx-auto">
-          {children}
+          <PageTransition>{children}</PageTransition>
         </div>
       </main>
 
