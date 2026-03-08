@@ -1,4 +1,5 @@
 import { ReactNode, useCallback } from 'react';
+import PageTransition from '@/components/PageTransition';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
