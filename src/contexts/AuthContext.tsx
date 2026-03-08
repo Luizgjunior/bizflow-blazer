@@ -54,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const [profileRes, roleRes] = await Promise.all([
         supabase.from('profiles').select('id, tenant_id, nome, email').eq('id', userId).single(),
-        supabase.from('user_roles').select('role').eq('user_id', userId).single(),
+        supabase.from('user_roles').select('role').eq('user_id', userId).maybeSingle(),
       ]);
 
       // If profile doesn't exist, the user was deleted — sign out
@@ -70,7 +70,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       if (profileRes.data) setProfile(profileRes.data);
-      if (roleRes.data) setRole(roleRes.data.role);
+      setRole(roleRes.data?.role ?? null);
     } finally {
       setProfileLoading(false);
     }
