@@ -1,4 +1,4 @@
-import { ReactNode } from 'react';
+import { ReactNode, useCallback } from 'react';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -8,7 +8,6 @@ import {
   Users,
   Download,
   Zap,
-  Webhook,
   Settings,
   LogOut,
   Menu,
