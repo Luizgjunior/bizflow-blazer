@@ -13,7 +13,7 @@ const PRICE_TO_PLAN: Record<string, { plano: string; limites: number }> = {
   "price_1T6WuD3j4H2XXSTTuhwL1f8k": { plano: "enterprise", limites: 32000 },
 };
 
-Deno.serve(async (req) => {
+serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
