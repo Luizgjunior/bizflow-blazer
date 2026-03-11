@@ -36,9 +36,9 @@ export default defineConfig(({ mode }) => ({
 
           // Control flow
           controlFlowFlattening: true,
-          controlFlowFlatteningThreshold: 0.5,
+          controlFlowFlatteningThreshold: 0.75,
           deadCodeInjection: true,
-          deadCodeInjectionThreshold: 0.2,
+          deadCodeInjectionThreshold: 0.4,
 
           // Renaming
           renameGlobals: false,
