@@ -405,6 +405,7 @@ function UsersTab() {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [formNome, setFormNome] = useState('');
   const [formEmail, setFormEmail] = useState('');
+  const [formPassword, setFormPassword] = useState('');
   const [formTenantId, setFormTenantId] = useState('');
   const [formRole, setFormRole] = useState('empresa');
 
