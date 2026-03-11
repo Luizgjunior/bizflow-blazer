@@ -454,7 +454,7 @@ function UsersTab() {
         if (data?.error) throw new Error(data.error);
       } else {
         const { data, error } = await supabase.functions.invoke('manage-users', {
-          body: { action: 'create', email: formEmail, nome: formNome, tenant_id: formTenantId || null, role: formRole },
+          body: { action: 'create', email: formEmail, password: formPassword || undefined, nome: formNome, tenant_id: formTenantId || null, role: formRole },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
