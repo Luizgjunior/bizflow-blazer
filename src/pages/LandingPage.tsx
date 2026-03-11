@@ -7,7 +7,7 @@ import {
   ArrowRight, BarChart3, Bot, CheckCircle2, ChevronDown,
   Crown, Database, Download, Filter, Globe, Layers, LineChart,
   Lock, MessageSquare, Rocket, Search, Shield, Sparkles, Target, Users, Zap,
-  Webhook, Clock, TrendingUp, Mail
+  Webhook, Clock, TrendingUp, Mail, LogOut
 } from 'lucide-react';
 import logoImg from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
@@ -115,7 +115,7 @@ const STATS = [
 export default function LandingPage() {
   useDocumentTitle('Prospecção B2B Inteligente');
   const navigate = useNavigate();
-  const { session } = useAuth();
+  const { session, signOut } = useAuth();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (
@@ -130,9 +130,14 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-2">
             {session ? (
-              <Button size="sm" onClick={() => navigate('/planos')} className="gap-1.5">
-                Escolher Plano <ArrowRight className="w-3.5 h-3.5" />
-              </Button>
+              <>
+                <Button variant="ghost" size="sm" onClick={() => signOut()} className="gap-1.5 text-muted-foreground">
+                  <LogOut className="w-3.5 h-3.5" /> Sair
+                </Button>
+                <Button size="sm" onClick={() => navigate('/planos')} className="gap-1.5">
+                  Escolher Plano <ArrowRight className="w-3.5 h-3.5" />
+                </Button>
+              </>
             ) : (
               <>
                 <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
