@@ -81,16 +81,19 @@ const PLANS = [
   {
     id: 'pro', name: 'Pro', price: 97, leads: '6.000',
     icon: Zap, features: ['6.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'CRM integrado', 'Suporte por email'],
+    checkoutUrl: 'https://pay.cakto.com.br/3az982s_802315',
   },
   {
     id: 'premium', name: 'Premium', price: 197, leads: '14.000',
     icon: Crown, popular: true,
     features: ['14.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'CRM integrado', 'Automações', 'Disparos WhatsApp', 'Chat WhatsApp', 'Suporte prioritário'],
+    checkoutUrl: 'https://pay.cakto.com.br/n2jz5qi',
   },
   {
     id: 'enterprise', name: 'Enterprise', price: 297, leads: '32.000',
     icon: Rocket,
     features: ['32.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'CRM integrado', 'Automações', 'Disparos WhatsApp', 'Chat WhatsApp', 'Webhook personalizado', 'Suporte dedicado'],
+    checkoutUrl: 'https://pay.cakto.com.br/msyt9mj',
   },
 ];
 
