@@ -30,7 +30,7 @@ const navItems = [
   { path: '/disparos', label: 'Disparos', icon: Send },
 ];
 
-const bottomNavItems = navItems.slice(0, 5);
+const bottomNavItems = navItems.slice(0, 6);
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const location = useLocation();

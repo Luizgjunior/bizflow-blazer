@@ -99,6 +99,7 @@ const FAQ = [
   { q: 'Posso integrar com meu CRM?', a: 'Sim! Você pode exportar leads em CSV ou usar webhooks para enviar dados em tempo real para qualquer ferramenta — CRM, n8n, Make, Zapier e mais.' },
   { q: 'O sistema funciona no celular?', a: 'Sim! O LeadFlow foi construído 100% mobile-first. Toda a experiência é otimizada para uso no smartphone.' },
   { q: 'Como funciona o suporte?', a: 'No plano Pro o suporte é por email. No Premium, você tem prioridade. No Enterprise, suporte dedicado com atendimento exclusivo.' },
+  { q: 'Como funciona o disparo de WhatsApp?', a: 'Basta conectar seu WhatsApp escaneando um QR Code dentro do sistema e criar sua campanha de disparo. Você pode enviar texto, mídia e templates para leads prospectados ou importados via planilha.' },
 ];
 
 const STATS = [
