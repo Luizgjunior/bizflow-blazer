@@ -105,7 +105,6 @@ Deno.serve(async (req) => {
       }
 
       // Step 2: Connect/start the instance to generate QR code
-      // UazAPI v2: POST /instance/connect with token header
       const connectResult = await tryFetch(`${UAZAPI_URL}/instance/connect`, {
         method: "POST",
         headers: {
@@ -122,28 +121,17 @@ Deno.serve(async (req) => {
       qrString = cd.qrcode || cd.base64 || cd.qr || cd.data?.qrcode || cd.data?.base64 || cd.instance?.qrcode || null;
       if (typeof qrString !== 'string' || qrString.length < 10) qrString = null;
 
-      // If no QR from connect, try getting it from instance info
+      // If no QR from connect, try /instance/qr endpoint
       if (!qrString) {
-        // Try multiple QR endpoints
-        for (const qrUrl of [
-          `${UAZAPI_URL}/instance/qr`,
-          `${UAZAPI_URL}/instance/info`,
-          `${UAZAPI_URL}/instance/connectionState`,
-        ]) {
-          const result = await tryFetch(qrUrl, {
-            method: "GET",
-            headers: { "token": instanceToken || "" },
-          });
-          console.log(`QR from ${qrUrl}:`, JSON.stringify(result.data).substring(0, 300));
-
-          if (result.ok && result.data.code !== 404) {
-            const d = result.data;
-            const val = d.qrcode || d.base64 || d.qr || d.data?.qrcode || d.data?.base64 || d.instance?.qrcode || null;
-            if (typeof val === 'string' && val.length > 10) {
-              qrString = val;
-              break;
-            }
-          }
+        const qrResult = await tryFetch(`${UAZAPI_URL}/instance/qr`, {
+          method: "GET",
+          headers: { "token": instanceToken || "" },
+        });
+        console.log("QR endpoint response:", JSON.stringify(qrResult.data).substring(0, 300));
+        if (qrResult.ok) {
+          const d = qrResult.data;
+          const val = d.qrcode || d.base64 || d.qr || d.data?.qrcode || d.data?.base64 || null;
+          if (typeof val === 'string' && val.length > 10) qrString = val;
         }
       }
 
@@ -166,31 +154,53 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Check status + QR from instance info
-      const statusResult = await tryFetch(`${UAZAPI_URL}/instance/info`, {
-        method: "GET",
-        headers: { "token": instance.instance_token || "" },
-      });
+      // Try multiple status endpoints
+      let statusData: any = {};
+      let statusFound = false;
 
-      if (!statusResult.ok) {
-        // Fallback to connectionState
-        const fallback = await tryFetch(`${UAZAPI_URL}/instance/connectionState`, {
-          method: "GET",
-          headers: { "token": instance.instance_token || "" },
+      // Try /instance/status first (UazAPI v2 primary)
+      for (const endpoint of [
+        { url: `${UAZAPI_URL}/instance/status`, method: "GET" },
+        { url: `${UAZAPI_URL}/instance/info`, method: "GET" },
+        { url: `${UAZAPI_URL}/instance/connect`, method: "GET" },
+      ]) {
+        const result = await tryFetch(endpoint.url, {
+          method: endpoint.method,
+          headers: { 
+            "Content-Type": "application/json",
+            "token": instance.instance_token || "" 
+          },
         });
-        console.log("Status fallback:", JSON.stringify(fallback.data).substring(0, 200));
+        console.log(`Status check ${endpoint.url}:`, JSON.stringify(result.data).substring(0, 300));
+        
+        if (result.ok && result.data && !result.data.error && result.status !== 404) {
+          statusData = result.data;
+          statusFound = true;
+          break;
+        }
       }
 
-      const d = statusResult.ok ? statusResult.data : {};
-      const state = d.status || d.state || d.instance?.status || d.data?.state;
-      const connected = state === "connected" || state === "open";
+      // Handle status which can be a string ("connected") or object ({ connected: true })
+      const rawStatus = statusData.status;
+      const instanceStatus = statusData.instance?.status;
+      let connected = false;
+      
+      if (typeof rawStatus === 'object' && rawStatus !== null && rawStatus.connected === true) {
+        connected = true;
+      } else if (instanceStatus === "connected" || instanceStatus === "open") {
+        connected = true;
+      } else if (typeof rawStatus === 'string' && (rawStatus === "connected" || rawStatus === "open")) {
+        connected = true;
+      }
+
+      const jid = (typeof rawStatus === 'object' && rawStatus?.jid) || statusData.instance?.owner || statusData.owner || statusData.phoneNumber || "";
+      console.log("Parsed connected:", connected, "jid:", jid, "instanceStatus:", instanceStatus);
 
       if (connected && instance.status !== "connected") {
-        const phoneNumber = d.owner || d.phoneNumber || d.instance?.owner || d.data?.phoneNumber || "";
-        const cleanPhone = phoneNumber.replace(/@.*/, "");
+        const cleanPhone = typeof jid === 'string' ? jid.replace(/@.*/, "").replace(/:/g, "").replace(/[^0-9]/g, "") : "";
         await adminClient
           .from("whatsapp_instances")
-          .update({ status: "connected", phone_number: cleanPhone })
+          .update({ status: "connected", phone_number: cleanPhone || "connected" })
           .eq("tenant_id", tenantId);
 
         return new Response(JSON.stringify({
@@ -201,8 +211,17 @@ Deno.serve(async (req) => {
 
       // Check if there's a QR code available (for polling while connecting)
       let qrString: string | null = null;
-      const qr = d.qrcode || d.instance?.qrcode || d.data?.qrcode;
-      if (typeof qr === 'string' && qr.length > 10) qrString = qr;
+      if (!connected) {
+        // Try /instance/qr for fresh QR
+        const qrResult = await tryFetch(`${UAZAPI_URL}/instance/qr`, {
+          method: "GET",
+          headers: { "token": instance.instance_token || "" },
+        });
+        if (qrResult.ok) {
+          const val = qrResult.data?.qrcode || qrResult.data?.base64 || qrResult.data?.qr || null;
+          if (typeof val === 'string' && val.length > 10) qrString = val;
+        }
+      }
 
       return new Response(JSON.stringify({
         status: connected ? "connected" : instance.status,
