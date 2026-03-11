@@ -7,7 +7,8 @@ import {
   Building2, Users, Plus, Trash2, Loader2, Shield, BarChart3,
   Target, Play, FileText, Activity, Webhook, Copy, Check, Info,
   Edit, TrendingUp, AlertTriangle, Save, CreditCard, DollarSign,
-  TrendingDown, CalendarDays, Receipt, Mail,
+  TrendingDown, CalendarDays, Receipt, Mail, MessageCircle, Bot,
+  Eye, ChevronRight,
 } from 'lucide-react';
 import { LineChart, Line } from 'recharts';
 import { motion } from 'framer-motion';
@@ -46,6 +47,7 @@ export default function BackofficePage() {
           <TabsTrigger value="tenants" className="text-xs">Tenants</TabsTrigger>
           <TabsTrigger value="consumo" className="text-xs">Consumo</TabsTrigger>
           <TabsTrigger value="users" className="text-xs">Usuários</TabsTrigger>
+          <TabsTrigger value="suporte" className="text-xs">Suporte</TabsTrigger>
           <TabsTrigger value="webhook" className="text-xs">Webhook</TabsTrigger>
           <TabsTrigger value="assinaturas" className="text-xs">Financeiro</TabsTrigger>
         </TabsList>
@@ -54,6 +56,7 @@ export default function BackofficePage() {
         <TabsContent value="tenants"><TenantsTab /></TabsContent>
         <TabsContent value="consumo"><ConsumoTab /></TabsContent>
         <TabsContent value="users"><UsersTab /></TabsContent>
+        <TabsContent value="suporte"><SuporteTab /></TabsContent>
         <TabsContent value="webhook"><WebhookTab /></TabsContent>
         <TabsContent value="assinaturas"><AssinaturasTab /></TabsContent>
       </Tabs>
@@ -1066,6 +1069,163 @@ function AssinaturasTab() {
               ))}
             </div>
           </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* ───────────── Suporte Tab ───────────── */
+
+function SuporteTab() {
+  const [selectedConv, setSelectedConv] = useState<string | null>(null);
+  
+  const { data: conversations, isLoading } = useQuery({
+    queryKey: ['backoffice-support-conversations'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('support_conversations')
+        .select('*')
+        .order('updated_at', { ascending: false });
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: profiles } = useQuery({
+    queryKey: ['backoffice-support-profiles'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('profiles').select('id, nome, email, tenant_id');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: tenants } = useQuery({
+    queryKey: ['backoffice-support-tenants'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('tenants').select('id, nome');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const { data: messages } = useQuery({
+    queryKey: ['backoffice-support-messages', selectedConv],
+    queryFn: async () => {
+      if (!selectedConv) return [];
+      const { data, error } = await supabase
+        .from('support_messages')
+        .select('*')
+        .eq('conversation_id', selectedConv)
+        .order('created_at', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!selectedConv,
+  });
+
+  const getProfile = (userId: string) => profiles?.find(p => p.id === userId);
+  const getTenant = (tenantId: string | null) => tenants?.find(t => t.id === tenantId);
+
+  if (isLoading) return <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-primary" /></div>;
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* Conversations List */}
+      <div className="lg:col-span-1 space-y-2">
+        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
+          <MessageCircle className="w-4 h-4 text-primary" />
+          Conversas ({conversations?.length ?? 0})
+        </h3>
+
+        {(!conversations || conversations.length === 0) && (
+          <div className="text-center py-8">
+            <Bot className="w-8 h-8 text-muted-foreground mx-auto mb-2" />
+            <p className="text-xs text-muted-foreground">Nenhuma conversa de suporte ainda</p>
+          </div>
+        )}
+
+        {conversations?.map((conv) => {
+          const profile = getProfile(conv.user_id);
+          const tenant = getTenant(conv.tenant_id);
+          const isSelected = selectedConv === conv.id;
+          return (
+            <button
+              key={conv.id}
+              onClick={() => setSelectedConv(conv.id)}
+              className={`w-full text-left p-3 rounded-xl border transition-all ${
+                isSelected
+                  ? 'border-primary bg-primary/5'
+                  : 'border-border bg-card hover:bg-muted/30'
+              }`}
+            >
+              <div className="flex items-center justify-between mb-1">
+                <p className="text-xs font-medium text-foreground truncate">
+                  {profile?.nome || profile?.email || 'Usuário'}
+                </p>
+                <Badge variant={conv.status === 'open' ? 'default' : 'secondary'} className="text-[9px] h-4">
+                  {conv.status === 'open' ? 'Aberta' : 'Fechada'}
+                </Badge>
+              </div>
+              {tenant && (
+                <p className="text-[10px] text-muted-foreground mb-1">{tenant.nome}</p>
+              )}
+              <p className="text-[10px] text-muted-foreground">
+                {new Date(conv.updated_at).toLocaleString('pt-BR')}
+              </p>
+            </button>
+          );
+        })}
+      </div>
+
+      {/* Messages Panel */}
+      <div className="lg:col-span-2">
+        {!selectedConv ? (
+          <div className="text-center py-16 border border-border rounded-xl bg-card">
+            <MessageCircle className="w-10 h-10 text-muted-foreground/30 mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground">Selecione uma conversa para visualizar</p>
+          </div>
+        ) : (
+          <div className="border border-border rounded-xl bg-card overflow-hidden">
+            <div className="px-4 py-3 border-b border-border bg-muted/30">
+              <p className="text-xs font-semibold text-foreground">
+                Conversa com {getProfile(conversations?.find(c => c.id === selectedConv)?.user_id ?? '')?.nome || 'Usuário'}
+              </p>
+              <p className="text-[10px] text-muted-foreground">
+                {getProfile(conversations?.find(c => c.id === selectedConv)?.user_id ?? '')?.email}
+              </p>
+            </div>
+            <div className="max-h-[500px] overflow-y-auto p-4 space-y-3">
+              {messages?.map((msg) => (
+                <div key={msg.id} className={`flex gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                  {msg.role === 'assistant' && (
+                    <div className="shrink-0 w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center mt-0.5">
+                      <Bot className="w-3 h-3 text-primary" />
+                    </div>
+                  )}
+                  <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-xs leading-relaxed ${
+                    msg.role === 'user'
+                      ? 'bg-primary text-primary-foreground rounded-br-md'
+                      : 'bg-muted text-foreground rounded-bl-md'
+                  }`}>
+                    {msg.content}
+                  </div>
+                </div>
+              ))}
+              {(!messages || messages.length === 0) && (
+                <p className="text-xs text-muted-foreground text-center py-4">Sem mensagens</p>
+              )}
+            </div>
+            <div className="px-4 py-2 border-t border-border bg-muted/20">
+              <p className="text-[10px] text-muted-foreground">
+                {messages?.length ?? 0} mensagens • Iniciada em{' '}
+                {conversations?.find(c => c.id === selectedConv)?.created_at
+                  ? new Date(conversations.find(c => c.id === selectedConv)!.created_at).toLocaleString('pt-BR')
+                  : '—'}
+              </p>
+            </div>
+          </div>
         )}
       </div>
     </div>

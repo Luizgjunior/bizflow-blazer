@@ -1,5 +1,6 @@
 import { ReactNode, useCallback, useMemo } from 'react';
 import PageTransition from '@/components/PageTransition';
+import Leadzinho from '@/components/Leadzinho';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import {
@@ -203,6 +204,8 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           );
         })}
       </nav>
+
+      <Leadzinho />
     </div>
   );
 }
