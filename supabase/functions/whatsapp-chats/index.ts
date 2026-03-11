@@ -81,12 +81,10 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Try /message/find with phone
-      const phone = chatId.replace(/@.*/, "");
       const res = await fetch(`${UAZAPI_URL}/message/find`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "token": token },
-        body: JSON.stringify({ phone, count }),
+        body: JSON.stringify({ chatid: chatId, count }),
       });
       const data = await res.json();
       console.log("Messages response status:", res.status, "keys:", Object.keys(data), "sample:", JSON.stringify(data).substring(0, 500));
