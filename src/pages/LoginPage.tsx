@@ -81,22 +81,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleFirstAccess = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (error) {
-        toast.error(error.message);
-      } else {
-        toast.success('Email enviado! Verifique sua caixa de entrada para definir sua senha.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  const whatsappUrl = 'https://wa.me/5565981078369';
 
 
   if (session) return null;
