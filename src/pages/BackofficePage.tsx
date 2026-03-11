@@ -47,6 +47,7 @@ export default function BackofficePage() {
           <TabsTrigger value="tenants" className="text-xs">Tenants</TabsTrigger>
           <TabsTrigger value="consumo" className="text-xs">Consumo</TabsTrigger>
           <TabsTrigger value="users" className="text-xs">Usuários</TabsTrigger>
+          <TabsTrigger value="suporte" className="text-xs">Suporte</TabsTrigger>
           <TabsTrigger value="webhook" className="text-xs">Webhook</TabsTrigger>
           <TabsTrigger value="assinaturas" className="text-xs">Financeiro</TabsTrigger>
         </TabsList>
