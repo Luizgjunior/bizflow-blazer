@@ -188,34 +188,6 @@ export default function LoginPage() {
                 Já tem conta? Entrar
               </button>
             </>
-          ) : mode === 'magic-link' ? (
-            <>
-              <h2 className="text-lg font-semibold text-foreground mb-1">Magic Link</h2>
-              <p className="text-sm text-muted-foreground mb-6">
-                Informe seu email e receba um link para entrar sem senha.
-              </p>
-
-              <form onSubmit={handleMagicLink} className="space-y-4">
-                <div>
-                  <Label htmlFor="email-magic">Email</Label>
-                  <div className="relative mt-1.5">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input id="email-magic" type="email" placeholder="seu@email.com" className="pl-9" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                  </div>
-                </div>
-                <Button type="submit" className="w-full gap-2" disabled={loading}>
-                  {loading ? 'Enviando...' : 'Enviar Magic Link'}
-                  {!loading && <ArrowRight className="w-4 h-4" />}
-                </Button>
-              </form>
-
-              <button
-                onClick={() => { setMode('login'); setEmail(''); setPassword(''); }}
-                className="w-full mt-4 text-sm text-muted-foreground hover:text-foreground transition-colors text-center"
-              >
-                Entrar com senha
-              </button>
-            </>
           ) : (
             <>
               <h2 className="text-lg font-semibold text-foreground mb-1">Primeiro Acesso</h2>
