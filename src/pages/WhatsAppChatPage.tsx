@@ -379,7 +379,7 @@ function MessageView({ chat, messages, loading, onSend, onSendMedia, onBack }: {
             messages.map((msg) => (
               <div key={msg.id} className={cn("flex", msg.fromMe ? "justify-end" : "justify-start")}>
                 <div className={cn(
-                  "max-w-[80%] rounded-lg px-3 py-2 shadow-sm",
+                  "max-w-[80%] rounded-lg px-3 py-2 shadow-sm overflow-hidden",
                   msg.fromMe
                     ? "bg-primary/15 text-foreground rounded-br-sm"
                     : "bg-card text-foreground rounded-bl-sm border border-border/50"
@@ -387,7 +387,7 @@ function MessageView({ chat, messages, loading, onSend, onSendMedia, onBack }: {
                   {msg.senderName && !msg.fromMe && (
                     <p className="text-[11px] font-semibold text-primary mb-0.5">{msg.senderName}</p>
                   )}
-                  <p className="text-sm whitespace-pre-wrap break-words">{msg.text || `[${msg.type}]`}</p>
+                  <p className="text-sm whitespace-pre-wrap" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{msg.text || `[${msg.type}]`}</p>
                   <div className={cn("flex items-center gap-1 mt-1", msg.fromMe ? "justify-end" : "justify-start")}>
                     <span className="text-[10px] text-muted-foreground">{msg.timestampFormatted}</span>
                     {msg.fromMe && <CheckCheck className="w-3 h-3 text-primary" />}
