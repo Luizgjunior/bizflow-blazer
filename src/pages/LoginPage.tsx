@@ -32,14 +32,16 @@ export default function LoginPage() {
 
 
   useEffect(() => {
-    if (!authLoading && session) {
+    if (!authLoading && !profileLoading && session) {
       if (planParam) {
         navigate(`/planos?selected=${planParam}`, { replace: true });
-      } else {
+      } else if (isAdmin || subscription.subscribed) {
         navigate('/', { replace: true });
+      } else {
+        navigate('/planos', { replace: true });
       }
     }
-  }, [session, authLoading, planParam, navigate]);
+  }, [session, authLoading, profileLoading, planParam, navigate, isAdmin, subscription.subscribed]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
