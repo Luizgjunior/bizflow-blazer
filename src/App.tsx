@@ -20,6 +20,7 @@ const LoginPage = lazy(() => import("./pages/LoginPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const PlanosPage = lazy(() => import("./pages/PlanosPage"));
 const DisparosPage = lazy(() => import("./pages/DisparosPage"));
+const WhatsAppChatPage = lazy(() => import("./pages/WhatsAppChatPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
