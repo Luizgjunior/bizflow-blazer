@@ -588,7 +588,7 @@ function CampaignsTab() {
 
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
                   <span>{c.total_contatos} contatos</span>
-                  <span className="text-green-500">{c.enviados} enviados</span>
+                  <span className="text-primary">{c.enviados} enviados</span>
                   <span className="text-destructive">{c.falhas} falhas</span>
                 </div>
 
