@@ -84,7 +84,7 @@ Deno.serve(async (req) => {
               "Content-Type": "application/json",
               "admintoken": UAZAPI_ADMIN_TOKEN,
             },
-            body: JSON.stringify({ instanceName }),
+            body: JSON.stringify({ Name: instanceName, instanceName }),
           });
           console.log(`Create attempt ${ep.url}:`, JSON.stringify(result.data));
           
