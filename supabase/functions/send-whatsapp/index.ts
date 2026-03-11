@@ -2,11 +2,18 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Random delay between 1s and 360s (never the same pattern)
+function getRandomDelay(): number {
+  const min = 1000;   // 1 second
+  const max = 360000; // 360 seconds
+  return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
 Deno.serve(async (req) => {
@@ -77,9 +84,10 @@ Deno.serve(async (req) => {
     const instanceToken = instance.instance_token || "";
 
     // Update campaign status to sending
+    const startedAt = new Date().toISOString();
     await adminClient
       .from("whatsapp_campaigns")
-      .update({ status: "sending", started_at: new Date().toISOString() })
+      .update({ status: "sending", started_at: startedAt })
       .eq("id", campaign_id);
 
     // Get pending contacts
@@ -103,15 +111,25 @@ Deno.serve(async (req) => {
 
     let enviados = campaign.enviados || 0;
     let falhas = campaign.falhas || 0;
+    const delays: number[] = [];
+    const contactResults: { telefone: string; nome: string | null; status: string; error?: string; delay_ms: number; sent_at?: string }[] = [];
 
-    for (const contact of contacts) {
+    for (let i = 0; i < contacts.length; i++) {
+      const contact = contacts[i];
+
+      // Apply random delay before sending (skip first message)
+      let delayMs = 0;
+      if (i > 0) {
+        delayMs = getRandomDelay();
+        delays.push(delayMs);
+        await sleep(delayMs);
+      }
+
       try {
         const phone = contact.telefone.replace(/\D/g, "");
-
         let sendResult;
 
         if (campaign.tipo === "media" && campaign.media_url) {
-          // Send media message - UazAPI v2: POST /send/media
           sendResult = await fetch(`${UAZAPI_URL}/send/media`, {
             method: "POST",
             headers: {
@@ -126,7 +144,6 @@ Deno.serve(async (req) => {
             }),
           });
         } else if (campaign.tipo === "template") {
-          // Send list/template message
           sendResult = await fetch(`${UAZAPI_URL}/message/sendList`, {
             method: "POST",
             headers: {
@@ -145,7 +162,6 @@ Deno.serve(async (req) => {
             }),
           });
         } else {
-          // Send text message - UazAPI v2: POST /send/text
           sendResult = await fetch(`${UAZAPI_URL}/send/text`, {
             method: "POST",
             headers: {
@@ -163,16 +179,20 @@ Deno.serve(async (req) => {
 
         if (sendResult.ok && !sendData.error) {
           enviados++;
+          const sentAt = new Date().toISOString();
           await adminClient
             .from("whatsapp_campaign_contacts")
-            .update({ status: "sent", sent_at: new Date().toISOString() })
+            .update({ status: "sent", sent_at: sentAt })
             .eq("id", contact.id);
+          contactResults.push({ telefone: contact.telefone, nome: contact.nome, status: "sent", delay_ms: delayMs, sent_at: sentAt });
         } else {
           falhas++;
+          const errMsg = sendData.error || "Send failed";
           await adminClient
             .from("whatsapp_campaign_contacts")
-            .update({ status: "failed", error_message: sendData.error || "Send failed" })
+            .update({ status: "failed", error_message: errMsg })
             .eq("id", contact.id);
+          contactResults.push({ telefone: contact.telefone, nome: contact.nome, status: "failed", error: errMsg, delay_ms: delayMs });
         }
       } catch (sendErr) {
         falhas++;
@@ -180,30 +200,52 @@ Deno.serve(async (req) => {
           .from("whatsapp_campaign_contacts")
           .update({ status: "failed", error_message: sendErr.message })
           .eq("id", contact.id);
+        contactResults.push({ telefone: contact.telefone, nome: contact.nome, status: "failed", error: sendErr.message, delay_ms: delayMs });
       }
 
-      // Update counters
+      // Update counters in real-time
       await adminClient
         .from("whatsapp_campaigns")
         .update({ enviados, falhas })
         .eq("id", campaign_id);
-
-      // Random delay 1-3s between messages
-      const delay = Math.floor(Math.random() * 2000) + 1000;
-      await sleep(delay);
     }
 
     // Mark campaign as completed
+    const finishedAt = new Date().toISOString();
     await adminClient
       .from("whatsapp_campaigns")
-      .update({ status: "completed", finished_at: new Date().toISOString(), enviados, falhas })
+      .update({ status: "completed", finished_at: finishedAt, enviados, falhas })
       .eq("id", campaign_id);
 
-    return new Response(JSON.stringify({
-      message: "Campaign completed",
+    // Generate report
+    const totalDelayMs = delays.reduce((a, b) => a + b, 0);
+    const avgDelayMs = delays.length > 0 ? Math.round(totalDelayMs / delays.length) : 0;
+    const minDelayMs = delays.length > 0 ? Math.min(...delays) : 0;
+    const maxDelayMs = delays.length > 0 ? Math.max(...delays) : 0;
+    const durationMs = new Date(finishedAt).getTime() - new Date(startedAt).getTime();
+
+    const report = {
+      campaign_id,
+      campaign_name: campaign.nome,
+      started_at: startedAt,
+      finished_at: finishedAt,
+      duration_seconds: Math.round(durationMs / 1000),
+      total_contacts: contacts.length,
       enviados,
       falhas,
-    }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      success_rate: contacts.length > 0 ? Math.round((enviados / contacts.length) * 100) : 0,
+      delay_stats: {
+        avg_seconds: Math.round(avgDelayMs / 1000),
+        min_seconds: Math.round(minDelayMs / 1000),
+        max_seconds: Math.round(maxDelayMs / 1000),
+        total_wait_seconds: Math.round(totalDelayMs / 1000),
+      },
+      contacts: contactResults,
+    };
+
+    return new Response(JSON.stringify(report), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
   } catch (err) {
     console.error("send-whatsapp error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
