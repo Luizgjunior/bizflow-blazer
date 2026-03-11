@@ -107,19 +107,10 @@ Deno.serve(async (req) => {
           .eq("user_id", authUser.user.id);
       }
 
-      // Generate magic link
-      const { data: linkData, error: linkError } =
-        await adminClient.auth.admin.generateLink({
-          type: "magiclink",
-          email,
-        });
-
       return new Response(
         JSON.stringify({
           success: true,
           user_id: authUser.user.id,
-          magic_link: linkData?.properties?.action_link || null,
-          magic_link_error: linkError?.message || null,
         }),
         {
           status: 200,
