@@ -154,31 +154,43 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Check status + QR from instance info
-      const statusResult = await tryFetch(`${UAZAPI_URL}/instance/info`, {
-        method: "GET",
-        headers: { "token": instance.instance_token || "" },
-      });
+      // Try multiple status endpoints
+      let statusData: any = {};
+      let statusFound = false;
 
-      if (!statusResult.ok) {
-        // Fallback to connectionState
-        const fallback = await tryFetch(`${UAZAPI_URL}/instance/connectionState`, {
-          method: "GET",
-          headers: { "token": instance.instance_token || "" },
+      // Try /instance/status first (UazAPI v2 primary)
+      for (const endpoint of [
+        { url: `${UAZAPI_URL}/instance/status`, method: "GET" },
+        { url: `${UAZAPI_URL}/instance/info`, method: "GET" },
+        { url: `${UAZAPI_URL}/instance/connect`, method: "GET" },
+      ]) {
+        const result = await tryFetch(endpoint.url, {
+          method: endpoint.method,
+          headers: { 
+            "Content-Type": "application/json",
+            "token": instance.instance_token || "" 
+          },
         });
-        console.log("Status fallback:", JSON.stringify(fallback.data).substring(0, 200));
+        console.log(`Status check ${endpoint.url}:`, JSON.stringify(result.data).substring(0, 300));
+        
+        if (result.ok && result.data && !result.data.error && result.status !== 404) {
+          statusData = result.data;
+          statusFound = true;
+          break;
+        }
       }
 
-      const d = statusResult.ok ? statusResult.data : {};
-      const state = d.status || d.state || d.instance?.status || d.data?.state;
+      const state = statusData.status || statusData.state || statusData.instance?.status || statusData.data?.state || statusData.data?.status;
       const connected = state === "connected" || state === "open";
 
+      console.log("Parsed state:", state, "connected:", connected, "statusFound:", statusFound);
+
       if (connected && instance.status !== "connected") {
-        const phoneNumber = d.owner || d.phoneNumber || d.instance?.owner || d.data?.phoneNumber || "";
-        const cleanPhone = phoneNumber.replace(/@.*/, "");
+        const phoneNumber = statusData.owner || statusData.phoneNumber || statusData.instance?.owner || statusData.data?.phoneNumber || statusData.user?.id || "";
+        const cleanPhone = typeof phoneNumber === 'string' ? phoneNumber.replace(/@.*/, "").replace(/[^0-9]/g, "") : "";
         await adminClient
           .from("whatsapp_instances")
-          .update({ status: "connected", phone_number: cleanPhone })
+          .update({ status: "connected", phone_number: cleanPhone || "connected" })
           .eq("tenant_id", tenantId);
 
         return new Response(JSON.stringify({
@@ -189,8 +201,17 @@ Deno.serve(async (req) => {
 
       // Check if there's a QR code available (for polling while connecting)
       let qrString: string | null = null;
-      const qr = d.qrcode || d.instance?.qrcode || d.data?.qrcode;
-      if (typeof qr === 'string' && qr.length > 10) qrString = qr;
+      if (!connected) {
+        // Try /instance/qr for fresh QR
+        const qrResult = await tryFetch(`${UAZAPI_URL}/instance/qr`, {
+          method: "GET",
+          headers: { "token": instance.instance_token || "" },
+        });
+        if (qrResult.ok) {
+          const val = qrResult.data?.qrcode || qrResult.data?.base64 || qrResult.data?.qr || null;
+          if (typeof val === 'string' && val.length > 10) qrString = val;
+        }
+      }
 
       return new Response(JSON.stringify({
         status: connected ? "connected" : instance.status,
