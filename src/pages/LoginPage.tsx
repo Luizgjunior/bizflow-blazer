@@ -98,6 +98,24 @@ export default function LoginPage() {
     }
   };
 
+  const handleMagicLink = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: window.location.origin },
+      });
+      if (error) {
+        toast.error(error.message);
+      } else {
+        toast.success('Link mágico enviado! Verifique seu email.');
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (session) return null;
 
   return (
