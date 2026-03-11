@@ -769,6 +769,135 @@ function CampaignsTab() {
           </Table>
         </DialogContent>
       </Dialog>
+      {/* Campaign Report Dialog */}
+      <Dialog open={showReport} onOpenChange={setShowReport}>
+        <DialogContent className="sm:max-w-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BarChart3 className="w-5 h-5 text-primary" />
+              Relatório da Campanha
+            </DialogTitle>
+            <DialogDescription>
+              {report?.campaign_name || 'Campanha'}
+            </DialogDescription>
+          </DialogHeader>
+
+          {report && (
+            <div className="space-y-4">
+              {/* Summary Cards */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div className="p-3 rounded-lg bg-primary/10 border border-primary/20 text-center">
+                  <p className="text-2xl font-bold text-primary">{report.enviados}</p>
+                  <p className="text-xs text-muted-foreground">Enviados</p>
+                </div>
+                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-center">
+                  <p className="text-2xl font-bold text-destructive">{report.falhas}</p>
+                  <p className="text-xs text-muted-foreground">Falhas</p>
+                </div>
+                <div className="p-3 rounded-lg bg-accent/10 border border-accent/20 text-center">
+                  <p className="text-2xl font-bold text-accent">{report.success_rate}%</p>
+                  <p className="text-xs text-muted-foreground">Taxa de Sucesso</p>
+                </div>
+                <div className="p-3 rounded-lg bg-muted border border-border text-center">
+                  <p className="text-2xl font-bold text-foreground">{report.total_contacts}</p>
+                  <p className="text-xs text-muted-foreground">Total</p>
+                </div>
+              </div>
+
+              {/* Timing Info */}
+              <Card>
+                <CardContent className="p-4">
+                  <h4 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-3">
+                    <Timer className="w-4 h-4 text-primary" />
+                    Estatísticas de Tempo
+                  </h4>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="text-muted-foreground">Duração total:</span>
+                      <span className="ml-2 font-medium text-foreground">
+                        {report.duration_seconds >= 60
+                          ? `${Math.floor(report.duration_seconds / 60)}min ${report.duration_seconds % 60}s`
+                          : `${report.duration_seconds}s`}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Intervalo médio:</span>
+                      <span className="ml-2 font-medium text-foreground">{report.delay_stats?.avg_seconds}s</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Menor intervalo:</span>
+                      <span className="ml-2 font-medium text-foreground">{report.delay_stats?.min_seconds}s</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Maior intervalo:</span>
+                      <span className="ml-2 font-medium text-foreground">{report.delay_stats?.max_seconds}s</span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Início:</span>
+                      <span className="ml-2 font-medium text-foreground">
+                        {new Date(report.started_at).toLocaleString('pt-BR')}
+                      </span>
+                    </div>
+                    <div>
+                      <span className="text-muted-foreground">Fim:</span>
+                      <span className="ml-2 font-medium text-foreground">
+                        {new Date(report.finished_at).toLocaleString('pt-BR')}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Contact Results Table */}
+              {report.contacts && report.contacts.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-foreground mb-2">Detalhes por Contato</h4>
+                  <div className="max-h-60 overflow-y-auto border rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Telefone</TableHead>
+                          <TableHead>Nome</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Intervalo</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {report.contacts.map((c: any, idx: number) => (
+                          <TableRow key={idx}>
+                            <TableCell className="text-xs font-mono">{c.telefone}</TableCell>
+                            <TableCell className="text-xs">{c.nome || '-'}</TableCell>
+                            <TableCell>
+                              <div className="flex items-center gap-1">
+                                {c.status === 'sent' ? (
+                                  <CheckCircle2 className="w-3.5 h-3.5 text-primary" />
+                                ) : (
+                                  <XCircle className="w-3.5 h-3.5 text-destructive" />
+                                )}
+                                <span className={`text-xs ${c.status === 'sent' ? 'text-primary' : 'text-destructive'}`}>
+                                  {c.status === 'sent' ? 'Enviado' : 'Falhou'}
+                                </span>
+                              </div>
+                              {c.error && (
+                                <p className="text-[10px] text-destructive flex items-center gap-1 mt-0.5">
+                                  <AlertTriangle className="w-3 h-3" />{c.error}
+                                </p>
+                              )}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground">
+                              {c.delay_ms > 0 ? `${Math.round(c.delay_ms / 1000)}s` : '-'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
