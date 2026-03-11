@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
-  Search, Send, ArrowLeft, MessageSquare, Loader2, MoreVertical, Smile, Paperclip, CheckCheck, RefreshCw,
+  Search, Send, ArrowLeft, MessageSquare, Loader2, MoreVertical, CheckCheck, RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -141,18 +141,18 @@ function ChatList({ chats, selectedId, onSelect, loading, searchTerm, onSearchCh
     <div className="flex flex-col h-full">
       <div className="p-3 border-b border-border bg-card">
         <div className="flex items-center justify-between mb-2">
-          <h2 className="text-sm font-semibold text-foreground">Conversas</h2>
-          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onRefresh} disabled={loading}>
-            <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
+          <h2 className="text-base font-semibold text-foreground">Conversas</h2>
+          <Button variant="ghost" size="icon" className="h-11 w-11" onClick={onRefresh} disabled={loading}>
+            <RefreshCw className={cn("w-4 h-4", loading && "animate-spin")} />
           </Button>
         </div>
         <div className="relative">
-          <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
           <Input
             placeholder="Buscar conversa..."
             value={searchTerm}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="pl-8 h-8 text-xs bg-muted/50 border-0"
+            className="pl-10 h-11 text-sm bg-muted/50 border-0"
           />
         </div>
       </div>
@@ -165,7 +165,7 @@ function ChatList({ chats, selectedId, onSelect, loading, searchTerm, onSearchCh
         ) : filtered.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
             <MessageSquare className="w-8 h-8 mb-2 opacity-50" />
-            <p className="text-xs">Nenhuma conversa encontrada</p>
+            <p className="text-sm">Nenhuma conversa encontrada</p>
           </div>
         ) : (
           filtered.map((chat) => (
@@ -173,13 +173,13 @@ function ChatList({ chats, selectedId, onSelect, loading, searchTerm, onSearchCh
               key={chat.id}
               onClick={() => onSelect(chat)}
               className={cn(
-                "w-full flex items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-muted/50 border-b border-border/50",
+                "w-full flex items-center gap-3 px-3 py-3.5 text-left transition-colors hover:bg-muted/50 border-b border-border/50 min-h-[64px]",
                 selectedId === chat.id && "bg-muted"
               )}
             >
-              <Avatar className="w-10 h-10 shrink-0">
+              <Avatar className="w-12 h-12 shrink-0">
                 {chat.image && <AvatarImage src={chat.image} />}
-                <AvatarFallback className={cn("text-xs text-white font-semibold", getAvatarColor(chat.name))}>
+                <AvatarFallback className={cn("text-sm text-white font-semibold", getAvatarColor(chat.name))}>
                   {getInitials(chat.name)}
                 </AvatarFallback>
               </Avatar>
@@ -187,14 +187,14 @@ function ChatList({ chats, selectedId, onSelect, loading, searchTerm, onSearchCh
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-foreground truncate">{chat.name}</p>
                   <span className={cn(
-                    "text-[10px] whitespace-nowrap ml-2",
+                    "text-[11px] whitespace-nowrap ml-2",
                     chat.unreadCount > 0 ? "text-primary font-semibold" : "text-muted-foreground"
                   )}>{chat.timestampFormatted}</span>
                 </div>
                 <div className="flex items-center justify-between mt-0.5">
                   <p className="text-xs text-muted-foreground truncate pr-2">{chat.lastMessage || 'Sem mensagens'}</p>
                   {chat.unreadCount > 0 && (
-                    <span className="min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center px-1 shrink-0">
+                    <span className="min-w-[20px] h-[20px] rounded-full bg-primary text-primary-foreground text-[11px] font-bold flex items-center justify-center px-1 shrink-0">
                       {chat.unreadCount}
                     </span>
                   )}
@@ -238,11 +238,11 @@ function MessageView({ chat, messages, loading, onSend, onBack }: {
   return (
     <div className="flex flex-col h-full">
       {/* Chat Header */}
-      <div className="flex items-center gap-3 px-4 py-3 border-b border-border bg-card">
-        <button onClick={onBack} className="lg:hidden p-1 text-muted-foreground hover:text-foreground">
+      <div className="flex items-center gap-3 px-3 py-2.5 border-b border-border bg-card min-h-[56px]">
+        <button onClick={onBack} className="lg:hidden p-2 -ml-1 text-muted-foreground hover:text-foreground min-w-[44px] min-h-[44px] flex items-center justify-center">
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <Avatar className="w-9 h-9">
+        <Avatar className="w-10 h-10">
           {chat.image && <AvatarImage src={chat.image} />}
           <AvatarFallback className={cn("text-xs text-white font-semibold", getAvatarColor(chat.name))}>
             {getInitials(chat.name)}
@@ -250,37 +250,37 @@ function MessageView({ chat, messages, loading, onSend, onBack }: {
         </Avatar>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-foreground truncate">{chat.name}</p>
-          <p className="text-[10px] text-muted-foreground">
+          <p className="text-[11px] text-muted-foreground">
             {chat.isGroup ? 'Grupo' : chat.phone}
           </p>
         </div>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+        <Button variant="ghost" size="icon" className="h-11 w-11 text-muted-foreground">
           <MoreVertical className="w-4 h-4" />
         </Button>
       </div>
 
       {/* Messages Area */}
       <ScrollArea className="flex-1 bg-muted/20">
-        <div className="p-4 space-y-1 min-h-full flex flex-col justify-end">
+        <div className="p-3 space-y-1 min-h-full flex flex-col justify-end">
           {loading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
             </div>
           ) : messages.length === 0 ? (
             <div className="flex items-center justify-center py-12 text-muted-foreground">
-              <p className="text-xs">Nenhuma mensagem encontrada</p>
+              <p className="text-sm">Nenhuma mensagem encontrada</p>
             </div>
           ) : (
             messages.map((msg) => (
               <div key={msg.id} className={cn("flex", msg.fromMe ? "justify-end" : "justify-start")}>
                 <div className={cn(
-                  "max-w-[75%] rounded-lg px-3 py-2 shadow-sm",
+                  "max-w-[80%] rounded-lg px-3 py-2 shadow-sm",
                   msg.fromMe
                     ? "bg-primary/15 text-foreground rounded-br-sm"
                     : "bg-card text-foreground rounded-bl-sm border border-border/50"
                 )}>
                   {msg.senderName && !msg.fromMe && (
-                    <p className="text-[10px] font-semibold text-primary mb-0.5">{msg.senderName}</p>
+                    <p className="text-[11px] font-semibold text-primary mb-0.5">{msg.senderName}</p>
                   )}
                   <p className="text-sm whitespace-pre-wrap break-words">{msg.text || `[${msg.type}]`}</p>
                   <div className={cn("flex items-center gap-1 mt-1", msg.fromMe ? "justify-end" : "justify-start")}>
@@ -296,23 +296,17 @@ function MessageView({ chat, messages, loading, onSend, onBack }: {
       </ScrollArea>
 
       {/* Input Bar */}
-      <div className="flex items-center gap-2 px-3 py-2 border-t border-border bg-card">
-        <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground shrink-0">
-          <Smile className="w-5 h-5" />
-        </Button>
-        <Button variant="ghost" size="icon" className="h-9 w-9 text-muted-foreground shrink-0">
-          <Paperclip className="w-5 h-5" />
-        </Button>
+      <div className="flex items-center gap-2 px-2 py-2 border-t border-border bg-card">
         <Input
           placeholder="Digite uma mensagem..."
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
-          className="flex-1 h-9 text-sm bg-muted/50 border-0"
+          className="flex-1 h-11 text-sm bg-muted/50 border-0"
         />
         <Button
           size="icon"
-          className="h-9 w-9 shrink-0"
+          className="h-11 w-11 shrink-0"
           onClick={handleSend}
           disabled={!text.trim() || sending}
         >
@@ -333,48 +327,69 @@ export default function WhatsAppChatPage() {
   const [loadingChats, setLoadingChats] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const selectedChatRef = useRef<Chat | null>(null);
 
-  const fetchChats = useCallback(async () => {
-    setLoadingChats(true);
+  // Keep ref in sync
+  useEffect(() => {
+    selectedChatRef.current = selectedChat;
+  }, [selectedChat]);
+
+  const fetchChats = useCallback(async (silent = false) => {
+    if (!silent) setLoadingChats(true);
     try {
       const data = await apiCall('chats');
       if (data.error) {
-        toast.error(data.error);
+        if (!silent) toast.error(data.error);
         return;
       }
       const parsed = (data.chats || []).map(parseChat);
-      // Sort by most recent timestamp
       parsed.sort((a: Chat, b: Chat) => (b.timestamp || 0) - (a.timestamp || 0));
       setChats(parsed);
     } catch (err: any) {
-      toast.error(err.message || 'Erro ao carregar conversas');
+      if (!silent) toast.error(err.message || 'Erro ao carregar conversas');
     } finally {
-      setLoadingChats(false);
+      if (!silent) setLoadingChats(false);
     }
   }, []);
 
+  const fetchMessages = useCallback(async (chatId: string, silent = false) => {
+    if (!silent) setLoadingMessages(true);
+    try {
+      const data = await apiCall('messages', { chatId, count: 100 });
+      if (data.error) {
+        if (!silent) toast.error(data.error);
+        return;
+      }
+      const parsed = (data.messages || []).map(parseMessage);
+      parsed.sort((a: Message, b: Message) => (a.timestamp || 0) - (b.timestamp || 0));
+      setMessages(parsed);
+    } catch (err: any) {
+      if (!silent) toast.error(err.message || 'Erro ao carregar mensagens');
+    } finally {
+      if (!silent) setLoadingMessages(false);
+    }
+  }, []);
+
+  // Initial load
   useEffect(() => {
     fetchChats();
   }, [fetchChats]);
 
-  const fetchMessages = useCallback(async (chatId: string) => {
-    setLoadingMessages(true);
-    try {
-      const data = await apiCall('messages', { chatId, count: 100 });
-      if (data.error) {
-        toast.error(data.error);
-        return;
-      }
-      const parsed = (data.messages || []).map(parseMessage);
-      // Sort oldest first
-      parsed.sort((a: Message, b: Message) => (a.timestamp || 0) - (b.timestamp || 0));
-      setMessages(parsed);
-    } catch (err: any) {
-      toast.error(err.message || 'Erro ao carregar mensagens');
-    } finally {
-      setLoadingMessages(false);
-    }
-  }, []);
+  // Polling: chat list every 15s
+  useEffect(() => {
+    const interval = setInterval(() => fetchChats(true), 15000);
+    return () => clearInterval(interval);
+  }, [fetchChats]);
+
+  // Polling: messages every 5s when chat selected
+  useEffect(() => {
+    if (!selectedChat) return;
+    const interval = setInterval(() => {
+      const current = selectedChatRef.current;
+      if (current) fetchMessages(current.chatId, true);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [selectedChat, fetchMessages]);
 
   const handleSelectChat = (chat: Chat) => {
     setSelectedChat(chat);
@@ -405,15 +420,15 @@ export default function WhatsAppChatPage() {
 
   return (
     <AppLayout>
-      <div className="space-y-4">
+      <div className="space-y-3">
         <div>
-          <h1 className="text-xl font-bold text-foreground tracking-tight">WhatsApp Chat</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Visualize e responda conversas do seu WhatsApp conectado.
+          <h1 className="text-lg font-bold text-foreground tracking-tight">WhatsApp Chat</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            Visualize e responda conversas em tempo real.
           </p>
         </div>
 
-        <div className="border border-border rounded-xl overflow-hidden bg-card" style={{ height: 'calc(100vh - 220px)', minHeight: '500px' }}>
+        <div className="border border-border rounded-xl overflow-hidden bg-card" style={{ height: 'calc(100vh - 180px)', minHeight: '400px' }}>
           <div className="flex h-full">
             {/* Sidebar */}
             <div className={cn(
@@ -427,7 +442,7 @@ export default function WhatsAppChatPage() {
                 loading={loadingChats}
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
-                onRefresh={fetchChats}
+                onRefresh={() => fetchChats(false)}
               />
             </div>
 
