@@ -221,7 +221,7 @@ Deno.serve(async (req) => {
         .single();
 
       if (instance) {
-        // UazAPI v2: POST /instance/disconnect
+        // Step 1: Disconnect the session
         await tryFetch(`${UAZAPI_URL}/instance/disconnect`, {
           method: "POST",
           headers: { 
@@ -231,9 +231,22 @@ Deno.serve(async (req) => {
           body: JSON.stringify({}),
         });
 
+        // Step 2: Delete the instance from UazAPI
+        const deleteResult = await tryFetch(`${UAZAPI_URL}/instance/delete`, {
+          method: "DELETE",
+          headers: { 
+            "Content-Type": "application/json",
+            "token": instance.instance_token || "",
+            "admintoken": UAZAPI_ADMIN_TOKEN,
+          },
+          body: JSON.stringify({ name: instance.instance_name }),
+        });
+        console.log("Delete instance response:", JSON.stringify(deleteResult.data).substring(0, 500));
+
+        // Step 3: Remove the record from the database
         await adminClient
           .from("whatsapp_instances")
-          .update({ status: "disconnected", phone_number: null })
+          .delete()
           .eq("tenant_id", tenantId);
       }
 
