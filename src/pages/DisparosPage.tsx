@@ -184,8 +184,8 @@ function WhatsAppTab() {
           <div className="flex items-center justify-between p-4 rounded-xl border border-border bg-muted/30">
             <div className="flex items-center gap-3">
               {status === 'connected' ? (
-                <div className="w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
-                  <Wifi className="w-5 h-5 text-green-500" />
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Wifi className="w-5 h-5 text-primary" />
                 </div>
               ) : (
                 <div className="w-10 h-10 rounded-full bg-muted flex items-center justify-center">
@@ -588,7 +588,7 @@ function CampaignsTab() {
 
                 <div className="flex items-center gap-4 text-xs text-muted-foreground">
                   <span>{c.total_contatos} contatos</span>
-                  <span className="text-green-500">{c.enviados} enviados</span>
+                  <span className="text-primary">{c.enviados} enviados</span>
                   <span className="text-destructive">{c.falhas} falhas</span>
                 </div>
 
@@ -753,7 +753,7 @@ function CampaignsTab() {
                   <TableCell className="text-xs">{c.nome || '-'}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      {c.status === 'sent' && <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />}
+                      {c.status === 'sent' && <CheckCircle2 className="w-3.5 h-3.5 text-primary" />}
                       {c.status === 'failed' && <XCircle className="w-3.5 h-3.5 text-destructive" />}
                       {c.status === 'pending' && <Clock className="w-3.5 h-3.5 text-muted-foreground" />}
                       {statusBadge(c.status)}
