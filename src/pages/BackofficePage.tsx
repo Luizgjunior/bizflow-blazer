@@ -412,12 +412,19 @@ function UsersTab() {
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['backoffice-users'],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*, user_roles(role), tenants(nome)')
-        .order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
+      const [profilesRes, rolesRes, tenantsRes] = await Promise.all([
+        supabase.from('profiles').select('*').order('created_at', { ascending: false }),
+        supabase.from('user_roles').select('*'),
+        supabase.from('tenants').select('id, nome'),
+      ]);
+      if (profilesRes.error) throw profilesRes.error;
+      const roles = rolesRes.data ?? [];
+      const tenants = tenantsRes.data ?? [];
+      return (profilesRes.data ?? []).map((p: any) => ({
+        ...p,
+        user_roles: roles.filter((r: any) => r.user_id === p.id),
+        tenants: tenants.find((t: any) => t.id === p.tenant_id) || null,
+      }));
     },
   });
 
