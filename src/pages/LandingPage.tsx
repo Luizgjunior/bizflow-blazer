@@ -495,7 +495,7 @@ export default function LandingPage() {
               <Button
                 size="lg"
                 variant="secondary"
-                onClick={() => navigate('/planos')}
+                onClick={() => window.open('https://pay.cakto.com.br/n2jz5qi', '_blank')}
                 className="w-full sm:w-auto gap-2 text-base font-semibold"
               >
                 Começar Agora <ArrowRight className="w-4 h-4" />
