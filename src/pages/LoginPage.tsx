@@ -134,7 +134,7 @@ export default function LoginPage() {
                 </a>
               </div>
             </>
-          ) : mode === 'signup' ? (
+          ) : (
             <>
               <h2 className="text-lg font-semibold text-foreground mb-1">Criar Conta</h2>
               <p className="text-sm text-muted-foreground mb-6">
