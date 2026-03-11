@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
       const res = await fetch(`${UAZAPI_URL}/message/sendText`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "token": token },
-        body: JSON.stringify({ phone, message }),
+        body: JSON.stringify({ phone, text: message }),
       });
       const data = await res.json();
 
