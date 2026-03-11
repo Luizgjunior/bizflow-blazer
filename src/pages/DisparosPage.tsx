@@ -487,6 +487,8 @@ function CampaignsTab() {
       if (data.error) {
         toast.error(data.error);
       } else {
+        setReport(data);
+        setShowReport(true);
         toast.success(`Campanha finalizada: ${data.enviados} enviados, ${data.falhas} falhas`);
         fetchCampaigns();
       }
