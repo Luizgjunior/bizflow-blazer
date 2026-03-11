@@ -5,73 +5,91 @@ import { supabase } from '@/integrations/supabase/client';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
-  Search, Send, ArrowLeft, MessageSquare, Loader2, Phone, Video, MoreVertical, Smile, Paperclip, Check, CheckCheck,
+  Search, Send, ArrowLeft, MessageSquare, Loader2, MoreVertical, Smile, Paperclip, CheckCheck, RefreshCw,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 type Chat = {
   id: string;
+  chatId: string;
   name: string;
   lastMessage: string;
-  timestamp: string;
+  timestamp: number;
+  timestampFormatted: string;
   unreadCount: number;
   isGroup: boolean;
   phone: string;
+  image: string;
 };
 
 type Message = {
   id: string;
   text: string;
-  timestamp: string;
+  timestamp: number;
+  timestampFormatted: string;
   fromMe: boolean;
   senderName?: string;
   type: string;
 };
 
+function formatTs(ts: number): string {
+  if (!ts) return '';
+  const date = ts > 1e12 ? new Date(ts) : new Date(ts * 1000);
+  if (isNaN(date.getTime())) return '';
+  const now = new Date();
+  const isToday = date.toDateString() === now.toDateString();
+  if (isToday) return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return 'Ontem';
+  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+}
+
 function parseChat(raw: any): Chat {
-  const id = raw.id || raw.jid || raw.chatId || '';
-  const name = raw.name || raw.pushName || raw.notify || raw.contact?.name || id.replace(/@.*/, '');
-  const lastMsg = raw.lastMessage?.body || raw.lastMessage?.message?.conversation || raw.lastMessage?.text || raw.msg || '';
-  const ts = raw.lastMessage?.timestamp || raw.timestamp || raw.t || 0;
-  const unread = raw.unreadCount || raw.unread || raw.count || 0;
-  const isGroup = id.includes('@g.us');
-  const phone = id.replace(/@.*/, '');
+  const chatId = raw.wa_chatid || raw.id || '';
+  const name = raw.wa_contactName || raw.wa_name || raw.name || raw.lead_name || chatId.replace(/@.*/, '');
+  const phone = raw.phone || chatId.replace(/@.*/, '');
+  const lastMsg = raw.wa_lastMessageTextVote || '';
+  const ts = raw.wa_lastMsgTimestamp || 0;
+  const unread = raw.wa_unreadCount || 0;
+  const isGroup = raw.wa_isGroup || false;
+  const image = raw.imagePreview || raw.image || '';
 
   return {
-    id,
+    id: raw.id || chatId,
+    chatId,
     name: name || phone,
-    lastMessage: typeof lastMsg === 'string' ? lastMsg : '',
-    timestamp: ts ? formatTimestamp(ts) : '',
+    lastMessage: lastMsg,
+    timestamp: ts,
+    timestampFormatted: formatTs(ts),
     unreadCount: unread,
     isGroup,
     phone,
+    image,
   };
 }
 
 function parseMessage(raw: any): Message {
   const id = raw.id || raw.key?.id || raw.messageId || Math.random().toString();
-  const text = raw.body || raw.message?.conversation || raw.message?.extendedTextMessage?.text || raw.text || raw.content || '';
-  const ts = raw.timestamp || raw.messageTimestamp || raw.t || 0;
+  const text = raw.body || raw.message?.conversation || raw.message?.extendedTextMessage?.text
+    || raw.text || raw.content || raw.wa_lastMessageTextVote || '';
+  const ts = raw.timestamp || raw.messageTimestamp || raw.t || raw.wa_lastMsgTimestamp || 0;
   const fromMe = raw.fromMe ?? raw.key?.fromMe ?? false;
   const senderName = raw.pushName || raw.senderName || raw.notify || '';
-  const type = raw.type || raw.messageType || 'text';
+  const type = raw.type || raw.messageType || raw.wa_lastMessageType || 'text';
 
-  return { id, text: typeof text === 'string' ? text : JSON.stringify(text), timestamp: formatTimestamp(ts), fromMe, senderName, type };
-}
-
-function formatTimestamp(ts: number | string): string {
-  if (!ts) return '';
-  const date = typeof ts === 'number' 
-    ? (ts > 1e12 ? new Date(ts) : new Date(ts * 1000)) 
-    : new Date(ts);
-  if (isNaN(date.getTime())) return '';
-  const now = new Date();
-  const isToday = date.toDateString() === now.toDateString();
-  if (isToday) return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+  return {
+    id,
+    text: typeof text === 'string' ? text : JSON.stringify(text),
+    timestamp: ts,
+    timestampFormatted: formatTs(ts),
+    fromMe,
+    senderName,
+    type,
+  };
 }
 
 function getInitials(name: string) {
@@ -105,13 +123,14 @@ async function apiCall(action: string, body?: any) {
 }
 
 /* ── Chat List Sidebar ── */
-function ChatList({ chats, selectedId, onSelect, loading, searchTerm, onSearchChange }: {
+function ChatList({ chats, selectedId, onSelect, loading, searchTerm, onSearchChange, onRefresh }: {
   chats: Chat[];
   selectedId: string | null;
   onSelect: (chat: Chat) => void;
   loading: boolean;
   searchTerm: string;
   onSearchChange: (v: string) => void;
+  onRefresh: () => void;
 }) {
   const filtered = chats.filter(c =>
     c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -120,9 +139,13 @@ function ChatList({ chats, selectedId, onSelect, loading, searchTerm, onSearchCh
 
   return (
     <div className="flex flex-col h-full">
-      {/* Header */}
       <div className="p-3 border-b border-border bg-card">
-        <h2 className="text-sm font-semibold text-foreground mb-2">Conversas</h2>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-sm font-semibold text-foreground">Conversas</h2>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onRefresh} disabled={loading}>
+            <RefreshCw className={cn("w-3.5 h-3.5", loading && "animate-spin")} />
+          </Button>
+        </div>
         <div className="relative">
           <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
           <Input
@@ -134,7 +157,6 @@ function ChatList({ chats, selectedId, onSelect, loading, searchTerm, onSearchCh
         </div>
       </div>
 
-      {/* List */}
       <ScrollArea className="flex-1">
         {loading ? (
           <div className="flex items-center justify-center py-12">
@@ -156,6 +178,7 @@ function ChatList({ chats, selectedId, onSelect, loading, searchTerm, onSearchCh
               )}
             >
               <Avatar className="w-10 h-10 shrink-0">
+                {chat.image && <AvatarImage src={chat.image} />}
                 <AvatarFallback className={cn("text-xs text-white font-semibold", getAvatarColor(chat.name))}>
                   {getInitials(chat.name)}
                 </AvatarFallback>
@@ -163,12 +186,15 @@ function ChatList({ chats, selectedId, onSelect, loading, searchTerm, onSearchCh
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between">
                   <p className="text-sm font-medium text-foreground truncate">{chat.name}</p>
-                  <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">{chat.timestamp}</span>
+                  <span className={cn(
+                    "text-[10px] whitespace-nowrap ml-2",
+                    chat.unreadCount > 0 ? "text-primary font-semibold" : "text-muted-foreground"
+                  )}>{chat.timestampFormatted}</span>
                 </div>
                 <div className="flex items-center justify-between mt-0.5">
-                  <p className="text-xs text-muted-foreground truncate">{chat.lastMessage || 'Sem mensagens'}</p>
+                  <p className="text-xs text-muted-foreground truncate pr-2">{chat.lastMessage || 'Sem mensagens'}</p>
                   {chat.unreadCount > 0 && (
-                    <span className="ml-2 min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center px-1">
+                    <span className="min-w-[18px] h-[18px] rounded-full bg-primary text-primary-foreground text-[10px] font-bold flex items-center justify-center px-1 shrink-0">
                       {chat.unreadCount}
                     </span>
                   )}
@@ -217,26 +243,24 @@ function MessageView({ chat, messages, loading, onSend, onBack }: {
           <ArrowLeft className="w-5 h-5" />
         </button>
         <Avatar className="w-9 h-9">
+          {chat.image && <AvatarImage src={chat.image} />}
           <AvatarFallback className={cn("text-xs text-white font-semibold", getAvatarColor(chat.name))}>
             {getInitials(chat.name)}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-foreground truncate">{chat.name}</p>
-          <p className="text-[10px] text-muted-foreground">{chat.phone}</p>
+          <p className="text-[10px] text-muted-foreground">
+            {chat.isGroup ? 'Grupo' : chat.phone}
+          </p>
         </div>
-        <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-            <Phone className="w-4 h-4" />
-          </Button>
-          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
-            <MoreVertical className="w-4 h-4" />
-          </Button>
-        </div>
+        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground">
+          <MoreVertical className="w-4 h-4" />
+        </Button>
       </div>
 
       {/* Messages Area */}
-      <ScrollArea className="flex-1 bg-[hsl(var(--muted)/0.3)]">
+      <ScrollArea className="flex-1 bg-muted/20">
         <div className="p-4 space-y-1 min-h-full flex flex-col justify-end">
           {loading ? (
             <div className="flex items-center justify-center py-12">
@@ -248,27 +272,19 @@ function MessageView({ chat, messages, loading, onSend, onBack }: {
             </div>
           ) : (
             messages.map((msg) => (
-              <div
-                key={msg.id}
-                className={cn(
-                  "flex",
-                  msg.fromMe ? "justify-end" : "justify-start"
-                )}
-              >
-                <div
-                  className={cn(
-                    "max-w-[75%] rounded-lg px-3 py-2 shadow-sm",
-                    msg.fromMe
-                      ? "bg-primary/15 text-foreground rounded-br-sm"
-                      : "bg-card text-foreground rounded-bl-sm border border-border/50"
-                  )}
-                >
+              <div key={msg.id} className={cn("flex", msg.fromMe ? "justify-end" : "justify-start")}>
+                <div className={cn(
+                  "max-w-[75%] rounded-lg px-3 py-2 shadow-sm",
+                  msg.fromMe
+                    ? "bg-primary/15 text-foreground rounded-br-sm"
+                    : "bg-card text-foreground rounded-bl-sm border border-border/50"
+                )}>
                   {msg.senderName && !msg.fromMe && (
                     <p className="text-[10px] font-semibold text-primary mb-0.5">{msg.senderName}</p>
                   )}
                   <p className="text-sm whitespace-pre-wrap break-words">{msg.text || `[${msg.type}]`}</p>
                   <div className={cn("flex items-center gap-1 mt-1", msg.fromMe ? "justify-end" : "justify-start")}>
-                    <span className="text-[10px] text-muted-foreground">{msg.timestamp}</span>
+                    <span className="text-[10px] text-muted-foreground">{msg.timestampFormatted}</span>
                     {msg.fromMe && <CheckCheck className="w-3 h-3 text-primary" />}
                   </div>
                 </div>
@@ -327,11 +343,8 @@ export default function WhatsAppChatPage() {
         return;
       }
       const parsed = (data.chats || []).map(parseChat);
-      // Sort: most recent first
-      parsed.sort((a: Chat, b: Chat) => {
-        if (!a.timestamp && !b.timestamp) return 0;
-        return b.timestamp.localeCompare(a.timestamp);
-      });
+      // Sort by most recent timestamp
+      parsed.sort((a: Chat, b: Chat) => (b.timestamp || 0) - (a.timestamp || 0));
       setChats(parsed);
     } catch (err: any) {
       toast.error(err.message || 'Erro ao carregar conversas');
@@ -353,6 +366,8 @@ export default function WhatsAppChatPage() {
         return;
       }
       const parsed = (data.messages || []).map(parseMessage);
+      // Sort oldest first
+      parsed.sort((a: Message, b: Message) => (a.timestamp || 0) - (b.timestamp || 0));
       setMessages(parsed);
     } catch (err: any) {
       toast.error(err.message || 'Erro ao carregar mensagens');
@@ -363,22 +378,22 @@ export default function WhatsAppChatPage() {
 
   const handleSelectChat = (chat: Chat) => {
     setSelectedChat(chat);
-    fetchMessages(chat.id);
+    fetchMessages(chat.chatId);
   };
 
   const handleSend = async (text: string) => {
     if (!selectedChat) return;
     try {
-      const data = await apiCall('send', { chatId: selectedChat.id, message: text });
+      const data = await apiCall('send', { chatId: selectedChat.chatId, message: text });
       if (data.error) {
         toast.error(data.error);
         return;
       }
-      // Add optimistic message
       const newMsg: Message = {
         id: Date.now().toString(),
         text,
-        timestamp: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        timestamp: Date.now(),
+        timestampFormatted: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
         fromMe: true,
         type: 'text',
       };
@@ -400,7 +415,7 @@ export default function WhatsAppChatPage() {
 
         <div className="border border-border rounded-xl overflow-hidden bg-card" style={{ height: 'calc(100vh - 220px)', minHeight: '500px' }}>
           <div className="flex h-full">
-            {/* Sidebar - Chat list */}
+            {/* Sidebar */}
             <div className={cn(
               "w-full lg:w-80 xl:w-96 border-r border-border h-full",
               selectedChat ? "hidden lg:flex lg:flex-col" : "flex flex-col"
@@ -412,10 +427,11 @@ export default function WhatsAppChatPage() {
                 loading={loadingChats}
                 searchTerm={searchTerm}
                 onSearchChange={setSearchTerm}
+                onRefresh={fetchChats}
               />
             </div>
 
-            {/* Main - Messages */}
+            {/* Messages */}
             <div className={cn(
               "flex-1 h-full",
               !selectedChat ? "hidden lg:flex" : "flex"
