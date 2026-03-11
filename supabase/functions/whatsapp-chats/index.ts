@@ -115,14 +115,37 @@ Deno.serve(async (req) => {
       }
 
       const phone = chatId.replace(/@.*/, "");
-      console.log("Sending text to phone:", phone, "chatId:", chatId);
+      console.log("Sending text to phone:", phone, "chatId:", chatId, "UAZAPI_URL:", UAZAPI_URL);
+      
+      // Try chatid format first (UazAPI v2 style)
+      const sendBody = { phone, text: message };
+      console.log("Request body:", JSON.stringify(sendBody));
+      
       const res = await fetch(`${UAZAPI_URL}/message/sendText`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "token": token },
-        body: JSON.stringify({ phone, text: message }),
+        body: JSON.stringify(sendBody),
       });
       const data = await res.json();
-      console.log("sendText response:", res.status, JSON.stringify(data));
+      console.log("sendText HTTP status:", res.status, "response:", JSON.stringify(data).substring(0, 500));
+
+      // If 405, try alternative endpoint
+      if (data.code === 405) {
+        console.log("Trying /chat/sendText as fallback...");
+        const res2 = await fetch(`${UAZAPI_URL}/chat/sendText`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "token": token },
+          body: JSON.stringify({ chatid: chatId, text: message }),
+        });
+        const data2 = await res2.json();
+        console.log("chat/sendText response:", res2.status, JSON.stringify(data2).substring(0, 500));
+        
+        if (data2.code !== 405) {
+          return new Response(JSON.stringify(data2), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+      }
 
       return new Response(JSON.stringify(data), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
