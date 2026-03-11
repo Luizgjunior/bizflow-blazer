@@ -86,7 +86,7 @@ const PLANS = [
   {
     id: 'enterprise', name: 'Enterprise', price: 197, leads: '32.000',
     icon: Rocket,
-    features: ['32.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'Automações', 'Webhook personalizado', 'Suporte dedicado'],
+    features: ['32.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'Automações', 'Disparos WhatsApp', 'Webhook personalizado', 'Suporte dedicado'],
   },
 ];
 
