@@ -22,6 +22,18 @@ import {
 import logoImg from '@/assets/logo.png';
 import { useState } from 'react';
 
+// Prefetch map for lazy-loaded routes
+const prefetchMap: Record<string, () => void> = {
+  '/icps': () => import('@/pages/ICPsPage'),
+  '/runs': () => import('@/pages/RunsPage'),
+  '/exports': () => import('@/pages/ExportsPage'),
+  '/automacao': () => import('@/pages/AutomacaoPage'),
+  '/disparos': () => import('@/pages/DisparosPage'),
+  '/whatsapp-chat': () => import('@/pages/WhatsAppChatPage'),
+  '/crm': () => import('@/pages/CrmKanbanPage'),
+  '/crm-dashboard': () => import('@/pages/CrmDashboardPage'),
+  '/backoffice': () => import('@/pages/BackofficePage'),
+};
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
