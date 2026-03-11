@@ -264,6 +264,8 @@ function CampaignsTab() {
   const [showCreate, setShowCreate] = useState(false);
   const [showDetail, setShowDetail] = useState<string | null>(null);
   const [contacts, setContacts] = useState<CampaignContact[]>([]);
+  const [showReport, setShowReport] = useState(false);
+  const [report, setReport] = useState<any>(null);
 
   // Create form state
   const [nome, setNome] = useState('');
