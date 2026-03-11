@@ -122,7 +122,7 @@ function WhatsAppTab() {
         setPhoneNumber(data.phone_number || '');
         toast.success('WhatsApp já está conectado!');
       } else if (data.qr_code) {
-        setQrCode(data.qr_code);
+        setQrCode(typeof data.qr_code === 'string' ? data.qr_code : JSON.stringify(data.qr_code));
         setShowQrDialog(true);
         setPolling(true);
         setStatus('connecting');
@@ -235,7 +235,7 @@ function WhatsAppTab() {
             {qrCode ? (
               <div className="p-4 bg-white rounded-xl">
                 <img
-                  src={qrCode.startsWith('data:') ? qrCode : `data:image/png;base64,${qrCode}`}
+                  src={typeof qrCode === 'string' ? (qrCode.startsWith('data:') ? qrCode : `data:image/png;base64,${qrCode}`) : ''}
                   alt="QR Code WhatsApp"
                   className="w-64 h-64"
                 />
