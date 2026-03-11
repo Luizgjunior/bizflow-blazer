@@ -59,7 +59,12 @@ Deno.serve(async (req) => {
       const res = await fetch(`${UAZAPI_URL}/chat/find`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "token": token },
-        body: JSON.stringify({}),
+        body: JSON.stringify({
+          operator: "AND",
+          sort: "-wa_lastMsgTimestamp",
+          limit: 50,
+          offset: 0,
+        }),
       });
       const data = await res.json();
       const chats = Array.isArray(data) ? data : (data.data || data.chats || []);
@@ -103,7 +108,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── SEND MESSAGE ──
+    // ── SEND TEXT MESSAGE ── UazAPI v2: POST /send/text
     if (action === "send") {
       const body = await req.json();
       const { chatId, message } = body;
@@ -114,18 +119,19 @@ Deno.serve(async (req) => {
         });
       }
 
-      const phone = chatId.replace(/@.*/, "");
-      const res = await fetch(`${UAZAPI_URL}/message/sendText`, {
+      const number = chatId.replace(/@.*/, "");
+      const res = await fetch(`${UAZAPI_URL}/send/text`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "token": token },
-        body: JSON.stringify({ phone, message }),
+        body: JSON.stringify({ number, text: message }),
       });
       const data = await res.json();
+      console.log("send/text response:", res.status, JSON.stringify(data).substring(0, 500));
 
-      if (data.code === 405) {
-        console.error("sendText 405 - UazAPI may not allow sending on this plan/instance");
-        return new Response(JSON.stringify({ error: "Envio não permitido. Verifique se seu plano UazAPI permite envio de mensagens." }), {
-          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+      if (!res.ok || data.error || data.code === 405) {
+        console.error("send/text failed:", JSON.stringify(data));
+        return new Response(JSON.stringify({ error: data.error || data.message || "Envio não permitido." }), {
+          status: res.ok ? 403 : res.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
@@ -134,7 +140,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── SEND MEDIA ──
+    // ── SEND MEDIA ── UazAPI v2: POST /send/media
     if (action === "sendMedia") {
       const body = await req.json();
       const { chatId, mediaUrl, mediaType, caption } = body;
@@ -145,16 +151,63 @@ Deno.serve(async (req) => {
         });
       }
 
-      const phone = chatId.replace(/@.*/, "");
-      const res = await fetch(`${UAZAPI_URL}/message/sendMedia`, {
+      const number = chatId.replace(/@.*/, "");
+      const res = await fetch(`${UAZAPI_URL}/send/media`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "token": token },
         body: JSON.stringify({
-          phone,
-          media: mediaUrl,
+          number,
           type: mediaType || "image",
+          file: mediaUrl,
           caption: caption || "",
         }),
+      });
+      const data = await res.json();
+      console.log("send/media response:", res.status, JSON.stringify(data).substring(0, 500));
+
+      return new Response(JSON.stringify(data), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── MARK AS READ ── UazAPI v2: POST /chat/read
+    if (action === "markRead") {
+      const body = await req.json();
+      const { chatId } = body;
+
+      if (!chatId) {
+        return new Response(JSON.stringify({ error: "chatId required" }), { 
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+
+      const res = await fetch(`${UAZAPI_URL}/chat/read`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "token": token },
+        body: JSON.stringify({ number: chatId, read: true }),
+      });
+      const data = await res.json();
+
+      return new Response(JSON.stringify(data), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── CHECK NUMBER ── UazAPI v2: POST /chat/check
+    if (action === "checkNumber") {
+      const body = await req.json();
+      const { numbers } = body;
+
+      if (!numbers || !Array.isArray(numbers)) {
+        return new Response(JSON.stringify({ error: "numbers array required" }), { 
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+
+      const res = await fetch(`${UAZAPI_URL}/chat/check`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "token": token },
+        body: JSON.stringify({ numbers }),
       });
       const data = await res.json();
 

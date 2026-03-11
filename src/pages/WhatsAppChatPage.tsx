@@ -487,6 +487,8 @@ export default function WhatsAppChatPage() {
   const handleSelectChat = (chat: Chat) => {
     setSelectedChat(chat);
     fetchMessages(chat.chatId);
+    // Mark as read silently
+    apiCall('markRead', { chatId: chat.chatId }).catch(() => {});
   };
 
   const handleSend = async (text: string) => {

@@ -111,17 +111,17 @@ Deno.serve(async (req) => {
         let sendResult;
 
         if (campaign.tipo === "media" && campaign.media_url) {
-          // Send media message
-          sendResult = await fetch(`${UAZAPI_URL}/message/sendMedia`, {
+          // Send media message - UazAPI v2: POST /send/media
+          sendResult = await fetch(`${UAZAPI_URL}/send/media`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
               "token": instanceToken,
             },
             body: JSON.stringify({
-              phone,
-              media: campaign.media_url,
+              number: phone,
               type: campaign.media_type || "image",
+              file: campaign.media_url,
               caption: campaign.mensagem || "",
             }),
           });
@@ -145,16 +145,16 @@ Deno.serve(async (req) => {
             }),
           });
         } else {
-          // Send text message
-          sendResult = await fetch(`${UAZAPI_URL}/message/sendText`, {
+          // Send text message - UazAPI v2: POST /send/text
+          sendResult = await fetch(`${UAZAPI_URL}/send/text`, {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
               "token": instanceToken,
             },
             body: JSON.stringify({
-              phone,
-              message: campaign.mensagem || "",
+              number: phone,
+              text: campaign.mensagem || "",
             }),
           });
         }
