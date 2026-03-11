@@ -22,13 +22,12 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
     }
 
-    const userId = claimsData.claims.sub;
+    const userId = user.id;
 
     // Get user's tenant_id
     const { data: profile } = await supabase.from("profiles").select("tenant_id").eq("id", userId).single();
@@ -63,7 +62,7 @@ Deno.serve(async (req) => {
         // Create new instance on UazAPI
         instanceName = `tenant_${tenantId.substring(0, 8)}`;
 
-        const createRes = await fetch(`${UAZAPI_URL}/instance/init`, {
+        const createRes = await fetch(`${UAZAPI_URL}/instance/create`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -73,7 +72,8 @@ Deno.serve(async (req) => {
         });
 
         const createData = await createRes.json();
-        instanceToken = createData.token || createData.instance?.token || "";
+        console.log("Create instance response:", JSON.stringify(createData));
+        instanceToken = createData.token || createData.instance?.token || createData.data?.token || "";
 
         // Save instance in DB
         await adminClient.from("whatsapp_instances").insert({
@@ -88,33 +88,29 @@ Deno.serve(async (req) => {
           phone_number: existing.phone_number 
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       } else {
-        // Re-initialize if disconnected
-        await fetch(`${UAZAPI_URL}/instance/init`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "admintoken": UAZAPI_ADMIN_TOKEN,
-          },
-          body: JSON.stringify({ instanceName }),
-        });
-
+        // Update status to connecting
         await adminClient
           .from("whatsapp_instances")
           .update({ status: "connecting" })
           .eq("tenant_id", tenantId);
       }
 
-      // Get QR Code
-      const qrRes = await fetch(`${UAZAPI_URL}/instance/qr`, {
+      // Get QR Code / connection state
+      const qrRes = await fetch(`${UAZAPI_URL}/instance/connectionState/${instanceName}`, {
         method: "GET",
         headers: { "token": instanceToken || "" },
       });
 
       const qrData = await qrRes.json();
+      console.log("ConnectionState response:", JSON.stringify(qrData));
+
+      // Extract QR code from various possible response formats
+      const qrValue = qrData.qrcode || qrData.base64 || qrData.qr || qrData.data?.qrcode || qrData.data?.base64 || qrData.data?.qr || null;
+      const qrString = typeof qrValue === 'string' ? qrValue : null;
 
       return new Response(JSON.stringify({
-        status: "connecting",
-        qr_code: qrData.qrcode || qrData.base64 || qrData.data || null,
+        status: qrData.state === "connected" || qrData.state === "open" ? "connected" : "connecting",
+        qr_code: qrString,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -132,17 +128,17 @@ Deno.serve(async (req) => {
       }
 
       // Check real status on UazAPI
-      const statusRes = await fetch(`${UAZAPI_URL}/instance/connectionState`, {
+      const statusRes = await fetch(`${UAZAPI_URL}/instance/connectionState/${instance.instance_name}`, {
         method: "GET",
         headers: { "token": instance.instance_token || "" },
       });
 
       const statusData = await statusRes.json();
+      console.log("Status response:", JSON.stringify(statusData));
       const connected = statusData.state === "connected" || statusData.state === "open";
 
       if (connected && instance.status !== "connected") {
-        // Update DB with connected status
-        const phoneNumber = statusData.phoneNumber || statusData.user?.id?.split("@")[0] || "";
+        const phoneNumber = statusData.phoneNumber || statusData.user?.id?.split("@")[0] || statusData.data?.phoneNumber || "";
         await adminClient
           .from("whatsapp_instances")
           .update({ status: "connected", phone_number: phoneNumber })
@@ -168,7 +164,7 @@ Deno.serve(async (req) => {
         .single();
 
       if (instance) {
-        await fetch(`${UAZAPI_URL}/instance/logout`, {
+        await fetch(`${UAZAPI_URL}/instance/logout/${instance.instance_name}`, {
           method: "DELETE",
           headers: { "token": instance.instance_token || "" },
         });
