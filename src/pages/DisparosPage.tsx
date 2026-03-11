@@ -753,7 +753,7 @@ function CampaignsTab() {
                   <TableCell className="text-xs">{c.nome || '-'}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">
-                      {c.status === 'sent' && <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />}
+                      {c.status === 'sent' && <CheckCircle2 className="w-3.5 h-3.5 text-primary" />}
                       {c.status === 'failed' && <XCircle className="w-3.5 h-3.5 text-destructive" />}
                       {c.status === 'pending' && <Clock className="w-3.5 h-3.5 text-muted-foreground" />}
                       {statusBadge(c.status)}
