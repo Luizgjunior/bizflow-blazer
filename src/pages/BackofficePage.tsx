@@ -734,9 +734,21 @@ function AssinaturasTab() {
   const { data: tenants = [], isLoading } = useQuery({
     queryKey: ['backoffice-financial-tenants'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('tenants').select('*').order('created_at', { ascending: false });
-      if (error) throw error;
-      return data;
+      const [tenantsRes, rolesRes, profilesRes] = await Promise.all([
+        supabase.from('tenants').select('*').order('created_at', { ascending: false }),
+        supabase.from('user_roles').select('user_id, role'),
+        supabase.from('profiles').select('id, nome, email, tenant_id'),
+      ]);
+      if (tenantsRes.error) throw tenantsRes.error;
+
+      // Find tenant_ids belonging to admin_global users
+      const adminUserIds = (rolesRes.data ?? []).filter((r: any) => r.role === 'admin_global').map((r: any) => r.user_id);
+      const adminTenantIds = new Set(
+        (profilesRes.data ?? []).filter((p: any) => adminUserIds.includes(p.id) && p.tenant_id).map((p: any) => p.tenant_id)
+      );
+
+      // Exclude admin tenants from financial reports
+      return (tenantsRes.data ?? []).filter((t: any) => !adminTenantIds.has(t.id));
     },
   });
 
