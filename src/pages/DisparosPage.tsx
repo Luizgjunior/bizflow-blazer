@@ -18,7 +18,7 @@ import { toast } from 'sonner';
 import {
   Smartphone, Wifi, WifiOff, QrCode, Send, Plus, Upload,
   FileSpreadsheet, Play, Eye, Loader2, CheckCircle2, XCircle, Clock,
-  MessageSquare, Image, ListChecks
+  MessageSquare, Image, ListChecks, BarChart3, Timer, AlertTriangle
 } from 'lucide-react';
 
 /* ── Types ── */
