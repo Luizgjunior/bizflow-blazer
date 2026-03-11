@@ -46,59 +46,79 @@ serve(async (req) => {
       });
     }
 
+    // First check tenant status from DB
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("tenant_id")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    const tenantId = profile?.tenant_id;
+    let tenantData: any = null;
+
+    if (tenantId) {
+      const { data } = await supabase
+        .from("tenants")
+        .select("ativo, plano, limites_consulta, stripe_customer_id, stripe_subscription_id, stripe_status")
+        .eq("id", tenantId)
+        .maybeSingle();
+      tenantData = data;
+    }
+
+    // Try Stripe check
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
 
-    if (customers.data.length === 0) {
-      return new Response(JSON.stringify({ subscribed: false }), {
+    if (customers.data.length > 0) {
+      const customerId = customers.data[0].id;
+      const subscriptions = await stripe.subscriptions.list({
+        customer: customerId,
+        status: "active",
+        limit: 1,
+      });
+
+      if (subscriptions.data.length > 0) {
+        const sub = subscriptions.data[0];
+        const subscriptionEnd = new Date(sub.current_period_end * 1000).toISOString();
+        const priceId = sub.items.data[0].price.id;
+        const planInfo = PRICE_TO_PLAN[priceId];
+        const plano = planInfo?.plano || "pro";
+
+        // Sync tenant with Stripe status
+        if (tenantId) {
+          await supabase.from("tenants").update({
+            ativo: true,
+            plano,
+            limites_consulta: planInfo?.limites || 6000,
+            stripe_customer_id: customerId,
+            stripe_subscription_id: sub.id,
+            stripe_status: "active",
+          }).eq("id", tenantId);
+        }
+
+        return new Response(JSON.stringify({
+          subscribed: true,
+          plano,
+          subscription_end: subscriptionEnd,
+          price_id: priceId,
+        }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
+    // Fallback: check tenant ativo status (e.g. Cakto or manually activated)
+    if (tenantData?.ativo) {
+      return new Response(JSON.stringify({
+        subscribed: true,
+        plano: tenantData.plano || "pro",
+        subscription_end: null,
+      }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const customerId = customers.data[0].id;
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customerId,
-      status: "active",
-      limit: 1,
-    });
-
-    const hasActiveSub = subscriptions.data.length > 0;
-    let plano: string | null = null;
-    let subscriptionEnd: string | null = null;
-    let priceId: string | null = null;
-
-    if (hasActiveSub) {
-      const sub = subscriptions.data[0];
-      subscriptionEnd = new Date(sub.current_period_end * 1000).toISOString();
-      priceId = sub.items.data[0].price.id;
-      const planInfo = PRICE_TO_PLAN[priceId];
-      plano = planInfo?.plano || "pro";
-
-      // Sync tenant with Stripe status
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("tenant_id")
-        .eq("id", user.id)
-        .maybeSingle();
-
-      if (profile?.tenant_id) {
-        await supabase.from("tenants").update({
-          ativo: true,
-          plano: plano,
-          limites_consulta: planInfo?.limites || 6000,
-          stripe_customer_id: customerId,
-          stripe_subscription_id: sub.id,
-          stripe_status: "active",
-        }).eq("id", profile.tenant_id);
-      }
-    }
-
-    return new Response(JSON.stringify({
-      subscribed: hasActiveSub,
-      plano,
-      subscription_end: subscriptionEnd,
-      price_id: priceId,
-    }), {
+    return new Response(JSON.stringify({ subscribed: false }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
