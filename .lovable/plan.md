@@ -1,100 +1,79 @@
 
 
-# Plano: Disparos WhatsApp com conexão via QR Code na sua UazAPI
+# Plano: Migrar para Stripe com 3 planos de assinatura
 
 ## Resumo
 
-Cada tenant conecta seu WhatsApp escaneando um QR Code direto no sistema. O QR Code é gerado pela sua instância UazAPI (centralizada). O tenant não precisa acessar o painel da UazAPI. Inclui envio de texto, mídia e templates, com suporte a leads prospectados e upload de planilha.
+Substituir a integração Cakto pela Stripe para gerenciar assinaturas mensais com 3 planos. Quando o pagamento falhar ou a assinatura for cancelada, o tenant perde acesso a extrações.
+
+## Planos
+
+| Plano | Preço | Leads |
+|-------|-------|-------|
+| Pro | R$ 47/mes | 6.000 |
+| Premium | R$ 97/mes | 14.000 |
+| Enterprise | R$ 197/mes | 32.000 |
+
+## Etapas
+
+### 1. Habilitar integração Stripe
+- Ativar o Stripe no projeto (vai pedir a chave secreta)
+- Criar os 3 produtos e preços na Stripe via ferramenta do Lovable
+
+### 2. Atualizar banco de dados
+- Adicionar colunas na tabela `tenants`: `stripe_customer_id`, `stripe_subscription_id`, `stripe_status` (substituindo os campos `cakto_*`)
+- Remover colunas Cakto (`cakto_customer_email`, `cakto_subscription_id`)
+- Atualizar valores do enum de plano para `pro`, `premium`, `enterprise`
+
+### 3. Criar Edge Function `stripe-webhook`
+- Receber eventos do Stripe: `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.deleted`
+- No `checkout.session.completed`: criar usuario (se nao existir), ativar tenant, definir plano e limites conforme o preco pago
+- No `invoice.paid`: manter `ativo = true`
+- No `invoice.payment_failed` / `subscription.deleted`: setar `ativo = false` (bloqueia extrações)
+
+### 4. Criar Edge Function `create-checkout`
+- Recebe o `price_id` do plano escolhido
+- Cria (ou recupera) um Stripe Customer pelo email do usuario
+- Gera uma Checkout Session do Stripe em modo `subscription`
+- Retorna a URL do checkout para redirect
+
+### 5. Criar pagina de planos (`/planos`)
+- Pagina publica ou acessivel por usuarios logados sem assinatura
+- Exibe os 3 cards de plano com preço, limite de leads e botao "Assinar"
+- Ao clicar, chama `create-checkout` e redireciona para o Stripe Checkout
+
+### 6. Atualizar ProtectedRoute
+- Apos login, verificar se o tenant esta `ativo`
+- Se `ativo = false`, redirecionar para `/planos` em vez do dashboard
+- Admins globais ficam isentos dessa verificação
+
+### 7. Bloquear extrações para inadimplentes
+- Na pagina de ICPs, antes de executar um ICP (run), verificar `tenant.ativo`
+- Se inativo, mostrar toast informando que a assinatura esta pendente
+
+### 8. Atualizar Backoffice
+- Substituir aba "Cakto" por aba "Assinaturas" mostrando status Stripe de cada tenant
+- Exibir: nome do tenant, plano, status da assinatura, stripe_customer_id
+
+### 9. Limpar codigo Cakto
+- Remover/substituir o webhook-cakto pela nova logica Stripe
+- Remover referencias a Cakto no frontend
 
 ---
 
-## Pré-requisito: Secrets
+## Detalhes tecnicos
 
-Armazenar suas credenciais UazAPI como secrets do backend:
-- `UAZAPI_URL` — URL base da sua instância (ex: `https://seudominio.uazapi.com`)
-- `UAZAPI_TOKEN` — Token de admin da sua conta UazAPI
+**Mapeamento plano → limites (aplicado no webhook)**:
+- `pro` → 6000
+- `premium` → 14000  
+- `enterprise` → 32000
 
-Essas credenciais são suas (dono do sistema), não do tenant.
+**Fluxo do usuario**:
+1. Usuario acessa `/planos` e escolhe um plano
+2. E redirecionado ao Stripe Checkout (cartao de credito)
+3. Apos pagamento, webhook cria conta + tenant + ativa
+4. Usuario acessa via "Primeiro Acesso" e define senha
+5. Todo mes o Stripe cobra automaticamente; se falhar, `ativo = false`
 
----
-
-## 1. Banco de Dados — Novas tabelas
-
-**`whatsapp_instances`** — Instância WhatsApp por tenant:
-- `id`, `tenant_id` (unique), `instance_name` (gerado automaticamente, ex: `tenant_{uuid_curto}`), `status` (disconnected/connecting/connected), `phone_number`, `created_at`, `updated_at`
-
-**`whatsapp_campaigns`** — Campanhas de disparo:
-- `id`, `tenant_id`, `nome`, `mensagem`, `media_url`, `media_type`, `tipo` (texto/media/template), `status` (draft/sending/completed/failed), `total_contatos`, `enviados`, `falhas`, `created_at`, `started_at`, `finished_at`
-
-**`whatsapp_campaign_contacts`** — Contatos de cada campanha:
-- `id`, `campaign_id`, `telefone`, `nome`, `cnpj`, `lead_id` (nullable), `status` (pending/sent/failed), `error_message`, `sent_at`, `created_at`
-
-RLS: Todas tenant-scoped + admin_global, seguindo padrão existente.
-
-**Storage bucket `whatsapp-media`** — Para uploads de mídia dos disparos.
-
----
-
-## 2. Edge Functions
-
-### `whatsapp-instance` — Gerenciar instância do tenant
-- **POST /connect**: Cria instância na UazAPI (`POST {UAZAPI_URL}/instance/create`) com nome auto-gerado, retorna QR Code (`GET {UAZAPI_URL}/instance/qr/{instance}`)
-- **GET /status**: Consulta status da conexão (`GET {UAZAPI_URL}/instance/connectionState/{instance}`)
-- **POST /disconnect**: Desconecta (`DELETE {UAZAPI_URL}/instance/logout/{instance}`)
-- Usa `UAZAPI_URL` e `UAZAPI_TOKEN` do servidor — tenant nunca vê as credenciais
-
-### `send-whatsapp` — Processar envio de campanha
-- Recebe `campaign_id`, lê contatos pendentes
-- Envia via UazAPI usando a instância do tenant: `/message/sendText`, `/message/sendMedia`
-- Delay entre mensagens (1-3s) para evitar bloqueio
-- Atualiza status de cada contato e contadores da campanha
-
----
-
-## 3. Frontend — Página `/disparos`
-
-### Aba "WhatsApp" — Conexão
-- Card mostrando status da conexão (conectado/desconectado)
-- Botão **"Conectar WhatsApp"** → abre dialog com QR Code gerado pela edge function
-- QR Code atualiza automaticamente (polling a cada 5s até conectar)
-- Ao escanear, status muda para "Conectado" com o número exibido
-- Botão "Desconectar" quando já conectado
-
-### Aba "Campanhas" — Criar e gerenciar disparos
-- Botão "Nova Campanha" → formulário:
-  - Nome, tipo (texto/mídia/template), conteúdo, upload de mídia
-  - Selecionar contatos: **leads prospectados** (multi-select da tabela leads) OU **upload planilha** (CSV com telefone, nome)
-- Lista de campanhas com progresso, status, ações (iniciar/ver detalhes)
-- Detalhes da campanha: lista de contatos com status individual
-
-### Parser de planilha
-- Upload CSV client-side com preview antes de importar
-- Colunas: `telefone` (obrigatório), `nome`, `cnpj`
-
----
-
-## 4. Navegação
-
-- Novo item "Disparos" no sidebar (`Send` ou `MessageSquare` icon)
-- Rota protegida `/disparos`
-- Adicionado ao bottom nav mobile
-
----
-
-## 5. Landing Page
-
-Adicionar na lista `FEATURES`:
-```
-{ icon: MessageSquare, title: 'Disparos WhatsApp', desc: 'Conecte seu WhatsApp e envie mensagens em massa para seus leads — texto, mídia e templates.' }
-```
-
-Adicionar nos `STEPS` e nos features dos planos (Premium e Enterprise).
-
-Adicionar FAQ: "Como funciona o disparo de WhatsApp?" → "Basta conectar seu WhatsApp escaneando um QR Code dentro do sistema e criar sua campanha de disparo."
-
----
-
-## O que NÃO será alterado
-
-Nenhuma página ou funcionalidade existente. Apenas adições: nova página, novas tabelas, novas edge functions, novo item no menu, novo card na landing.
+**Edge Function `stripe-webhook`**: usara `verify_jwt = false` no config.toml e validara a assinatura do webhook via `Stripe-Signature` header com o secret `STRIPE_WEBHOOK_SECRET`.
 
