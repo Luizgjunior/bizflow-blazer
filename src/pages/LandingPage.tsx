@@ -70,6 +70,7 @@ const STEPS = [
   { num: '02', title: 'Execute a Busca', desc: 'Com um clique, o sistema prospecta milhares de empresas que se encaixam no perfil.', icon: Rocket },
   { num: '03', title: 'Receba Leads Qualificados', desc: 'Leads com score, CNPJ, razão social e dados completos prontos para prospecção.', icon: TrendingUp },
   { num: '04', title: 'Exporte ou Integre', desc: 'Baixe em CSV ou receba via webhook direto no seu CRM.', icon: Globe },
+  { num: '05', title: 'Dispare pelo WhatsApp', desc: 'Conecte seu número e envie mensagens em massa para seus leads diretamente pelo sistema.', icon: MessageSquare },
 ];
 
 const PLANS = [
