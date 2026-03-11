@@ -37,15 +37,15 @@ const prefetchMap: Record<string, () => void> = {
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/whatsapp-chat', label: 'Chat WhatsApp', icon: MessageSquare },
+  { path: '/crm', label: 'CRM Kanban', icon: Kanban },
+  { path: '/crm-dashboard', label: 'CRM Dashboard', icon: BarChart3 },
   { path: '/icps', label: 'ICPs', icon: Target },
   { path: '/runs', label: 'Runs', icon: Play },
   { path: '/leads', label: 'Leads', icon: Users },
   { path: '/exports', label: 'Exports', icon: Download },
   { path: '/automacao', label: 'Automação', icon: Zap },
   { path: '/disparos', label: 'Disparos', icon: Send },
-  { path: '/whatsapp-chat', label: 'Chat WhatsApp', icon: MessageSquare },
-  { path: '/crm', label: 'CRM Kanban', icon: Kanban },
-  { path: '/crm-dashboard', label: 'CRM Dashboard', icon: BarChart3 },
 ];
 
 const bottomNavItems = navItems.slice(0, 6);
