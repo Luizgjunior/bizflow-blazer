@@ -18,6 +18,7 @@ import {
   MessageSquare,
   Kanban,
   BarChart3,
+  HelpCircle,
 } from 'lucide-react';
 import logoImg from '@/assets/logo.png';
 import { useState } from 'react';
