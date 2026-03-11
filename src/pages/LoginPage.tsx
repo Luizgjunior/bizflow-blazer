@@ -156,6 +156,12 @@ export default function LoginPage() {
 
               <div className="mt-4 space-y-2">
                 <button
+                  onClick={() => { setMode('magic-link'); setEmail(''); setPassword(''); }}
+                  className="w-full text-sm text-primary hover:text-primary/80 transition-colors text-center font-medium"
+                >
+                  Entrar com Magic Link
+                </button>
+                <button
                   onClick={() => { setMode('first-access'); setEmail(''); }}
                   className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors text-center"
                 >
