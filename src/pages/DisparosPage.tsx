@@ -122,7 +122,7 @@ function WhatsAppTab() {
         setPhoneNumber(data.phone_number || '');
         toast.success('WhatsApp já está conectado!');
       } else if (data.qr_code) {
-        setQrCode(data.qr_code);
+        setQrCode(typeof data.qr_code === 'string' ? data.qr_code : JSON.stringify(data.qr_code));
         setShowQrDialog(true);
         setPolling(true);
         setStatus('connecting');
