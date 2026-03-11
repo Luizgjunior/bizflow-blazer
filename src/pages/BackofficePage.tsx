@@ -457,9 +457,6 @@ function UsersTab() {
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
-        if (data?.magic_link) {
-          toast.info('Magic link gerado. O usuário receberá o acesso por email.');
-        }
       }
     },
     onSuccess: () => {
