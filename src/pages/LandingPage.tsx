@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
@@ -115,7 +114,6 @@ const STATS = [
 export default function LandingPage() {
   useDocumentTitle('Prospecção B2B Inteligente');
   const navigate = useNavigate();
-  const { session } = useAuth();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (

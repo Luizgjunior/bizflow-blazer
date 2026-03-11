@@ -14,7 +14,7 @@ type Mode = 'login' | 'signup' | 'first-access';
 export default function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { session, loading: authLoading, isAdmin, subscription, profileLoading } = useAuth();
+  const { session } = useAuth();
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
@@ -30,18 +30,15 @@ export default function LoginPage() {
     }
   }, [planParam, session]);
 
-
   useEffect(() => {
-    if (!authLoading && !profileLoading && session) {
+    if (session) {
       if (planParam) {
         navigate(`/planos?selected=${planParam}`, { replace: true });
-      } else if (isAdmin || subscription.subscribed) {
-        navigate('/', { replace: true });
       } else {
-        navigate('/planos', { replace: true });
+        navigate('/', { replace: true });
       }
     }
-  }, [session, authLoading, profileLoading, planParam, navigate, isAdmin, subscription.subscribed]);
+  }, [session, planParam, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
