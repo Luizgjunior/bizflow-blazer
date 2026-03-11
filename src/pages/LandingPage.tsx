@@ -7,7 +7,7 @@ import {
   ArrowRight, BarChart3, Bot, CheckCircle2, ChevronDown,
   Crown, Database, Download, Filter, Globe, Layers, LineChart,
   Lock, MessageSquare, Rocket, Search, Shield, Sparkles, Target, Users, Zap,
-  Webhook, Clock, TrendingUp, Mail, LogOut
+  Webhook, Clock, TrendingUp, Mail, LogOut, Phone, Kanban, Send, Eye, UserPlus
 } from 'lucide-react';
 import logoImg from '@/assets/logo.png';
 import { Button } from '@/components/ui/button';
@@ -64,30 +64,33 @@ const FEATURES = [
   { icon: Download, title: 'Exportação CSV', desc: 'Exporte seus leads em CSV para integrar com qualquer CRM ou ferramenta do seu time de vendas.' },
   { icon: Webhook, title: 'Webhooks', desc: 'Receba leads em tempo real via webhook e integre com n8n, Make, Zapier ou seu próprio sistema.' },
   { icon: MessageSquare, title: 'Disparos WhatsApp', desc: 'Conecte seu WhatsApp e envie mensagens em massa para seus leads — texto, mídia e templates.' },
+  { icon: Phone, title: 'Chat WhatsApp', desc: 'Converse com seus leads em tempo real direto pela plataforma, sem precisar sair do sistema.' },
+  { icon: Kanban, title: 'CRM Integrado', desc: 'Pipeline visual estilo Kanban para acompanhar negociações. Deals criados automaticamente via WhatsApp.' },
 ];
 
 const STEPS = [
   { num: '01', title: 'Crie seu ICP', desc: 'Defina os filtros do seu cliente ideal — segmento, localização, porte e mais.', icon: Filter },
   { num: '02', title: 'Execute a Busca', desc: 'Com um clique, o sistema prospecta milhares de empresas que se encaixam no perfil.', icon: Rocket },
   { num: '03', title: 'Receba Leads Qualificados', desc: 'Leads com score, CNPJ, razão social e dados completos prontos para prospecção.', icon: TrendingUp },
-  { num: '04', title: 'Exporte ou Integre', desc: 'Baixe em CSV ou receba via webhook direto no seu CRM.', icon: Globe },
-  { num: '05', title: 'Dispare pelo WhatsApp', desc: 'Conecte seu número e envie mensagens em massa para seus leads diretamente pelo sistema.', icon: MessageSquare },
+  { num: '04', title: 'Exporte ou Integre', desc: 'Baixe em CSV, receba via webhook ou gerencie direto no CRM integrado.', icon: Globe },
+  { num: '05', title: 'Dispare pelo WhatsApp', desc: 'Conecte seu número e envie mensagens em massa ou converse 1 a 1 direto pela plataforma.', icon: MessageSquare },
+  { num: '06', title: 'Acompanhe no CRM', desc: 'Gerencie seus deals no pipeline Kanban. Novos contatos do WhatsApp viram cards automaticamente.', icon: Kanban },
 ];
 
 const PLANS = [
   {
-    id: 'pro', name: 'Pro', price: 47, leads: '6.000',
-    icon: Zap, features: ['6.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'Suporte por email'],
+    id: 'pro', name: 'Pro', price: 97, leads: '6.000',
+    icon: Zap, features: ['6.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'CRM integrado', 'Suporte por email'],
   },
   {
-    id: 'premium', name: 'Premium', price: 97, leads: '14.000',
+    id: 'premium', name: 'Premium', price: 197, leads: '14.000',
     icon: Crown, popular: true,
-    features: ['14.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'Automações', 'Disparos WhatsApp', 'Suporte prioritário'],
+    features: ['14.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'CRM integrado', 'Automações', 'Disparos WhatsApp', 'Chat WhatsApp', 'Suporte prioritário'],
   },
   {
-    id: 'enterprise', name: 'Enterprise', price: 197, leads: '32.000',
+    id: 'enterprise', name: 'Enterprise', price: 297, leads: '32.000',
     icon: Rocket,
-    features: ['32.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'Automações', 'Disparos WhatsApp', 'Webhook personalizado', 'Suporte dedicado'],
+    features: ['32.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'CRM integrado', 'Automações', 'Disparos WhatsApp', 'Chat WhatsApp', 'Webhook personalizado', 'Suporte dedicado'],
   },
 ];
 
@@ -97,10 +100,12 @@ const FAQ = [
   { q: 'Como funciona o score dos leads?', a: 'Cada lead recebe uma pontuação de 0 a 100 baseada na aderência ao seu ICP. Quanto maior o score, mais alinhado ao seu perfil ideal de cliente.' },
   { q: 'Posso cancelar a qualquer momento?', a: 'Sim! Não existe fidelidade. Você pode cancelar sua assinatura quando quiser, sem multas ou burocracia.' },
   { q: 'Os leads são exclusivos?', a: 'Os dados são baseados em informações públicas. O diferencial está nos filtros do seu ICP e no score de qualificação, que tornam sua prospecção muito mais assertiva.' },
-  { q: 'Posso integrar com meu CRM?', a: 'Sim! Você pode exportar leads em CSV ou usar webhooks para enviar dados em tempo real para qualquer ferramenta — CRM, n8n, Make, Zapier e mais.' },
+  { q: 'Posso integrar com meu CRM?', a: 'Sim! Além do CRM integrado com pipeline Kanban, você pode exportar leads em CSV ou usar webhooks para enviar dados em tempo real para qualquer ferramenta.' },
   { q: 'O sistema funciona no celular?', a: 'Sim! O LeadFlow foi construído 100% mobile-first. Toda a experiência é otimizada para uso no smartphone.' },
   { q: 'Como funciona o suporte?', a: 'No plano Pro o suporte é por email. No Premium, você tem prioridade. No Enterprise, suporte dedicado com atendimento exclusivo.' },
   { q: 'Como funciona o disparo de WhatsApp?', a: 'Basta conectar seu WhatsApp escaneando um QR Code dentro do sistema e criar sua campanha de disparo. Você pode enviar texto, mídia e templates para leads prospectados ou importados via planilha.' },
+  { q: 'O que é o CRM integrado?', a: 'É um pipeline visual estilo Kanban onde você acompanha suas negociações. Quando um novo contato chega pelo WhatsApp, um card de deal é criado automaticamente na sua pipeline.' },
+  { q: 'Como funciona o Chat WhatsApp?', a: 'Após conectar seu número, você pode conversar com seus leads em tempo real direto pela plataforma, com interface similar ao WhatsApp Web. Inclui envio de texto, mídia e visualização do histórico.' },
 ];
 
 const STATS = [
@@ -108,6 +113,30 @@ const STATS = [
   { value: 99, suffix: '%', label: 'Dados atualizados' },
   { value: 30, suffix: 's', label: 'Tempo médio de busca' },
   { value: 4.9, suffix: '★', label: 'Avaliação' },
+];
+
+const HIGHLIGHTS = [
+  {
+    icon: Phone,
+    badge: 'WhatsApp',
+    title: 'Chat e disparos WhatsApp integrados',
+    desc: 'Conecte seu WhatsApp com QR Code e tenha tudo em um só lugar. Converse em tempo real com seus leads, envie campanhas em massa com texto e mídia, e acompanhe tudo sem sair da plataforma.',
+    bullets: ['Chat em tempo real estilo WhatsApp Web', 'Campanhas de disparo em massa', 'Suporte a texto, imagens e templates', 'Delays inteligentes anti-bloqueio'],
+  },
+  {
+    icon: Kanban,
+    badge: 'CRM',
+    title: 'Pipeline de vendas visual',
+    desc: 'Gerencie todo o seu funil de vendas com o CRM estilo Kanban. Arraste e solte deals entre etapas, acompanhe atividades e tenha visão total das suas negociações.',
+    bullets: ['Pipeline Kanban drag & drop', 'Deals criados auto via WhatsApp', 'Histórico completo de atividades', 'Dashboard com métricas e conversão'],
+  },
+  {
+    icon: Bot,
+    badge: 'Automação',
+    title: 'Prospecção no piloto automático',
+    desc: 'Configure seus ICPs e deixe o sistema trabalhar por você. Automações buscam novos leads nos intervalos definidos, e webhooks entregam em tempo real no seu CRM ou ferramenta favorita.',
+    bullets: ['Execuções agendadas (diária, semanal, mensal)', 'Webhooks em tempo real', 'Integração com n8n, Make e Zapier', 'Distribuição automática de leads'],
+  },
 ];
 
 /* ───────────────────── component ───────────────────── */
@@ -154,7 +183,6 @@ export default function LandingPage() {
 
       {/* ─── HERO ─── */}
       <section className="relative pt-16 pb-20 px-4">
-        {/* bg glow */}
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
           <div className="absolute top-[-40%] left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-primary/8 blur-[120px]" />
           <div className="absolute bottom-[-20%] right-[-10%] w-[400px] h-[400px] rounded-full bg-accent/6 blur-[100px]" />
@@ -163,22 +191,22 @@ export default function LandingPage() {
         <div className="relative max-w-3xl mx-auto text-center">
           <FadeIn>
             <Badge variant="outline" className="mb-6 text-xs py-1 px-3 border-primary/30 text-primary">
-              <Sparkles className="w-3 h-3 mr-1.5" /> Prospecção B2B com IA
+              <Sparkles className="w-3 h-3 mr-1.5" /> Prospecção B2B + CRM + WhatsApp
             </Badge>
           </FadeIn>
 
           <FadeIn delay={0.1}>
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-extrabold tracking-tight leading-[1.1] mb-5">
-              Encontre seus{' '}
-              <span className="gradient-text">clientes ideais</span>{' '}
-              em segundos
+              Prospecte, converse e{' '}
+              <span className="gradient-text">venda mais</span>{' '}
+              em um só lugar
             </h1>
           </FadeIn>
 
           <FadeIn delay={0.2}>
             <p className="text-base sm:text-lg text-muted-foreground max-w-xl mx-auto mb-8 leading-relaxed">
-              Plataforma inteligente de prospecção B2B. Defina seu ICP, execute buscas
-              e receba leads qualificados com CNPJ, score e dados completos — tudo pelo celular.
+              Plataforma completa de vendas B2B. Encontre leads qualificados, dispare pelo WhatsApp,
+              converse em tempo real e gerencie seu funil no CRM integrado — tudo pelo celular.
             </p>
           </FadeIn>
 
@@ -218,10 +246,10 @@ export default function LandingPage() {
             <Badge variant="outline" className="mb-4 text-xs">Funcionalidades</Badge>
             <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
               Tudo que você precisa para{' '}
-              <span className="gradient-text">prospectar melhor</span>
+              <span className="gradient-text">prospectar e vender</span>
             </h2>
             <p className="text-muted-foreground mt-3 max-w-lg mx-auto text-sm sm:text-base">
-              Ferramentas poderosas pensadas para times de vendas que querem escalar resultados.
+              Da prospecção ao fechamento. Ferramentas integradas para todo o ciclo de vendas.
             </p>
           </FadeIn>
 
@@ -244,8 +272,50 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ─── HIGHLIGHTS (deep-dive into key features) ─── */}
+      <section className="py-20 px-4 bg-muted/20">
+        <div className="max-w-5xl mx-auto">
+          <FadeIn className="text-center mb-14">
+            <Badge variant="outline" className="mb-4 text-xs">Destaques</Badge>
+            <h2 className="text-2xl sm:text-3xl font-bold tracking-tight">
+              Conheça o que torna o LeadFlow{' '}
+              <span className="gradient-text">diferente</span>
+            </h2>
+          </FadeIn>
+
+          <div className="space-y-8">
+            {HIGHLIGHTS.map((h, i) => {
+              const Icon = h.icon;
+              const isEven = i % 2 === 0;
+              return (
+                <FadeIn key={i} delay={i * 0.1}>
+                  <div className={`flex flex-col ${isEven ? 'md:flex-row' : 'md:flex-row-reverse'} gap-6 items-center rounded-2xl border border-border bg-card p-6 sm:p-8`}>
+                    <div className="flex-1 min-w-0">
+                      <Badge variant="outline" className="mb-3 text-[10px]">{h.badge}</Badge>
+                      <h3 className="text-lg sm:text-xl font-bold text-foreground mb-2">{h.title}</h3>
+                      <p className="text-sm text-muted-foreground leading-relaxed mb-4">{h.desc}</p>
+                      <ul className="space-y-2">
+                        {h.bullets.map((b, j) => (
+                          <li key={j} className="flex items-center gap-2 text-sm text-muted-foreground">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-primary shrink-0" />
+                            {b}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                    <div className="shrink-0 w-24 h-24 sm:w-32 sm:h-32 rounded-2xl gradient-primary flex items-center justify-center">
+                      <Icon className="w-10 h-10 sm:w-14 sm:h-14 text-primary-foreground" />
+                    </div>
+                  </div>
+                </FadeIn>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
       {/* ─── HOW IT WORKS ─── */}
-      <section id="como-funciona" className="py-20 px-4 bg-muted/20">
+      <section id="como-funciona" className="py-20 px-4">
         <div className="max-w-4xl mx-auto">
           <FadeIn className="text-center mb-14">
             <Badge variant="outline" className="mb-4 text-xs">Passo a Passo</Badge>
@@ -277,7 +347,7 @@ export default function LandingPage() {
       </section>
 
       {/* ─── SECURITY ─── */}
-      <section className="py-20 px-4">
+      <section className="py-20 px-4 bg-muted/20">
         <div className="max-w-4xl mx-auto">
           <FadeIn className="text-center mb-10">
             <Badge variant="outline" className="mb-4 text-xs">Segurança</Badge>
@@ -310,7 +380,7 @@ export default function LandingPage() {
       </section>
 
       {/* ─── PLANS ─── */}
-      <section className="py-20 px-4 bg-muted/20">
+      <section className="py-20 px-4">
         <div className="max-w-5xl mx-auto">
           <FadeIn className="text-center mb-14">
             <Badge variant="outline" className="mb-4 text-xs">Planos</Badge>
@@ -369,7 +439,7 @@ export default function LandingPage() {
       </section>
 
       {/* ─── FAQ ─── */}
-      <section className="py-20 px-4">
+      <section className="py-20 px-4 bg-muted/20">
         <div className="max-w-2xl mx-auto">
           <FadeIn className="text-center mb-12">
             <Badge variant="outline" className="mb-4 text-xs">Dúvidas</Badge>
@@ -416,7 +486,7 @@ export default function LandingPage() {
               Pronto para escalar suas vendas?
             </h2>
             <p className="text-primary-foreground/80 mb-8 text-sm sm:text-base max-w-md mx-auto">
-              Comece agora e descubra leads qualificados para o seu negócio em poucos minutos.
+              Prospecção, WhatsApp e CRM integrados. Comece agora e feche mais negócios.
             </p>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
               <Button
