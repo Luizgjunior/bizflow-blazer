@@ -282,7 +282,7 @@ export default function AjudaPage() {
 
   return (
     <AppLayout>
-      <PageHeader title="Central de Ajuda" subtitle="Tutoriais e guias de uso do sistema" />
+      <PageHeader title="Central de Ajuda" description="Tutoriais e guias de uso do sistema" />
 
       {/* Search + Filters */}
       <div className="mb-6 space-y-4">
