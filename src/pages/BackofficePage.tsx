@@ -600,11 +600,8 @@ function UsersTab() {
                   <p className="text-[11px] text-muted-foreground">{u.email}</p>
                   <p className="text-[11px] text-muted-foreground mt-1">Tenant: {u.tenants?.nome || '—'}</p>
                   <div className="mt-3 flex gap-2">
-                    <Button size="sm" variant="outline" className="flex-1 gap-1 text-xs" onClick={() => sendMagicLink.mutate(u.email)}>
-                      <Mail className="w-3 h-3" /> Magic Link
-                    </Button>
-                    <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => openEdit(u)}>
-                      <Edit className="w-3 h-3" />
+                    <Button size="sm" variant="outline" className="flex-1 gap-1 text-xs" onClick={() => openEdit(u)}>
+                      <Edit className="w-3 h-3" /> Editar
                     </Button>
                     <Button size="sm" variant="outline" className="gap-1 text-xs text-destructive hover:text-destructive" onClick={() => { if (confirm('Excluir?')) deleteUser.mutate(u.id); }}>
                       <Trash2 className="w-3 h-3" />
