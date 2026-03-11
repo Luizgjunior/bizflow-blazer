@@ -431,7 +431,7 @@ function UsersTab() {
   });
 
   const resetForm = () => {
-    setFormNome(''); setFormEmail(''); setFormTenantId(''); setFormRole('empresa'); setEditingUser(null);
+    setFormNome(''); setFormEmail(''); setFormPassword(''); setFormTenantId(''); setFormRole('empresa'); setEditingUser(null);
   };
 
   const openEdit = (user: any) => {
