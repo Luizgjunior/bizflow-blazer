@@ -9,6 +9,7 @@ import {
   Users,
   Download,
   Zap,
+  Send,
   Settings,
   LogOut,
   Menu,
