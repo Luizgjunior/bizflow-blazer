@@ -1,4 +1,4 @@
-import { ReactNode, useCallback } from 'react';
+import { ReactNode, useCallback, useMemo } from 'react';
 import PageTransition from '@/components/PageTransition';
 import { useLocation, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -22,6 +22,18 @@ import {
 import logoImg from '@/assets/logo.png';
 import { useState } from 'react';
 
+// Prefetch map for lazy-loaded routes
+const prefetchMap: Record<string, () => void> = {
+  '/icps': () => import('@/pages/ICPsPage'),
+  '/runs': () => import('@/pages/RunsPage'),
+  '/exports': () => import('@/pages/ExportsPage'),
+  '/automacao': () => import('@/pages/AutomacaoPage'),
+  '/disparos': () => import('@/pages/DisparosPage'),
+  '/whatsapp-chat': () => import('@/pages/WhatsAppChatPage'),
+  '/crm': () => import('@/pages/CrmKanbanPage'),
+  '/crm-dashboard': () => import('@/pages/CrmDashboardPage'),
+  '/backoffice': () => import('@/pages/BackofficePage'),
+};
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -74,6 +86,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               <Link
                 key={item.path}
                 to={item.path}
+                onMouseEnter={() => prefetchMap[item.path]?.()}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                   isActive
                     ? 'bg-sidebar-accent text-sidebar-accent-foreground'
@@ -141,6 +154,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                     key={item.path}
                     to={item.path}
                     onClick={() => setSidebarOpen(false)}
+                    onMouseEnter={() => prefetchMap[item.path]?.()}
                     className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all ${
                       isActive
                         ? 'bg-primary/10 text-primary'

@@ -7,16 +7,18 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import ProtectedRoute from "@/components/ProtectedRoute";
 import { lazy, Suspense } from "react";
 
-// Lazy-loaded pages
-const Index = lazy(() => import("./pages/Index"));
-const Dashboard = lazy(() => import("./pages/Dashboard"));
+// Eagerly loaded (core pages for instant navigation)
+import Index from "./pages/Index";
+import Dashboard from "./pages/Dashboard";
+import LoginPage from "./pages/LoginPage";
+import LeadsPage from "./pages/LeadsPage";
+
+// Lazy loaded (less frequent pages)
 const ICPsPage = lazy(() => import("./pages/ICPsPage"));
 const RunsPage = lazy(() => import("./pages/RunsPage"));
-const LeadsPage = lazy(() => import("./pages/LeadsPage"));
 const ExportsPage = lazy(() => import("./pages/ExportsPage"));
 const AutomacaoPage = lazy(() => import("./pages/AutomacaoPage"));
 const BackofficePage = lazy(() => import("./pages/BackofficePage"));
-const LoginPage = lazy(() => import("./pages/LoginPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const PlanosPage = lazy(() => import("./pages/PlanosPage"));
 const DisparosPage = lazy(() => import("./pages/DisparosPage"));
@@ -28,8 +30,8 @@ const NotFound = lazy(() => import("./pages/NotFound"));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5, // 5 min cache
-      gcTime: 1000 * 60 * 10, // 10 min garbage collection
+      staleTime: 1000 * 60 * 5,
+      gcTime: 1000 * 60 * 10,
       refetchOnWindowFocus: false,
       retry: 1,
     },
