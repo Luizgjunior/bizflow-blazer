@@ -7,7 +7,8 @@ import {
   Building2, Users, Plus, Trash2, Loader2, Shield, BarChart3,
   Target, Play, FileText, Activity, Webhook, Copy, Check, Info,
   Edit, TrendingUp, AlertTriangle, Save, CreditCard, DollarSign,
-  TrendingDown, CalendarDays, Receipt, Mail,
+  TrendingDown, CalendarDays, Receipt, Mail, MessageCircle, Bot,
+  Eye, ChevronRight,
 } from 'lucide-react';
 import { LineChart, Line } from 'recharts';
 import { motion } from 'framer-motion';
