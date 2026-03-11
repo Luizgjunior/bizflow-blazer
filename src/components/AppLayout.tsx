@@ -32,6 +32,8 @@ const navItems = [
   { path: '/automacao', label: 'Automação', icon: Zap },
   { path: '/disparos', label: 'Disparos', icon: Send },
   { path: '/whatsapp-chat', label: 'Chat WhatsApp', icon: MessageSquare },
+  { path: '/crm', label: 'CRM Kanban', icon: Kanban },
+  { path: '/crm-dashboard', label: 'CRM Dashboard', icon: BarChart3 },
 ];
 
 const bottomNavItems = navItems.slice(0, 6);
