@@ -15,6 +15,7 @@ import {
   Menu,
   X,
   Shield,
+  MessageSquare,
 } from 'lucide-react';
 import logoImg from '@/assets/logo.png';
 import { useState } from 'react';
