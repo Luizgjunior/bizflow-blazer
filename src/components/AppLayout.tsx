@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import logoImg from '@/assets/logo.png';
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
