@@ -74,16 +74,49 @@ function parseChat(raw: any): Chat {
 
 function parseMessage(raw: any): Message {
   const id = raw.id || raw.key?.id || raw.messageId || Math.random().toString();
-  const text = raw.body || raw.message?.conversation || raw.message?.extendedTextMessage?.text
-    || raw.text || raw.content || raw.wa_lastMessageTextVote || '';
   const ts = raw.timestamp || raw.messageTimestamp || raw.t || raw.wa_lastMsgTimestamp || 0;
   const fromMe = raw.fromMe ?? raw.key?.fromMe ?? false;
   const senderName = raw.pushName || raw.senderName || raw.notify || '';
   const type = raw.type || raw.messageType || raw.wa_lastMessageType || 'text';
 
+  // Extract text carefully — avoid falling through to raw.content which can be a huge base64 object
+  let text = '';
+  if (typeof raw.body === 'string' && raw.body) {
+    text = raw.body;
+  } else if (raw.message?.conversation) {
+    text = raw.message.conversation;
+  } else if (raw.message?.extendedTextMessage?.text) {
+    text = raw.message.extendedTextMessage.text;
+  } else if (typeof raw.text === 'string' && raw.text) {
+    text = raw.text;
+  } else if (typeof raw.content === 'string' && raw.content) {
+    text = raw.content;
+  } else if (raw.content && typeof raw.content === 'object') {
+    // Media message — extract caption if available, otherwise show type label
+    text = raw.content.caption || raw.content.text || '';
+  } else if (raw.wa_lastMessageTextVote) {
+    text = raw.wa_lastMessageTextVote;
+  }
+
+  // Map message types to friendly labels when no text
+  const mediaTypeLabels: Record<string, string> = {
+    ImageMessage: '📷 Imagem',
+    VideoMessage: '🎥 Vídeo',
+    AudioMessage: '🎵 Áudio',
+    StickerMessage: '🏷️ Sticker',
+    DocumentMessage: '📄 Documento',
+    ContactMessage: '👤 Contato',
+    LocationMessage: '📍 Localização',
+    PollCreationMessage: '📊 Enquete',
+  };
+
+  if (!text && type && mediaTypeLabels[type]) {
+    text = mediaTypeLabels[type];
+  }
+
   return {
     id,
-    text: typeof text === 'string' ? text : JSON.stringify(text),
+    text,
     timestamp: ts,
     timestampFormatted: formatTs(ts),
     fromMe,
