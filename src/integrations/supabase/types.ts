@@ -456,6 +456,8 @@ export type Database = {
       tenants: {
         Row: {
           ativo: boolean
+          cakto_customer_email: string | null
+          cakto_subscription_id: string | null
           created_at: string
           id: string
           limites_consulta: number
@@ -467,6 +469,8 @@ export type Database = {
         }
         Insert: {
           ativo?: boolean
+          cakto_customer_email?: string | null
+          cakto_subscription_id?: string | null
           created_at?: string
           id?: string
           limites_consulta?: number
@@ -478,6 +482,8 @@ export type Database = {
         }
         Update: {
           ativo?: boolean
+          cakto_customer_email?: string | null
+          cakto_subscription_id?: string | null
           created_at?: string
           id?: string
           limites_consulta?: number
