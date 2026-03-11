@@ -118,9 +118,16 @@ Deno.serve(async (req) => {
       const res = await fetch(`${UAZAPI_URL}/message/sendText`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "token": token },
-        body: JSON.stringify({ phone, message }),
+        body: JSON.stringify({ phone, text: message }),
       });
       const data = await res.json();
+
+      if (data.code === 405) {
+        console.error("sendText 405 - UazAPI may not allow sending on this plan/instance");
+        return new Response(JSON.stringify({ error: "Envio não permitido. Verifique se seu plano UazAPI permite envio de mensagens." }), {
+          status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
 
       return new Response(JSON.stringify(data), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
