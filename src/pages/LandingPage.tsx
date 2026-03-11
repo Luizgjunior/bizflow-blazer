@@ -62,6 +62,7 @@ const FEATURES = [
   { icon: Bot, title: 'Automações', desc: 'Agende execuções recorrentes. O sistema busca leads automaticamente conforme sua frequência.' },
   { icon: Download, title: 'Exportação CSV', desc: 'Exporte seus leads em CSV para integrar com qualquer CRM ou ferramenta do seu time de vendas.' },
   { icon: Webhook, title: 'Webhooks', desc: 'Receba leads em tempo real via webhook e integre com n8n, Make, Zapier ou seu próprio sistema.' },
+  { icon: MessageSquare, title: 'Disparos WhatsApp', desc: 'Conecte seu WhatsApp e envie mensagens em massa para seus leads — texto, mídia e templates.' },
 ];
 
 const STEPS = [
