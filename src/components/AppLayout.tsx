@@ -18,6 +18,7 @@ import {
   MessageSquare,
   Kanban,
   BarChart3,
+  HelpCircle,
 } from 'lucide-react';
 import logoImg from '@/assets/logo.png';
 import { useState } from 'react';
@@ -33,6 +34,7 @@ const prefetchMap: Record<string, () => void> = {
   '/crm': () => import('@/pages/CrmKanbanPage'),
   '/crm-dashboard': () => import('@/pages/CrmDashboardPage'),
   '/backoffice': () => import('@/pages/BackofficePage'),
+  '/ajuda': () => import('@/pages/AjudaPage'),
 };
 
 const navItems = [
@@ -105,11 +107,16 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
         <div className="p-3 border-t border-sidebar-border space-y-0.5">
           <Link
-            to="/settings"
-            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-foreground transition-all"
+            to="/ajuda"
+            onMouseEnter={() => prefetchMap['/ajuda']?.()}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+              location.pathname === '/ajuda'
+                ? 'bg-sidebar-accent text-sidebar-accent-foreground'
+                : 'text-sidebar-foreground hover:bg-sidebar-accent/50 hover:text-foreground'
+            }`}
           >
-            <Settings className="w-4 h-4" />
-            Configurações
+            <HelpCircle className="w-4 h-4" />
+            Ajuda
           </Link>
           <button onClick={handleSignOut} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-sidebar-foreground hover:bg-destructive/10 hover:text-destructive transition-all w-full">
             <LogOut className="w-4 h-4" />

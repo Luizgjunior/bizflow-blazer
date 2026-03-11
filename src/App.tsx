@@ -25,6 +25,7 @@ const DisparosPage = lazy(() => import("./pages/DisparosPage"));
 const WhatsAppChatPage = lazy(() => import("./pages/WhatsAppChatPage"));
 const CrmKanbanPage = lazy(() => import("./pages/CrmKanbanPage"));
 const CrmDashboardPage = lazy(() => import("./pages/CrmDashboardPage"));
+const AjudaPage = lazy(() => import("./pages/AjudaPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -57,6 +58,7 @@ function AppRoutes() {
         <Route path="/crm" element={<ProtectedRoute><CrmKanbanPage /></ProtectedRoute>} />
         <Route path="/crm-dashboard" element={<ProtectedRoute><CrmDashboardPage /></ProtectedRoute>} />
         <Route path="/backoffice" element={<ProtectedRoute><BackofficePage /></ProtectedRoute>} />
+        <Route path="/ajuda" element={<ProtectedRoute><AjudaPage /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>
