@@ -429,7 +429,7 @@ export default function LandingPage() {
                     <Button
                       className="w-full gap-2"
                       variant={plan.popular ? 'default' : 'outline'}
-                      onClick={() => window.open(plan.checkoutUrl, '_blank')}
+                      onClick={() => { window.location.href = plan.checkoutUrl; }}
                     >
                       Assinar {plan.name} <ArrowRight className="w-4 h-4" />
                     </Button>

@@ -75,7 +75,7 @@ export default function PlanosPage() {
     }
 
     // Logged in: open Cakto checkout directly
-    window.open(plan.caktoUrl, '_blank');
+    window.location.href = plan.caktoUrl;
   };
 
   return (
