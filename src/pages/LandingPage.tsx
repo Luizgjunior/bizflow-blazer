@@ -81,16 +81,19 @@ const PLANS = [
   {
     id: 'pro', name: 'Pro', price: 97, leads: '6.000',
     icon: Zap, features: ['6.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'CRM integrado', 'Suporte por email'],
+    checkoutUrl: 'https://pay.cakto.com.br/3az982s_802315',
   },
   {
     id: 'premium', name: 'Premium', price: 197, leads: '14.000',
     icon: Crown, popular: true,
     features: ['14.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'CRM integrado', 'Automações', 'Disparos WhatsApp', 'Chat WhatsApp', 'Suporte prioritário'],
+    checkoutUrl: 'https://pay.cakto.com.br/n2jz5qi',
   },
   {
     id: 'enterprise', name: 'Enterprise', price: 297, leads: '32.000',
     icon: Rocket,
     features: ['32.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'CRM integrado', 'Automações', 'Disparos WhatsApp', 'Chat WhatsApp', 'Webhook personalizado', 'Suporte dedicado'],
+    checkoutUrl: 'https://pay.cakto.com.br/msyt9mj',
   },
 ];
 
@@ -212,7 +215,7 @@ export default function LandingPage() {
 
           <FadeIn delay={0.3}>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Button size="lg" onClick={() => navigate('/planos')} className="w-full sm:w-auto gap-2 text-base">
+              <Button size="lg" onClick={() => window.open('https://pay.cakto.com.br/n2jz5qi', '_blank')} className="w-full sm:w-auto gap-2 text-base">
                 Começar Agora <ArrowRight className="w-4 h-4" />
               </Button>
               <Button size="lg" variant="outline" onClick={() => document.getElementById('como-funciona')?.scrollIntoView({ behavior: 'smooth' })} className="w-full sm:w-auto gap-2 text-base">
@@ -426,9 +429,9 @@ export default function LandingPage() {
                     <Button
                       className="w-full gap-2"
                       variant={plan.popular ? 'default' : 'outline'}
-                      onClick={() => navigate('/planos')}
+                      onClick={() => window.open(plan.checkoutUrl, '_blank')}
                     >
-                      Escolher {plan.name} <ArrowRight className="w-4 h-4" />
+                      Assinar {plan.name} <ArrowRight className="w-4 h-4" />
                     </Button>
                   </div>
                 </FadeIn>
@@ -492,7 +495,7 @@ export default function LandingPage() {
               <Button
                 size="lg"
                 variant="secondary"
-                onClick={() => navigate('/planos')}
+                onClick={() => window.open('https://pay.cakto.com.br/n2jz5qi', '_blank')}
                 className="w-full sm:w-auto gap-2 text-base font-semibold"
               >
                 Começar Agora <ArrowRight className="w-4 h-4" />
