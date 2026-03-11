@@ -25,6 +25,7 @@ const DisparosPage = lazy(() => import("./pages/DisparosPage"));
 const WhatsAppChatPage = lazy(() => import("./pages/WhatsAppChatPage"));
 const CrmKanbanPage = lazy(() => import("./pages/CrmKanbanPage"));
 const CrmDashboardPage = lazy(() => import("./pages/CrmDashboardPage"));
+const AjudaPage = lazy(() => import("./pages/AjudaPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
