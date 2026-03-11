@@ -488,9 +488,6 @@ function UsersTab() {
 
   const UserActions = ({ user }: { user: any }) => (
     <div className="flex items-center gap-1">
-      <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => sendMagicLink.mutate(user.email)} title="Enviar Magic Link">
-        <Mail className="w-3.5 h-3.5" />
-      </Button>
       <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => openEdit(user)}>
         <Edit className="w-3.5 h-3.5" />
       </Button>
