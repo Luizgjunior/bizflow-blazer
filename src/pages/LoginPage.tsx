@@ -14,7 +14,7 @@ type Mode = 'login' | 'signup' | 'first-access';
 export default function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { session } = useAuth();
+  const { session, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
