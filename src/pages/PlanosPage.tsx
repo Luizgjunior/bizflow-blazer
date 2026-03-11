@@ -62,26 +62,20 @@ export default function PlanosPage() {
   }, [session, selectedPlan]);
 
   const handleSubscribe = async (planId: string) => {
+    const plan = PLANS.find((p) => p.id === planId);
+    if (!plan?.caktoUrl) {
+      toast.error('Link de pagamento não encontrado');
+      return;
+    }
+
     if (!session) {
+      // Redirect to login with plan selection, then will redirect to Cakto after login
       navigate(`/login?plan=${planId}`);
       return;
     }
 
-    setLoadingPlan(planId);
-    try {
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { plan_id: planId },
-      });
-
-      if (error) throw error;
-      if (data?.url) {
-        window.open(data.url, '_blank');
-      }
-    } catch (err: any) {
-      toast.error(err.message || 'Erro ao criar checkout');
-    } finally {
-      setLoadingPlan(null);
-    }
+    // Logged in: open Cakto checkout directly
+    window.open(plan.caktoUrl, '_blank');
   };
 
   return (
