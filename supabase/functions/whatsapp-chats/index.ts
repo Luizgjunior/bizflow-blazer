@@ -56,22 +56,65 @@ Deno.serve(async (req) => {
 
     // ── LIST CHATS ──
     if (action === "chats") {
-      const res = await fetch(`${UAZAPI_URL}/chat/list`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", "token": token },
-        body: JSON.stringify({}),
-      });
-      const data = await res.json();
-      console.log("Chat list response keys:", Object.keys(data), "status:", res.status);
+      // Try multiple endpoint paths since UazAPI docs are unclear
+      const paths = ["/chat/find", "/chats", "/chat/fetchAll", "/chat/list"];
+      let bestResult: any = null;
       
-      // Try multiple response formats
+      for (const path of paths) {
+        try {
+          const res = await fetch(`${UAZAPI_URL}${path}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "token": token },
+            body: JSON.stringify({}),
+          });
+          const data = await res.json();
+          console.log(`Trying ${path}: status=${res.status}, keys=${JSON.stringify(Object.keys(data))}, sample=${JSON.stringify(data).substring(0, 300)}`);
+          
+          if (res.ok && !data.error) {
+            bestResult = data;
+            console.log(`SUCCESS with path: ${path}`);
+            break;
+          }
+        } catch (e) {
+          console.log(`Error with ${path}: ${e.message}`);
+        }
+      }
+      
+      // Also try GET method on some paths
+      if (!bestResult) {
+        for (const path of ["/chats", "/chat/list", "/chat/find"]) {
+          try {
+            const res = await fetch(`${UAZAPI_URL}${path}`, {
+              method: "GET",
+              headers: { "Content-Type": "application/json", "token": token },
+            });
+            const data = await res.json();
+            console.log(`GET ${path}: status=${res.status}, keys=${JSON.stringify(Object.keys(data))}, sample=${JSON.stringify(data).substring(0, 300)}`);
+            
+            if (res.ok && !data.error) {
+              bestResult = data;
+              console.log(`SUCCESS with GET ${path}`);
+              break;
+            }
+          } catch (e) {
+            console.log(`Error GET ${path}: ${e.message}`);
+          }
+        }
+      }
+
+      if (!bestResult) {
+        return new Response(JSON.stringify({ chats: [], error: "Could not find working chat endpoint" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
       let chats = [];
-      if (Array.isArray(data)) {
-        chats = data;
-      } else if (data.chats && Array.isArray(data.chats)) {
-        chats = data.chats;
-      } else if (data.data && Array.isArray(data.data)) {
-        chats = data.data;
+      if (Array.isArray(bestResult)) {
+        chats = bestResult;
+      } else if (bestResult.chats && Array.isArray(bestResult.chats)) {
+        chats = bestResult.chats;
+      } else if (bestResult.data && Array.isArray(bestResult.data)) {
+        chats = bestResult.data;
       }
 
       return new Response(JSON.stringify({ chats }), {
