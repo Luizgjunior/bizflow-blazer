@@ -7,7 +7,7 @@ import {
   Building2, Users, Plus, Trash2, Loader2, Shield, BarChart3,
   Target, Play, FileText, Activity, Webhook, Copy, Check, Info,
   Edit, TrendingUp, AlertTriangle, Save, CreditCard, DollarSign,
-  TrendingDown, CalendarDays, Receipt,
+  TrendingDown, CalendarDays, Receipt, Mail,
 } from 'lucide-react';
 import { LineChart, Line } from 'recharts';
 import { motion } from 'framer-motion';
@@ -397,6 +397,14 @@ function TenantsTab() {
 }
 
 function UsersTab() {
+  const queryClient = useQueryClient();
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingUser, setEditingUser] = useState<any>(null);
+  const [formNome, setFormNome] = useState('');
+  const [formEmail, setFormEmail] = useState('');
+  const [formTenantId, setFormTenantId] = useState('');
+  const [formRole, setFormRole] = useState('empresa');
+
   const { data: users = [], isLoading } = useQuery({
     queryKey: ['backoffice-users'],
     queryFn: async () => {
@@ -409,8 +417,143 @@ function UsersTab() {
     },
   });
 
+  const { data: tenantsList = [] } = useQuery({
+    queryKey: ['backoffice-tenants-list'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('tenants').select('id, nome').order('nome');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const resetForm = () => {
+    setFormNome(''); setFormEmail(''); setFormTenantId(''); setFormRole('empresa'); setEditingUser(null);
+  };
+
+  const openEdit = (user: any) => {
+    setEditingUser(user);
+    setFormNome(user.nome);
+    setFormEmail(user.email);
+    setFormTenantId(user.tenant_id || '');
+    const roles = user.user_roles as any[];
+    setFormRole(roles?.length > 0 ? roles[0].role : 'empresa');
+    setDialogOpen(true);
+  };
+
+  const saveUser = useMutation({
+    mutationFn: async () => {
+      if (editingUser) {
+        const { data, error } = await supabase.functions.invoke('manage-users', {
+          body: { action: 'update', user_id: editingUser.id, nome: formNome, tenant_id: formTenantId || null, role: formRole },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+      } else {
+        const { data, error } = await supabase.functions.invoke('manage-users', {
+          body: { action: 'create', email: formEmail, nome: formNome, tenant_id: formTenantId || null, role: formRole },
+        });
+        if (error) throw error;
+        if (data?.error) throw new Error(data.error);
+        if (data?.magic_link) {
+          toast.info('Magic link gerado. O usuário receberá o acesso por email.');
+        }
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['backoffice-users'] });
+      queryClient.invalidateQueries({ queryKey: ['backoffice-counts'] });
+      toast.success(editingUser ? 'Usuário atualizado!' : 'Usuário criado!');
+      setDialogOpen(false);
+      resetForm();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const deleteUser = useMutation({
+    mutationFn: async (userId: string) => {
+      const { data, error } = await supabase.functions.invoke('manage-users', {
+        body: { action: 'delete', user_id: userId },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['backoffice-users'] });
+      queryClient.invalidateQueries({ queryKey: ['backoffice-counts'] });
+      toast.success('Usuário excluído');
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const sendMagicLink = useMutation({
+    mutationFn: async (email: string) => {
+      const { data, error } = await supabase.functions.invoke('manage-users', {
+        body: { action: 'send-magic-link', email },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+    },
+    onSuccess: () => toast.success('Magic link enviado!'),
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const UserActions = ({ user }: { user: any }) => (
+    <div className="flex items-center gap-1">
+      <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => sendMagicLink.mutate(user.email)} title="Enviar Magic Link">
+        <Mail className="w-3.5 h-3.5" />
+      </Button>
+      <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => openEdit(user)}>
+        <Edit className="w-3.5 h-3.5" />
+      </Button>
+      <Button size="sm" variant="ghost" className="h-7 px-2 text-destructive hover:text-destructive" onClick={() => { if (confirm('Excluir este usuário?')) deleteUser.mutate(user.id); }}>
+        <Trash2 className="w-3.5 h-3.5" />
+      </Button>
+    </div>
+  );
+
   return (
     <div>
+      <div className="flex justify-end mb-4">
+        <Dialog open={dialogOpen} onOpenChange={(open) => { setDialogOpen(open); if (!open) resetForm(); }}>
+          <DialogTrigger asChild>
+            <Button size="sm" className="gap-1.5"><Plus className="w-4 h-4" /> Novo Usuário</Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader><DialogTitle>{editingUser ? 'Editar Usuário' : 'Criar Usuário'}</DialogTitle></DialogHeader>
+            <div className="space-y-4 mt-2">
+              <div><Label>Nome</Label><Input className="mt-1.5" value={formNome} onChange={e => setFormNome(e.target.value)} placeholder="Nome do usuário" /></div>
+              {!editingUser && (
+                <div><Label>Email</Label><Input type="email" className="mt-1.5" value={formEmail} onChange={e => setFormEmail(e.target.value)} placeholder="email@exemplo.com" /></div>
+              )}
+              <div>
+                <Label>Tenant</Label>
+                <Select value={formTenantId} onValueChange={setFormTenantId}>
+                  <SelectTrigger className="mt-1.5"><SelectValue placeholder="Selecione um tenant" /></SelectTrigger>
+                  <SelectContent>
+                    {tenantsList.map((t: any) => (
+                      <SelectItem key={t.id} value={t.id}>{t.nome}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Role</Label>
+                <Select value={formRole} onValueChange={setFormRole}>
+                  <SelectTrigger className="mt-1.5"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="empresa">Empresa</SelectItem>
+                    <SelectItem value="admin_global">Admin Global</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button className="w-full gap-1.5" onClick={() => saveUser.mutate()} disabled={(!editingUser && !formEmail) || saveUser.isPending}>
+                {saveUser.isPending ? 'Salvando...' : editingUser ? <><Save className="w-4 h-4" /> Salvar</> : 'Criar Usuário'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      </div>
+
       {isLoading ? (
         <div className="flex justify-center py-12"><Loader2 className="w-6 h-6 text-primary animate-spin" /></div>
       ) : users.length === 0 ? (
@@ -427,6 +570,7 @@ function UsersTab() {
                   <th className="text-left text-xs font-medium text-muted-foreground p-3">Role</th>
                   <th className="text-left text-xs font-medium text-muted-foreground p-3">Tenant</th>
                   <th className="text-left text-xs font-medium text-muted-foreground p-3">Criado</th>
+                  <th className="text-right text-xs font-medium text-muted-foreground p-3 pr-4">Ações</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-border">
@@ -446,6 +590,7 @@ function UsersTab() {
                       </td>
                       <td className="p-3 text-sm text-muted-foreground">{u.tenants?.nome || '—'}</td>
                       <td className="p-3 text-sm text-muted-foreground">{new Date(u.created_at).toLocaleDateString('pt-BR')}</td>
+                      <td className="p-3 pr-4 text-right"><UserActions user={u} /></td>
                     </tr>
                   );
                 })}
@@ -468,6 +613,17 @@ function UsersTab() {
                   </div>
                   <p className="text-[11px] text-muted-foreground">{u.email}</p>
                   <p className="text-[11px] text-muted-foreground mt-1">Tenant: {u.tenants?.nome || '—'}</p>
+                  <div className="mt-3 flex gap-2">
+                    <Button size="sm" variant="outline" className="flex-1 gap-1 text-xs" onClick={() => sendMagicLink.mutate(u.email)}>
+                      <Mail className="w-3 h-3" /> Magic Link
+                    </Button>
+                    <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => openEdit(u)}>
+                      <Edit className="w-3 h-3" />
+                    </Button>
+                    <Button size="sm" variant="outline" className="gap-1 text-xs text-destructive hover:text-destructive" onClick={() => { if (confirm('Excluir?')) deleteUser.mutate(u.id); }}>
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
+                  </div>
                 </div>
               );
             })}
