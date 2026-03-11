@@ -240,6 +240,7 @@ export default function LoginPage() {
               </button>
             </>
           ) : (
+            <>
               <h2 className="text-lg font-semibold text-foreground mb-1">Primeiro Acesso</h2>
               <p className="text-sm text-muted-foreground mb-6">
                 Informe o email que você usou na compra. Enviaremos um link para definir sua senha.
