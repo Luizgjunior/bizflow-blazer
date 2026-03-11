@@ -1,79 +1,60 @@
 
 
-# Plano: Migrar para Stripe com 3 planos de assinatura
+## Plano: Gestão de Usuários no Backoffice + Login via Magic Link (Cakto)
 
-## Resumo
+### Contexto
+- A aba "Usuários" no Backoffice é somente leitura. Precisa virar um painel completo de CRUD.
+- O webhook Cakto já cria usuários sem senha, mas as colunas `cakto_customer_email` e `cakto_subscription_id` foram removidas da tabela `tenants` numa migração posterior — precisam ser recriadas.
+- O login precisa suportar Magic Link para usuários vindos da Cakto (sem senha).
 
-Substituir a integração Cakto pela Stripe para gerenciar assinaturas mensais com 3 planos. Quando o pagamento falhar ou a assinatura for cancelada, o tenant perde acesso a extrações.
+### O que será feito
 
-## Planos
+**1. Migração de banco de dados**
+- Re-adicionar `cakto_customer_email` e `cakto_subscription_id` na tabela `tenants`
 
-| Plano | Preço | Leads |
-|-------|-------|-------|
-| Pro | R$ 47/mes | 6.000 |
-| Premium | R$ 97/mes | 14.000 |
-| Enterprise | R$ 197/mes | 32.000 |
+**2. Backoffice — UsersTab completa**
+- Botão "Novo Usuário" com dialog: nome, email, tenant (select dos tenants existentes), role
+- Criação via edge function `manage-users` (usa `supabase.auth.admin`) — cria o auth user sem senha + profile + role + vincula ao tenant
+- Após criar, envia magic link automaticamente para o email do usuário
+- Editar usuário: alterar nome, tenant, role
+- Excluir usuário: remove do auth + cascade deleta profile/role
+- Botão "Reenviar Magic Link" por usuário
+- Toggle ativar/desativar tenant do usuário
 
-## Etapas
+**3. Edge Function `manage-users`**
+- Ações: `create`, `update`, `delete`, `send-magic-link`
+- `create`: `supabase.auth.admin.createUser()` sem senha, `email_confirm: true`, depois gera magic link via `supabase.auth.admin.generateLink({ type: 'magiclink' })` e usa a infra existente ou retorna o link
+- `delete`: `supabase.auth.admin.deleteUser()`
+- `send-magic-link`: `supabase.auth.admin.generateLink({ type: 'magiclink' })`
 
-### 1. Habilitar integração Stripe
-- Ativar o Stripe no projeto (vai pedir a chave secreta)
-- Criar os 3 produtos e preços na Stripe via ferramenta do Lovable
+**4. Login — suporte a Magic Link**
+- Adicionar modo "Magic Link" na tela de login: usuário informa email, recebe link por email, clica e entra logado
+- Usar `supabase.auth.signInWithOtp({ email })` no frontend
+- Manter os modos existentes (login com senha, primeiro acesso, signup)
 
-### 2. Atualizar banco de dados
-- Adicionar colunas na tabela `tenants`: `stripe_customer_id`, `stripe_subscription_id`, `stripe_status` (substituindo os campos `cakto_*`)
-- Remover colunas Cakto (`cakto_customer_email`, `cakto_subscription_id`)
-- Atualizar valores do enum de plano para `pro`, `premium`, `enterprise`
+**5. Webhook Cakto — ajuste**
+- Após criar o usuário, enviar magic link automaticamente via `supabase.auth.admin.generateLink()`
+- Atualizar para usar as colunas cakto restauradas
 
-### 3. Criar Edge Function `stripe-webhook`
-- Receber eventos do Stripe: `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.deleted`
-- No `checkout.session.completed`: criar usuario (se nao existir), ativar tenant, definir plano e limites conforme o preco pago
-- No `invoice.paid`: manter `ativo = true`
-- No `invoice.payment_failed` / `subscription.deleted`: setar `ativo = false` (bloqueia extrações)
+### Arquivos envolvidos
 
-### 4. Criar Edge Function `create-checkout`
-- Recebe o `price_id` do plano escolhido
-- Cria (ou recupera) um Stripe Customer pelo email do usuario
-- Gera uma Checkout Session do Stripe em modo `subscription`
-- Retorna a URL do checkout para redirect
+| Arquivo | Ação |
+|---|---|
+| Migração SQL | Re-adicionar colunas cakto no tenants |
+| `supabase/functions/manage-users/index.ts` | Criar (nova edge function) |
+| `src/pages/BackofficePage.tsx` | Reescrever UsersTab com CRUD completo |
+| `src/pages/LoginPage.tsx` | Adicionar modo Magic Link |
+| `supabase/functions/webhook-cakto/index.ts` | Enviar magic link após criar usuário |
+| `supabase/config.toml` | Adicionar `verify_jwt = false` para manage-users |
 
-### 5. Criar pagina de planos (`/planos`)
-- Pagina publica ou acessivel por usuarios logados sem assinatura
-- Exibe os 3 cards de plano com preço, limite de leads e botao "Assinar"
-- Ao clicar, chama `create-checkout` e redireciona para o Stripe Checkout
+### Fluxo do usuário Cakto
 
-### 6. Atualizar ProtectedRoute
-- Apos login, verificar se o tenant esta `ativo`
-- Se `ativo = false`, redirecionar para `/planos` em vez do dashboard
-- Admins globais ficam isentos dessa verificação
-
-### 7. Bloquear extrações para inadimplentes
-- Na pagina de ICPs, antes de executar um ICP (run), verificar `tenant.ativo`
-- Se inativo, mostrar toast informando que a assinatura esta pendente
-
-### 8. Atualizar Backoffice
-- Substituir aba "Cakto" por aba "Assinaturas" mostrando status Stripe de cada tenant
-- Exibir: nome do tenant, plano, status da assinatura, stripe_customer_id
-
-### 9. Limpar codigo Cakto
-- Remover/substituir o webhook-cakto pela nova logica Stripe
-- Remover referencias a Cakto no frontend
-
----
-
-## Detalhes tecnicos
-
-**Mapeamento plano → limites (aplicado no webhook)**:
-- `pro` → 6000
-- `premium` → 14000  
-- `enterprise` → 32000
-
-**Fluxo do usuario**:
-1. Usuario acessa `/planos` e escolhe um plano
-2. E redirecionado ao Stripe Checkout (cartao de credito)
-3. Apos pagamento, webhook cria conta + tenant + ativa
-4. Usuario acessa via "Primeiro Acesso" e define senha
-5. Todo mes o Stripe cobra automaticamente; se falhar, `ativo = false`
-
-**Edge Function `stripe-webhook`**: usara `verify_jwt = false` no config.toml e validara a assinatura do webhook via `Stripe-Signature` header com o secret `STRIPE_WEBHOOK_SECRET`.
+```text
+Compra na Cakto
+  → Webhook recebe email
+  → Cria auth user (sem senha) + tenant + profile
+  → Envia magic link por email
+  → Usuário clica no link → logado direto
+  → Próximos acessos: login via magic link ou define senha
+```
 
