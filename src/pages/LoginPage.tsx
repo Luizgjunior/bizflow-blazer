@@ -176,34 +176,6 @@ export default function LoginPage() {
                 Já tem conta? Entrar
               </button>
             </>
-          ) : (
-            <>
-              <h2 className="text-lg font-semibold text-foreground mb-1">Primeiro Acesso</h2>
-              <p className="text-sm text-muted-foreground mb-6">
-                Informe o email que você usou na compra. Enviaremos um link para definir sua senha.
-              </p>
-
-              <form onSubmit={handleFirstAccess} className="space-y-4">
-                <div>
-                  <Label htmlFor="email-first">Email de compra</Label>
-                  <div className="relative mt-1.5">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input id="email-first" type="email" placeholder="email@usado-na-compra.com" className="pl-9" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                  </div>
-                </div>
-                <Button type="submit" className="w-full gap-2" disabled={loading}>
-                  {loading ? 'Enviando...' : 'Enviar link de acesso'}
-                  {!loading && <KeyRound className="w-4 h-4" />}
-                </Button>
-              </form>
-
-              <button
-                onClick={() => { setMode('login'); setEmail(''); setPassword(''); }}
-                className="w-full mt-4 text-sm text-muted-foreground hover:text-foreground transition-colors text-center"
-              >
-                Já tem senha? Entrar
-              </button>
-            </>
           )}
         </div>
 
