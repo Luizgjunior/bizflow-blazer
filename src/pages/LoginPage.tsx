@@ -30,15 +30,17 @@ export default function LoginPage() {
     }
   }, [planParam, session]);
 
+  const { session, loading: authLoading } = useAuth();
+
   useEffect(() => {
-    if (session) {
+    if (!authLoading && session) {
       if (planParam) {
         navigate(`/planos?selected=${planParam}`, { replace: true });
       } else {
         navigate('/', { replace: true });
       }
     }
-  }, [session, planParam, navigate]);
+  }, [session, authLoading, planParam, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
