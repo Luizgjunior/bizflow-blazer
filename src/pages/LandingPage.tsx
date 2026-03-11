@@ -130,9 +130,14 @@ export default function LandingPage() {
           </div>
           <div className="flex items-center gap-2">
             {session ? (
-              <Button size="sm" onClick={() => navigate('/planos')} className="gap-1.5">
-                Escolher Plano <ArrowRight className="w-3.5 h-3.5" />
-              </Button>
+              <>
+                <Button variant="ghost" size="sm" onClick={() => signOut()} className="gap-1.5 text-muted-foreground">
+                  <LogOut className="w-3.5 h-3.5" /> Sair
+                </Button>
+                <Button size="sm" onClick={() => navigate('/planos')} className="gap-1.5">
+                  Escolher Plano <ArrowRight className="w-3.5 h-3.5" />
+                </Button>
+              </>
             ) : (
               <>
                 <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
