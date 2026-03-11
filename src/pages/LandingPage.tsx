@@ -81,7 +81,7 @@ const PLANS = [
   {
     id: 'premium', name: 'Premium', price: 97, leads: '14.000',
     icon: Crown, popular: true,
-    features: ['14.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'Automações', 'Suporte prioritário'],
+    features: ['14.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'Automações', 'Disparos WhatsApp', 'Suporte prioritário'],
   },
   {
     id: 'enterprise', name: 'Enterprise', price: 197, leads: '32.000',
