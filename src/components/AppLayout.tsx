@@ -86,6 +86,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               <Link
                 key={item.path}
                 to={item.path}
+                onMouseEnter={() => prefetchMap[item.path]?.()}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 ${
                   isActive
                     ? 'bg-sidebar-accent text-sidebar-accent-foreground'
