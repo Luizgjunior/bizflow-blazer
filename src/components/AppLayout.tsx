@@ -16,6 +16,8 @@ import {
   X,
   Shield,
   MessageSquare,
+  Kanban,
+  BarChart3,
 } from 'lucide-react';
 import logoImg from '@/assets/logo.png';
 import { useState } from 'react';
