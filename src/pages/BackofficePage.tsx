@@ -485,17 +485,6 @@ function UsersTab() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const sendMagicLink = useMutation({
-    mutationFn: async (email: string) => {
-      const { data, error } = await supabase.functions.invoke('manage-users', {
-        body: { action: 'send-magic-link', email },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-    },
-    onSuccess: () => toast.success('Magic link enviado!'),
-    onError: (e: any) => toast.error(e.message),
-  });
 
   const UserActions = ({ user }: { user: any }) => (
     <div className="flex items-center gap-1">
