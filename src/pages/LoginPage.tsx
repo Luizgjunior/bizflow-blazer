@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
-type Mode = 'login' | 'signup' | 'first-access' | 'magic-link';
+type Mode = 'login' | 'signup' | 'first-access';
 
 export default function LoginPage() {
   const navigate = useNavigate();
