@@ -122,13 +122,16 @@ export default function LoginPage() {
                 </Button>
               </form>
 
-              <div className="mt-4">
-                <button
-                  onClick={() => { setMode('first-access'); setEmail(''); }}
-                  className="w-full text-sm text-primary hover:text-primary/80 transition-colors text-center font-medium"
+              <div className="mt-4 space-y-2">
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors text-center font-medium"
                 >
-                  Primeiro acesso? Definir senha
-                </button>
+                  <MessageCircle className="w-4 h-4" />
+                  Precisa de ajuda? Fale conosco
+                </a>
               </div>
             </>
           ) : mode === 'signup' ? (
