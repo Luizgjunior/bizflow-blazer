@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import {
-  Search, Send, ArrowLeft, MessageSquare, Loader2, MoreVertical, CheckCheck, RefreshCw,
+  Search, Send, ArrowLeft, MessageSquare, Loader2, MoreVertical, CheckCheck, RefreshCw, Paperclip, X, Image as ImageIcon, FileText,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -122,6 +122,13 @@ async function apiCall(action: string, body?: any) {
   return res.json();
 }
 
+function getMediaType(file: File): string {
+  if (file.type.startsWith('image/')) return 'image';
+  if (file.type.startsWith('video/')) return 'video';
+  if (file.type.startsWith('audio/')) return 'audio';
+  return 'document';
+}
+
 /* ── Chat List Sidebar ── */
 function ChatList({ chats, selectedId, onSelect, loading, searchTerm, onSearchChange, onRefresh }: {
   chats: Chat[];
@@ -208,16 +215,55 @@ function ChatList({ chats, selectedId, onSelect, loading, searchTerm, onSearchCh
   );
 }
 
+/* ── File Preview ── */
+function FilePreview({ file, onRemove }: { file: File; onRemove: () => void }) {
+  const isImage = file.type.startsWith('image/');
+  const [preview, setPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (isImage) {
+      const url = URL.createObjectURL(file);
+      setPreview(url);
+      return () => URL.revokeObjectURL(url);
+    }
+  }, [file, isImage]);
+
+  return (
+    <div className="relative inline-flex items-center gap-2 bg-muted rounded-lg p-2 pr-8 max-w-[200px]">
+      {isImage && preview ? (
+        <img src={preview} alt={file.name} className="w-12 h-12 rounded object-cover" />
+      ) : (
+        <div className="w-12 h-12 rounded bg-muted-foreground/10 flex items-center justify-center">
+          <FileText className="w-5 h-5 text-muted-foreground" />
+        </div>
+      )}
+      <div className="min-w-0 flex-1">
+        <p className="text-xs font-medium text-foreground truncate">{file.name}</p>
+        <p className="text-[10px] text-muted-foreground">{(file.size / 1024).toFixed(0)} KB</p>
+      </div>
+      <button
+        onClick={onRemove}
+        className="absolute top-1 right-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center"
+      >
+        <X className="w-3 h-3" />
+      </button>
+    </div>
+  );
+}
+
 /* ── Message View ── */
-function MessageView({ chat, messages, loading, onSend, onBack }: {
+function MessageView({ chat, messages, loading, onSend, onSendMedia, onBack }: {
   chat: Chat;
   messages: Message[];
   loading: boolean;
   onSend: (text: string) => void;
+  onSendMedia: (file: File, caption: string) => Promise<void>;
   onBack: () => void;
 }) {
   const [text, setText] = useState('');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [sending, setSending] = useState(false);
 
   useEffect(() => {
@@ -225,7 +271,21 @@ function MessageView({ chat, messages, loading, onSend, onBack }: {
   }, [messages]);
 
   const handleSend = async () => {
-    if (!text.trim() || sending) return;
+    if (sending) return;
+
+    if (selectedFile) {
+      setSending(true);
+      try {
+        await onSendMedia(selectedFile, text.trim());
+        setText('');
+        setSelectedFile(null);
+      } finally {
+        setSending(false);
+      }
+      return;
+    }
+
+    if (!text.trim()) return;
     setSending(true);
     try {
       await onSend(text.trim());
@@ -233,6 +293,18 @@ function MessageView({ chat, messages, loading, onSend, onBack }: {
     } finally {
       setSending(false);
     }
+  };
+
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 16 * 1024 * 1024) {
+        toast.error('Arquivo muito grande. Máximo 16MB.');
+        return;
+      }
+      setSelectedFile(file);
+    }
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   return (
@@ -295,10 +367,32 @@ function MessageView({ chat, messages, loading, onSend, onBack }: {
         </div>
       </ScrollArea>
 
+      {/* File Preview */}
+      {selectedFile && (
+        <div className="px-3 py-2 border-t border-border bg-card/80">
+          <FilePreview file={selectedFile} onRemove={() => setSelectedFile(null)} />
+        </div>
+      )}
+
       {/* Input Bar */}
       <div className="flex items-center gap-2 px-2 py-2 border-t border-border bg-card">
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.zip,.rar"
+          className="hidden"
+          onChange={handleFileSelect}
+        />
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-11 w-11 shrink-0 text-muted-foreground"
+          onClick={() => fileInputRef.current?.click()}
+        >
+          <Paperclip className="w-5 h-5" />
+        </Button>
         <Input
-          placeholder="Digite uma mensagem..."
+          placeholder={selectedFile ? "Legenda (opcional)..." : "Digite uma mensagem..."}
           value={text}
           onChange={(e) => setText(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && handleSend()}
@@ -308,7 +402,7 @@ function MessageView({ chat, messages, loading, onSend, onBack }: {
           size="icon"
           className="h-11 w-11 shrink-0"
           onClick={handleSend}
-          disabled={!text.trim() || sending}
+          disabled={(!text.trim() && !selectedFile) || sending}
         >
           {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
         </Button>
@@ -329,7 +423,6 @@ export default function WhatsAppChatPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const selectedChatRef = useRef<Chat | null>(null);
 
-  // Keep ref in sync
   useEffect(() => {
     selectedChatRef.current = selectedChat;
   }, [selectedChat]);
@@ -418,6 +511,57 @@ export default function WhatsAppChatPage() {
     }
   };
 
+  const handleSendMedia = async (file: File, caption: string) => {
+    if (!selectedChat) return;
+    try {
+      // Upload file to storage bucket
+      const fileExt = file.name.split('.').pop();
+      const fileName = `chat/${Date.now()}_${Math.random().toString(36).slice(2)}.${fileExt}`;
+
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('whatsapp-media')
+        .upload(fileName, file);
+
+      if (uploadError) {
+        toast.error('Erro ao fazer upload do arquivo');
+        console.error('Upload error:', uploadError);
+        return;
+      }
+
+      const { data: urlData } = supabase.storage
+        .from('whatsapp-media')
+        .getPublicUrl(fileName);
+
+      const mediaUrl = urlData.publicUrl;
+      const mediaType = getMediaType(file);
+
+      const data = await apiCall('sendMedia', {
+        chatId: selectedChat.chatId,
+        mediaUrl,
+        mediaType,
+        caption,
+      });
+
+      if (data.error) {
+        toast.error(data.error);
+        return;
+      }
+
+      const newMsg: Message = {
+        id: Date.now().toString(),
+        text: caption || `[${mediaType}] ${file.name}`,
+        timestamp: Date.now(),
+        timestampFormatted: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+        fromMe: true,
+        type: mediaType,
+      };
+      setMessages(prev => [...prev, newMsg]);
+      toast.success('Mídia enviada!');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao enviar mídia');
+    }
+  };
+
   return (
     <AppLayout>
       <div className="space-y-3">
@@ -458,6 +602,7 @@ export default function WhatsAppChatPage() {
                     messages={messages}
                     loading={loadingMessages}
                     onSend={handleSend}
+                    onSendMedia={handleSendMedia}
                     onBack={() => setSelectedChat(null)}
                   />
                 </div>
