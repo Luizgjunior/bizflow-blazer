@@ -405,6 +405,7 @@ function UsersTab() {
   const [editingUser, setEditingUser] = useState<any>(null);
   const [formNome, setFormNome] = useState('');
   const [formEmail, setFormEmail] = useState('');
+  const [formPassword, setFormPassword] = useState('');
   const [formTenantId, setFormTenantId] = useState('');
   const [formRole, setFormRole] = useState('empresa');
 
@@ -430,7 +431,7 @@ function UsersTab() {
   });
 
   const resetForm = () => {
-    setFormNome(''); setFormEmail(''); setFormTenantId(''); setFormRole('empresa'); setEditingUser(null);
+    setFormNome(''); setFormEmail(''); setFormPassword(''); setFormTenantId(''); setFormRole('empresa'); setEditingUser(null);
   };
 
   const openEdit = (user: any) => {
@@ -453,7 +454,7 @@ function UsersTab() {
         if (data?.error) throw new Error(data.error);
       } else {
         const { data, error } = await supabase.functions.invoke('manage-users', {
-          body: { action: 'create', email: formEmail, nome: formNome, tenant_id: formTenantId || null, role: formRole },
+          body: { action: 'create', email: formEmail, password: formPassword || undefined, nome: formNome, tenant_id: formTenantId || null, role: formRole },
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
@@ -510,6 +511,9 @@ function UsersTab() {
               <div><Label>Nome</Label><Input className="mt-1.5" value={formNome} onChange={e => setFormNome(e.target.value)} placeholder="Nome do usuário" /></div>
               {!editingUser && (
                 <div><Label>Email</Label><Input type="email" className="mt-1.5" value={formEmail} onChange={e => setFormEmail(e.target.value)} placeholder="email@exemplo.com" /></div>
+              )}
+              {!editingUser && (
+                <div><Label>Senha</Label><Input type="password" className="mt-1.5" value={formPassword} onChange={e => setFormPassword(e.target.value)} placeholder="Mínimo 6 caracteres" minLength={6} /></div>
               )}
               <div>
                 <Label>Tenant</Label>
