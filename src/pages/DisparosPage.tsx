@@ -235,7 +235,7 @@ function WhatsAppTab() {
             {qrCode ? (
               <div className="p-4 bg-white rounded-xl">
                 <img
-                  src={qrCode.startsWith('data:') ? qrCode : `data:image/png;base64,${qrCode}`}
+                  src={typeof qrCode === 'string' ? (qrCode.startsWith('data:') ? qrCode : `data:image/png;base64,${qrCode}`) : ''}
                   alt="QR Code WhatsApp"
                   className="w-64 h-64"
                 />
