@@ -14,7 +14,7 @@ type Mode = 'login' | 'signup' | 'first-access';
 export default function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { session } = useAuth();
+  const { session, loading: authLoading } = useAuth();
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<Mode>('login');
   const [email, setEmail] = useState('');
@@ -30,15 +30,16 @@ export default function LoginPage() {
     }
   }, [planParam, session]);
 
+
   useEffect(() => {
-    if (session) {
+    if (!authLoading && session) {
       if (planParam) {
         navigate(`/planos?selected=${planParam}`, { replace: true });
       } else {
         navigate('/', { replace: true });
       }
     }
-  }, [session, planParam, navigate]);
+  }, [session, authLoading, planParam, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
