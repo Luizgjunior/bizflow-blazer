@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Mail, Lock, ArrowRight, KeyRound, UserPlus } from 'lucide-react';
+import { Mail, Lock, ArrowRight, UserPlus, MessageCircle } from 'lucide-react';
 import logoImg from '@/assets/logo.png';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
-type Mode = 'login' | 'signup' | 'first-access';
+type Mode = 'login' | 'signup';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -81,22 +81,7 @@ export default function LoginPage() {
     }
   };
 
-  const handleFirstAccess = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/reset-password`,
-      });
-      if (error) {
-        toast.error(error.message);
-      } else {
-        toast.success('Email enviado! Verifique sua caixa de entrada para definir sua senha.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
+  const whatsappUrl = 'https://wa.me/5565981078369';
 
 
   if (session) return null;
@@ -137,16 +122,19 @@ export default function LoginPage() {
                 </Button>
               </form>
 
-              <div className="mt-4">
-                <button
-                  onClick={() => { setMode('first-access'); setEmail(''); }}
-                  className="w-full text-sm text-primary hover:text-primary/80 transition-colors text-center font-medium"
+              <div className="mt-4 space-y-2">
+                <a
+                  href={whatsappUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="w-full flex items-center justify-center gap-2 text-sm text-primary hover:text-primary/80 transition-colors text-center font-medium"
                 >
-                  Primeiro acesso? Definir senha
-                </button>
+                  <MessageCircle className="w-4 h-4" />
+                  Precisa de ajuda? Fale conosco
+                </a>
               </div>
             </>
-          ) : mode === 'signup' ? (
+          ) : (
             <>
               <h2 className="text-lg font-semibold text-foreground mb-1">Criar Conta</h2>
               <p className="text-sm text-muted-foreground mb-6">
@@ -186,34 +174,6 @@ export default function LoginPage() {
                 className="w-full mt-4 text-sm text-muted-foreground hover:text-foreground transition-colors text-center"
               >
                 Já tem conta? Entrar
-              </button>
-            </>
-          ) : (
-            <>
-              <h2 className="text-lg font-semibold text-foreground mb-1">Primeiro Acesso</h2>
-              <p className="text-sm text-muted-foreground mb-6">
-                Informe o email que você usou na compra. Enviaremos um link para definir sua senha.
-              </p>
-
-              <form onSubmit={handleFirstAccess} className="space-y-4">
-                <div>
-                  <Label htmlFor="email-first">Email de compra</Label>
-                  <div className="relative mt-1.5">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input id="email-first" type="email" placeholder="email@usado-na-compra.com" className="pl-9" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                  </div>
-                </div>
-                <Button type="submit" className="w-full gap-2" disabled={loading}>
-                  {loading ? 'Enviando...' : 'Enviar link de acesso'}
-                  {!loading && <KeyRound className="w-4 h-4" />}
-                </Button>
-              </form>
-
-              <button
-                onClick={() => { setMode('login'); setEmail(''); setPassword(''); }}
-                className="w-full mt-4 text-sm text-muted-foreground hover:text-foreground transition-colors text-center"
-              >
-                Já tem senha? Entrar
               </button>
             </>
           )}
