@@ -63,12 +63,6 @@ function WhatsAppTab() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
 
-      const res = await supabase.functions.invoke('whatsapp-instance', {
-        body: null,
-        headers: { 'Content-Type': 'application/json' },
-      });
-
-      // Use query param approach
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
       const response = await fetch(
         `https://${projectId}.supabase.co/functions/v1/whatsapp-instance?action=status`,
