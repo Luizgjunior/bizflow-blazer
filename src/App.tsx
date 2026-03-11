@@ -58,6 +58,7 @@ function AppRoutes() {
         <Route path="/crm" element={<ProtectedRoute><CrmKanbanPage /></ProtectedRoute>} />
         <Route path="/crm-dashboard" element={<ProtectedRoute><CrmDashboardPage /></ProtectedRoute>} />
         <Route path="/backoffice" element={<ProtectedRoute><BackofficePage /></ProtectedRoute>} />
+        <Route path="/ajuda" element={<ProtectedRoute><AjudaPage /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     </Suspense>

@@ -399,7 +399,7 @@ export default function AjudaPage() {
                       {tutorial.tips && tutorial.tips.length > 0 && (
                         <div className="rounded-lg bg-muted/50 border border-border p-4">
                           <h4 className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
-                            <Lightbulb className="w-3.5 h-3.5 text-yellow-500" />
+                            <Lightbulb className="w-3.5 h-3.5 text-accent" />
                             Dicas
                           </h4>
                           <ul className="space-y-1.5">
