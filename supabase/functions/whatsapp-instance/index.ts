@@ -111,10 +111,15 @@ Deno.serve(async (req) => {
       });
 
       const qrData = await qrRes.json();
+      console.log("QR API response:", JSON.stringify(qrData));
+
+      // Try multiple possible field names from UazAPI response
+      const qrValue = qrData.qrcode || qrData.base64 || qrData.data || qrData.qr || qrData.value || qrData.code || null;
 
       return new Response(JSON.stringify({
         status: "connecting",
-        qr_code: qrData.qrcode || qrData.base64 || qrData.data || null,
+        qr_code: typeof qrValue === 'string' ? qrValue : null,
+        qr_raw: qrData,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
