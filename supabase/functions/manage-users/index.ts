@@ -107,19 +107,10 @@ Deno.serve(async (req) => {
           .eq("user_id", authUser.user.id);
       }
 
-      // Generate magic link
-      const { data: linkData, error: linkError } =
-        await adminClient.auth.admin.generateLink({
-          type: "magiclink",
-          email,
-        });
-
       return new Response(
         JSON.stringify({
           success: true,
           user_id: authUser.user.id,
-          magic_link: linkData?.properties?.action_link || null,
-          magic_link_error: linkError?.message || null,
         }),
         {
           status: 200,
@@ -197,43 +188,6 @@ Deno.serve(async (req) => {
         status: 200,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
-    }
-
-    if (action === "send-magic-link") {
-      const { email } = body;
-      if (!email) {
-        return new Response(JSON.stringify({ error: "email required" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const { data: linkData, error: linkError } =
-        await adminClient.auth.admin.generateLink({
-          type: "magiclink",
-          email,
-        });
-
-      if (linkError) {
-        return new Response(
-          JSON.stringify({ error: linkError.message }),
-          {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          magic_link: linkData?.properties?.action_link || null,
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
     }
 
     return new Response(JSON.stringify({ error: "Invalid action" }), {

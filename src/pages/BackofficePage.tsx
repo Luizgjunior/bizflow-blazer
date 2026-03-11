@@ -457,9 +457,6 @@ function UsersTab() {
         });
         if (error) throw error;
         if (data?.error) throw new Error(data.error);
-        if (data?.magic_link) {
-          toast.info('Magic link gerado. O usuário receberá o acesso por email.');
-        }
       }
     },
     onSuccess: () => {
@@ -488,23 +485,9 @@ function UsersTab() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  const sendMagicLink = useMutation({
-    mutationFn: async (email: string) => {
-      const { data, error } = await supabase.functions.invoke('manage-users', {
-        body: { action: 'send-magic-link', email },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-    },
-    onSuccess: () => toast.success('Magic link enviado!'),
-    onError: (e: any) => toast.error(e.message),
-  });
 
   const UserActions = ({ user }: { user: any }) => (
     <div className="flex items-center gap-1">
-      <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => sendMagicLink.mutate(user.email)} title="Enviar Magic Link">
-        <Mail className="w-3.5 h-3.5" />
-      </Button>
       <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => openEdit(user)}>
         <Edit className="w-3.5 h-3.5" />
       </Button>
@@ -617,11 +600,8 @@ function UsersTab() {
                   <p className="text-[11px] text-muted-foreground">{u.email}</p>
                   <p className="text-[11px] text-muted-foreground mt-1">Tenant: {u.tenants?.nome || '—'}</p>
                   <div className="mt-3 flex gap-2">
-                    <Button size="sm" variant="outline" className="flex-1 gap-1 text-xs" onClick={() => sendMagicLink.mutate(u.email)}>
-                      <Mail className="w-3 h-3" /> Magic Link
-                    </Button>
-                    <Button size="sm" variant="outline" className="gap-1 text-xs" onClick={() => openEdit(u)}>
-                      <Edit className="w-3 h-3" />
+                    <Button size="sm" variant="outline" className="flex-1 gap-1 text-xs" onClick={() => openEdit(u)}>
+                      <Edit className="w-3 h-3" /> Editar
                     </Button>
                     <Button size="sm" variant="outline" className="gap-1 text-xs text-destructive hover:text-destructive" onClick={() => { if (confirm('Excluir?')) deleteUser.mutate(u.id); }}>
                       <Trash2 className="w-3 h-3" />

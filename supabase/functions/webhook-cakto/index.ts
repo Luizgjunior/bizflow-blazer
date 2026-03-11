@@ -154,19 +154,6 @@ Deno.serve(async (req) => {
           .eq("id", newProfile.tenant_id);
       }
 
-      // Send magic link automatically
-      let magicLinkResult = null;
-      try {
-        const { data: linkData } = await supabase.auth.admin.generateLink({
-          type: "magiclink",
-          email: customerEmail,
-        });
-        magicLinkResult = linkData?.properties?.action_link || null;
-        console.log(`Magic link generated for ${customerEmail}`);
-      } catch (mlErr) {
-        console.error("Error generating magic link:", mlErr);
-      }
-
       console.log(`New user+tenant created for ${customerEmail}`);
       return new Response(
         JSON.stringify({
@@ -174,7 +161,6 @@ Deno.serve(async (req) => {
           action: "created",
           email: customerEmail,
           user_id: authUser.user.id,
-          magic_link_sent: !!magicLinkResult,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );

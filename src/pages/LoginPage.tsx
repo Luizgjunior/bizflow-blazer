@@ -9,7 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from 'sonner';
 
-type Mode = 'login' | 'signup' | 'first-access' | 'magic-link';
+type Mode = 'login' | 'signup' | 'first-access';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -98,23 +98,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleMagicLink = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    try {
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: window.location.origin },
-      });
-      if (error) {
-        toast.error(error.message);
-      } else {
-        toast.success('Link mágico enviado! Verifique seu email.');
-      }
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (session) return null;
 
@@ -154,16 +137,10 @@ export default function LoginPage() {
                 </Button>
               </form>
 
-              <div className="mt-4 space-y-2">
-                <button
-                  onClick={() => { setMode('magic-link'); setEmail(''); setPassword(''); }}
-                  className="w-full text-sm text-primary hover:text-primary/80 transition-colors text-center font-medium"
-                >
-                  Entrar com Magic Link
-                </button>
+              <div className="mt-4">
                 <button
                   onClick={() => { setMode('first-access'); setEmail(''); }}
-                  className="w-full text-sm text-muted-foreground hover:text-foreground transition-colors text-center"
+                  className="w-full text-sm text-primary hover:text-primary/80 transition-colors text-center font-medium"
                 >
                   Primeiro acesso? Definir senha
                 </button>
@@ -209,34 +186,6 @@ export default function LoginPage() {
                 className="w-full mt-4 text-sm text-muted-foreground hover:text-foreground transition-colors text-center"
               >
                 Já tem conta? Entrar
-              </button>
-            </>
-          ) : mode === 'magic-link' ? (
-            <>
-              <h2 className="text-lg font-semibold text-foreground mb-1">Magic Link</h2>
-              <p className="text-sm text-muted-foreground mb-6">
-                Informe seu email e receba um link para entrar sem senha.
-              </p>
-
-              <form onSubmit={handleMagicLink} className="space-y-4">
-                <div>
-                  <Label htmlFor="email-magic">Email</Label>
-                  <div className="relative mt-1.5">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input id="email-magic" type="email" placeholder="seu@email.com" className="pl-9" value={email} onChange={(e) => setEmail(e.target.value)} required />
-                  </div>
-                </div>
-                <Button type="submit" className="w-full gap-2" disabled={loading}>
-                  {loading ? 'Enviando...' : 'Enviar Magic Link'}
-                  {!loading && <ArrowRight className="w-4 h-4" />}
-                </Button>
-              </form>
-
-              <button
-                onClick={() => { setMode('login'); setEmail(''); setPassword(''); }}
-                className="w-full mt-4 text-sm text-muted-foreground hover:text-foreground transition-colors text-center"
-              >
-                Entrar com senha
               </button>
             </>
           ) : (
