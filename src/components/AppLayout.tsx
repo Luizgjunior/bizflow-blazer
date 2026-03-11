@@ -154,6 +154,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
                     key={item.path}
                     to={item.path}
                     onClick={() => setSidebarOpen(false)}
+                    onMouseEnter={() => prefetchMap[item.path]?.()}
                     className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all ${
                       isActive
                         ? 'bg-primary/10 text-primary'
