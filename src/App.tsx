@@ -19,6 +19,7 @@ const BackofficePage = lazy(() => import("./pages/BackofficePage"));
 const LoginPage = lazy(() => import("./pages/LoginPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const PlanosPage = lazy(() => import("./pages/PlanosPage"));
+const DisparosPage = lazy(() => import("./pages/DisparosPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
