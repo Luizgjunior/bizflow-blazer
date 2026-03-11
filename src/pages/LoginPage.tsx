@@ -30,7 +30,6 @@ export default function LoginPage() {
     }
   }, [planParam, session]);
 
-  const { session, loading: authLoading } = useAuth();
 
   useEffect(() => {
     if (!authLoading && session) {
