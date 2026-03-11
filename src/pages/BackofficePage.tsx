@@ -512,6 +512,9 @@ function UsersTab() {
               {!editingUser && (
                 <div><Label>Email</Label><Input type="email" className="mt-1.5" value={formEmail} onChange={e => setFormEmail(e.target.value)} placeholder="email@exemplo.com" /></div>
               )}
+              {!editingUser && (
+                <div><Label>Senha</Label><Input type="password" className="mt-1.5" value={formPassword} onChange={e => setFormPassword(e.target.value)} placeholder="Mínimo 6 caracteres" minLength={6} /></div>
+              )}
               <div>
                 <Label>Tenant</Label>
                 <Select value={formTenantId} onValueChange={setFormTenantId}>

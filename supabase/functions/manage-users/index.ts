@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
     const { action } = body;
 
     if (action === "create") {
-      const { email, nome, tenant_id, role } = body;
+      const { email, password, nome, tenant_id, role } = body;
       if (!email) {
         return new Response(JSON.stringify({ error: "Email is required" }), {
           status: 400,
@@ -65,17 +65,23 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Create user without password
+      const createUserPayload: any = {
+        email,
+        email_confirm: true,
+        user_metadata: {
+          nome: nome || email.split("@")[0],
+          empresa_nome: nome || email.split("@")[0],
+          plano: "pro",
+        },
+      };
+
+      if (password) {
+        createUserPayload.password = password;
+      }
+
+      // Create user
       const { data: authUser, error: authError } =
-        await adminClient.auth.admin.createUser({
-          email,
-          email_confirm: true,
-          user_metadata: {
-            nome: nome || email.split("@")[0],
-            empresa_nome: nome || email.split("@")[0],
-            plano: "pro",
-          },
-        });
+        await adminClient.auth.admin.createUser(createUserPayload);
 
       if (authError) {
         return new Response(
