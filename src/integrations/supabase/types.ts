@@ -383,6 +383,160 @@ export type Database = {
           },
         ]
       }
+      whatsapp_campaign_contacts: {
+        Row: {
+          campaign_id: string
+          cnpj: string | null
+          created_at: string
+          error_message: string | null
+          id: string
+          lead_id: string | null
+          nome: string | null
+          sent_at: string | null
+          status: string
+          telefone: string
+        }
+        Insert: {
+          campaign_id: string
+          cnpj?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          lead_id?: string | null
+          nome?: string | null
+          sent_at?: string | null
+          status?: string
+          telefone: string
+        }
+        Update: {
+          campaign_id?: string
+          cnpj?: string | null
+          created_at?: string
+          error_message?: string | null
+          id?: string
+          lead_id?: string | null
+          nome?: string | null
+          sent_at?: string | null
+          status?: string
+          telefone?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_campaign_contacts_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_campaign_contacts_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_campaigns: {
+        Row: {
+          created_at: string
+          enviados: number
+          falhas: number
+          finished_at: string | null
+          id: string
+          media_type: string | null
+          media_url: string | null
+          mensagem: string | null
+          nome: string
+          started_at: string | null
+          status: string
+          tenant_id: string
+          tipo: string
+          total_contatos: number
+        }
+        Insert: {
+          created_at?: string
+          enviados?: number
+          falhas?: number
+          finished_at?: string | null
+          id?: string
+          media_type?: string | null
+          media_url?: string | null
+          mensagem?: string | null
+          nome: string
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+          tipo?: string
+          total_contatos?: number
+        }
+        Update: {
+          created_at?: string
+          enviados?: number
+          falhas?: number
+          finished_at?: string | null
+          id?: string
+          media_type?: string | null
+          media_url?: string | null
+          mensagem?: string | null
+          nome?: string
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+          tipo?: string
+          total_contatos?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_campaigns_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      whatsapp_instances: {
+        Row: {
+          created_at: string
+          id: string
+          instance_name: string
+          instance_token: string | null
+          phone_number: string | null
+          status: string
+          tenant_id: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          instance_name: string
+          instance_token?: string | null
+          phone_number?: string | null
+          status?: string
+          tenant_id: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          instance_name?: string
+          instance_token?: string | null
+          phone_number?: string | null
+          status?: string
+          tenant_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_instances_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: true
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Views: {
       [_ in never]: never
