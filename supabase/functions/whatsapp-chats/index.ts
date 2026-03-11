@@ -127,6 +127,35 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── SEND MEDIA ──
+    if (action === "sendMedia") {
+      const body = await req.json();
+      const { chatId, mediaUrl, mediaType, caption } = body;
+
+      if (!chatId || !mediaUrl) {
+        return new Response(JSON.stringify({ error: "chatId and mediaUrl required" }), { 
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+
+      const phone = chatId.replace(/@.*/, "");
+      const res = await fetch(`${UAZAPI_URL}/message/sendMedia`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "token": token },
+        body: JSON.stringify({
+          phone,
+          media: mediaUrl,
+          type: mediaType || "image",
+          caption: caption || "",
+        }),
+      });
+      const data = await res.json();
+
+      return new Response(JSON.stringify(data), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     return new Response(JSON.stringify({ error: "Invalid action" }), {
       status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
