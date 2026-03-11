@@ -1,0 +1,1 @@
+DELETE FROM whatsapp_instances WHERE instance_name = 'tenant_6f42b62d';

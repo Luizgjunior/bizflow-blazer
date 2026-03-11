@@ -55,6 +55,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
+    // ── ACTION: CONNECT ──
     if (action === "connect") {
       const { data: existing } = await adminClient
         .from("whatsapp_instances")
@@ -66,25 +67,29 @@ Deno.serve(async (req) => {
       let instanceToken = existing?.instance_token;
 
       if (!existing) {
-        // Create new instance
+        // UazAPI v2: POST /instance/init with { name }
         instanceName = `tenant_${tenantId.substring(0, 8)}`;
-        const createResult = await tryFetch(`${UAZAPI_URL}/instance/create`, {
+        const createResult = await tryFetch(`${UAZAPI_URL}/instance/init`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
             "admintoken": UAZAPI_ADMIN_TOKEN,
           },
-          body: JSON.stringify({ Name: instanceName, instanceName }),
+          body: JSON.stringify({ name: instanceName }),
         });
-        console.log("Create response:", JSON.stringify(createResult.data).substring(0, 300));
+        console.log("Create (init) response:", JSON.stringify(createResult.data).substring(0, 500));
 
         if (!createResult.ok || createResult.data.error) {
           return new Response(JSON.stringify({ 
-            error: "Failed to create instance: " + (createResult.data.error || createResult.data.message || "Unknown error"),
+            error: "Failed to create instance: " + (createResult.data.error || createResult.data.message || JSON.stringify(createResult.data)),
           }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
 
-        instanceToken = createResult.data.token || createResult.data.instance?.token || "";
+        // Extract token from response - could be in various places
+        instanceToken = createResult.data.token 
+          || createResult.data.instance?.token 
+          || createResult.data.data?.token 
+          || "";
 
         await adminClient.from("whatsapp_instances").insert({
           tenant_id: tenantId,
@@ -104,7 +109,7 @@ Deno.serve(async (req) => {
           .eq("tenant_id", tenantId);
       }
 
-      // Step 2: Connect/start the instance to generate QR code
+      // UazAPI v2: POST /instance/connect to generate QR code
       const connectResult = await tryFetch(`${UAZAPI_URL}/instance/connect`, {
         method: "POST",
         headers: {
@@ -115,25 +120,11 @@ Deno.serve(async (req) => {
       });
       console.log("Connect response:", JSON.stringify(connectResult.data).substring(0, 500));
 
-      // Extract QR code from connect response
+      // Extract QR code from response
       let qrString: string | null = null;
       const cd = connectResult.data;
       qrString = cd.qrcode || cd.base64 || cd.qr || cd.data?.qrcode || cd.data?.base64 || cd.instance?.qrcode || null;
       if (typeof qrString !== 'string' || qrString.length < 10) qrString = null;
-
-      // If no QR from connect, try /instance/qr endpoint
-      if (!qrString) {
-        const qrResult = await tryFetch(`${UAZAPI_URL}/instance/qr`, {
-          method: "GET",
-          headers: { "token": instanceToken || "" },
-        });
-        console.log("QR endpoint response:", JSON.stringify(qrResult.data).substring(0, 300));
-        if (qrResult.ok) {
-          const d = qrResult.data;
-          const val = d.qrcode || d.base64 || d.qr || d.data?.qrcode || d.data?.base64 || null;
-          if (typeof val === 'string' && val.length > 10) qrString = val;
-        }
-      }
 
       return new Response(JSON.stringify({
         status: "connecting",
@@ -141,6 +132,7 @@ Deno.serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ── ACTION: STATUS ──
     if (action === "status") {
       const { data: instance } = await adminClient
         .from("whatsapp_instances")
@@ -154,33 +146,19 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Try multiple status endpoints
-      let statusData: any = {};
-      let statusFound = false;
+      // UazAPI v2: GET /instance/status
+      const statusResult = await tryFetch(`${UAZAPI_URL}/instance/status`, {
+        method: "GET",
+        headers: { 
+          "Content-Type": "application/json",
+          "token": instance.instance_token || "" 
+        },
+      });
+      console.log("Status check response:", JSON.stringify(statusResult.data).substring(0, 500));
 
-      // Try /instance/status first (UazAPI v2 primary)
-      for (const endpoint of [
-        { url: `${UAZAPI_URL}/instance/status`, method: "GET" },
-        { url: `${UAZAPI_URL}/instance/info`, method: "GET" },
-        { url: `${UAZAPI_URL}/instance/connect`, method: "GET" },
-      ]) {
-        const result = await tryFetch(endpoint.url, {
-          method: endpoint.method,
-          headers: { 
-            "Content-Type": "application/json",
-            "token": instance.instance_token || "" 
-          },
-        });
-        console.log(`Status check ${endpoint.url}:`, JSON.stringify(result.data).substring(0, 300));
-        
-        if (result.ok && result.data && !result.data.error && result.status !== 404) {
-          statusData = result.data;
-          statusFound = true;
-          break;
-        }
-      }
+      const statusData = statusResult.ok ? statusResult.data : {};
 
-      // Handle status which can be a string ("connected") or object ({ connected: true })
+      // Parse connected state
       const rawStatus = statusData.status;
       const instanceStatus = statusData.instance?.status;
       let connected = false;
@@ -194,7 +172,7 @@ Deno.serve(async (req) => {
       }
 
       const jid = (typeof rawStatus === 'object' && rawStatus?.jid) || statusData.instance?.owner || statusData.owner || statusData.phoneNumber || "";
-      console.log("Parsed connected:", connected, "jid:", jid, "instanceStatus:", instanceStatus);
+      console.log("Parsed connected:", connected, "jid:", jid);
 
       if (connected && instance.status !== "connected") {
         const cleanPhone = typeof jid === 'string' ? jid.replace(/@.*/, "").replace(/:/g, "").replace(/[^0-9]/g, "") : "";
@@ -209,16 +187,20 @@ Deno.serve(async (req) => {
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // Check if there's a QR code available (for polling while connecting)
+      // If not connected, try to get fresh QR code
       let qrString: string | null = null;
       if (!connected) {
-        // Try /instance/qr for fresh QR
-        const qrResult = await tryFetch(`${UAZAPI_URL}/instance/qr`, {
-          method: "GET",
-          headers: { "token": instance.instance_token || "" },
+        const connectResult = await tryFetch(`${UAZAPI_URL}/instance/connect`, {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "token": instance.instance_token || "" 
+          },
+          body: JSON.stringify({}),
         });
-        if (qrResult.ok) {
-          const val = qrResult.data?.qrcode || qrResult.data?.base64 || qrResult.data?.qr || null;
+        if (connectResult.ok) {
+          const cd = connectResult.data;
+          const val = cd.qrcode || cd.base64 || cd.qr || cd.data?.qrcode || cd.data?.base64 || null;
           if (typeof val === 'string' && val.length > 10) qrString = val;
         }
       }
@@ -230,6 +212,7 @@ Deno.serve(async (req) => {
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ── ACTION: DISCONNECT ──
     if (action === "disconnect") {
       const { data: instance } = await adminClient
         .from("whatsapp_instances")
@@ -238,9 +221,14 @@ Deno.serve(async (req) => {
         .single();
 
       if (instance) {
-        await tryFetch(`${UAZAPI_URL}/instance/logout`, {
-          method: "DELETE",
-          headers: { "token": instance.instance_token || "" },
+        // UazAPI v2: POST /instance/disconnect
+        await tryFetch(`${UAZAPI_URL}/instance/disconnect`, {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            "token": instance.instance_token || "" 
+          },
+          body: JSON.stringify({}),
         });
 
         await adminClient
