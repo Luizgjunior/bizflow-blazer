@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import logoImg from '@/assets/logo.png';
 import { useState } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+
 
 const navItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
@@ -116,47 +116,38 @@ export default function AppLayout({ children }: { children: ReactNode }) {
       </header>
 
       {/* Mobile Slide Menu */}
-      <AnimatePresence>
-        {sidebarOpen && (
-          <>
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="lg:hidden fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
-              onClick={() => setSidebarOpen(false)}
-            />
-            <motion.div
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
-              transition={{ type: 'spring', damping: 25 }}
-              className="lg:hidden fixed right-0 top-14 bottom-0 w-64 bg-card border-l border-border z-50 p-4"
-            >
-              <nav className="space-y-1">
-                {allNavItems.map((item) => {
-                  const isActive = location.pathname === item.path;
-                  return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      onClick={() => setSidebarOpen(false)}
-                      className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all ${
-                        isActive
-                          ? 'bg-primary/10 text-primary'
-                          : 'text-muted-foreground hover:text-foreground hover:bg-muted'
-                      }`}
-                    >
-                      <item.icon className="w-4 h-4" />
-                      {item.label}
-                    </Link>
-                  );
-                })}
-              </nav>
-            </motion.div>
-          </>
-        )}
-      </AnimatePresence>
+      {sidebarOpen && (
+        <>
+          <div
+            className="lg:hidden fixed inset-0 bg-background/80 backdrop-blur-sm z-40"
+            onClick={() => setSidebarOpen(false)}
+          />
+          <div
+            className="lg:hidden fixed right-0 top-14 bottom-0 w-64 bg-card border-l border-border z-50 p-4 animate-in slide-in-from-right duration-200"
+          >
+            <nav className="space-y-1">
+              {allNavItems.map((item) => {
+                const isActive = location.pathname === item.path;
+                return (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    onClick={() => setSidebarOpen(false)}
+                    className={`flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-all ${
+                      isActive
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-muted-foreground hover:text-foreground hover:bg-muted'
+                    }`}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    {item.label}
+                  </Link>
+                );
+              })}
+            </nav>
+          </div>
+        </>
+      )}
 
       {/* Main Content */}
       <main className="flex-1 lg:ml-64 pt-14 lg:pt-0 pb-20 lg:pb-0">
