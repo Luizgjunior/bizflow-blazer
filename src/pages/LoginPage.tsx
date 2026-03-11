@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Mail, Lock, ArrowRight, KeyRound, UserPlus } from 'lucide-react';
+import { Mail, Lock, ArrowRight, UserPlus, MessageCircle } from 'lucide-react';
 import logoImg from '@/assets/logo.png';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
