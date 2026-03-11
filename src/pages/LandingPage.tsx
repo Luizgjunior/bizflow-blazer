@@ -5,7 +5,7 @@ import { useRef } from 'react';
 import {
   ArrowRight, BarChart3, Bot, CheckCircle2, ChevronDown,
   Crown, Database, Download, Filter, Globe, Layers, LineChart,
-  Lock, Rocket, Search, Shield, Sparkles, Target, Users, Zap,
+  Lock, MessageSquare, Rocket, Search, Shield, Sparkles, Target, Users, Zap,
   Webhook, Clock, TrendingUp, Mail
 } from 'lucide-react';
 import logoImg from '@/assets/logo.png';
