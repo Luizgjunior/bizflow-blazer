@@ -47,7 +47,7 @@ const navItems = [
   { path: '/leads', label: 'Leads', icon: Users },
   { path: '/exports', label: 'Exports', icon: Download },
   { path: '/automacao', label: 'Automação', icon: Zap },
-  { path: '/disparos', label: 'Disparos', icon: Send },
+  { path: '/disparos', label: 'Conexão', icon: Send },
 ];
 
 const bottomNavItems = navItems.slice(0, 6);
