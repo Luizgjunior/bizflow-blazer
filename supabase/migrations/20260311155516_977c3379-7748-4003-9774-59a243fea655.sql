@@ -1,0 +1,1 @@
+DELETE FROM whatsapp_instances WHERE tenant_id = '6f42b62d-06c7-4b90-b197-30b6eeb2dfb4';
