@@ -105,7 +105,6 @@ Deno.serve(async (req) => {
       }
 
       // Step 2: Connect/start the instance to generate QR code
-      // UazAPI v2: POST /instance/connect with token header
       const connectResult = await tryFetch(`${UAZAPI_URL}/instance/connect`, {
         method: "POST",
         headers: {
@@ -122,28 +121,17 @@ Deno.serve(async (req) => {
       qrString = cd.qrcode || cd.base64 || cd.qr || cd.data?.qrcode || cd.data?.base64 || cd.instance?.qrcode || null;
       if (typeof qrString !== 'string' || qrString.length < 10) qrString = null;
 
-      // If no QR from connect, try getting it from instance info
+      // If no QR from connect, try /instance/qr endpoint
       if (!qrString) {
-        // Try multiple QR endpoints
-        for (const qrUrl of [
-          `${UAZAPI_URL}/instance/qr`,
-          `${UAZAPI_URL}/instance/info`,
-          `${UAZAPI_URL}/instance/connectionState`,
-        ]) {
-          const result = await tryFetch(qrUrl, {
-            method: "GET",
-            headers: { "token": instanceToken || "" },
-          });
-          console.log(`QR from ${qrUrl}:`, JSON.stringify(result.data).substring(0, 300));
-
-          if (result.ok && result.data.code !== 404) {
-            const d = result.data;
-            const val = d.qrcode || d.base64 || d.qr || d.data?.qrcode || d.data?.base64 || d.instance?.qrcode || null;
-            if (typeof val === 'string' && val.length > 10) {
-              qrString = val;
-              break;
-            }
-          }
+        const qrResult = await tryFetch(`${UAZAPI_URL}/instance/qr`, {
+          method: "GET",
+          headers: { "token": instanceToken || "" },
+        });
+        console.log("QR endpoint response:", JSON.stringify(qrResult.data).substring(0, 300));
+        if (qrResult.ok) {
+          const d = qrResult.data;
+          const val = d.qrcode || d.base64 || d.qr || d.data?.qrcode || d.data?.base64 || null;
+          if (typeof val === 'string' && val.length > 10) qrString = val;
         }
       }
 
