@@ -14,26 +14,29 @@ const PLANS = [
   {
     id: 'pro',
     name: 'Pro',
-    price: 47,
+    price: 97,
     leads: 6000,
     icon: Zap,
+    caktoUrl: 'https://pay.cakto.com.br/3az982s_802315',
     features: ['6.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'Suporte por email'],
   },
   {
     id: 'premium',
     name: 'Premium',
-    price: 97,
+    price: 197,
     leads: 14000,
     icon: Crown,
     popular: true,
+    caktoUrl: 'https://pay.cakto.com.br/n2jz5qi',
     features: ['14.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'Automações', 'Suporte prioritário'],
   },
   {
     id: 'enterprise',
     name: 'Enterprise',
-    price: 197,
+    price: 297,
     leads: 32000,
     icon: Rocket,
+    caktoUrl: 'https://pay.cakto.com.br/msyt9mj',
     features: ['32.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'Automações', 'Webhook personalizado', 'Suporte dedicado'],
   },
 ];
@@ -59,26 +62,20 @@ export default function PlanosPage() {
   }, [session, selectedPlan]);
 
   const handleSubscribe = async (planId: string) => {
+    const plan = PLANS.find((p) => p.id === planId);
+    if (!plan?.caktoUrl) {
+      toast.error('Link de pagamento não encontrado');
+      return;
+    }
+
     if (!session) {
+      // Redirect to login with plan selection, then will redirect to Cakto after login
       navigate(`/login?plan=${planId}`);
       return;
     }
 
-    setLoadingPlan(planId);
-    try {
-      const { data, error } = await supabase.functions.invoke('create-checkout', {
-        body: { plan_id: planId },
-      });
-
-      if (error) throw error;
-      if (data?.url) {
-        window.open(data.url, '_blank');
-      }
-    } catch (err: any) {
-      toast.error(err.message || 'Erro ao criar checkout');
-    } finally {
-      setLoadingPlan(null);
-    }
+    // Logged in: open Cakto checkout directly
+    window.open(plan.caktoUrl, '_blank');
   };
 
   return (
