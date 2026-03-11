@@ -190,43 +190,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    if (action === "send-magic-link") {
-      const { email } = body;
-      if (!email) {
-        return new Response(JSON.stringify({ error: "email required" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
-      const { data: linkData, error: linkError } =
-        await adminClient.auth.admin.generateLink({
-          type: "magiclink",
-          email,
-        });
-
-      if (linkError) {
-        return new Response(
-          JSON.stringify({ error: linkError.message }),
-          {
-            status: 400,
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          }
-        );
-      }
-
-      return new Response(
-        JSON.stringify({
-          success: true,
-          magic_link: linkData?.properties?.action_link || null,
-        }),
-        {
-          status: 200,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        }
-      );
-    }
-
     return new Response(JSON.stringify({ error: "Invalid action" }), {
       status: 400,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
