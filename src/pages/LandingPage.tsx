@@ -429,9 +429,9 @@ export default function LandingPage() {
                     <Button
                       className="w-full gap-2"
                       variant={plan.popular ? 'default' : 'outline'}
-                      onClick={() => navigate('/planos')}
+                      onClick={() => window.open(plan.checkoutUrl, '_blank')}
                     >
-                      Escolher {plan.name} <ArrowRight className="w-4 h-4" />
+                      Assinar {plan.name} <ArrowRight className="w-4 h-4" />
                     </Button>
                   </div>
                 </FadeIn>
