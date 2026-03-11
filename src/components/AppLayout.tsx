@@ -28,6 +28,7 @@ const navItems = [
   { path: '/exports', label: 'Exports', icon: Download },
   { path: '/automacao', label: 'Automação', icon: Zap },
   { path: '/disparos', label: 'Disparos', icon: Send },
+  { path: '/whatsapp-chat', label: 'Chat WhatsApp', icon: MessageSquare },
 ];
 
 const bottomNavItems = navItems.slice(0, 6);
