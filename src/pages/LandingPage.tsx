@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import { motion, useInView } from 'framer-motion';
 import { useRef } from 'react';
@@ -114,6 +115,7 @@ const STATS = [
 export default function LandingPage() {
   useDocumentTitle('Prospecção B2B Inteligente');
   const navigate = useNavigate();
+  const { session } = useAuth();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
 
   return (
@@ -127,12 +129,20 @@ export default function LandingPage() {
             <span className="font-bold text-foreground text-sm">LeadFlow</span>
           </div>
           <div className="flex items-center gap-2">
-            <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
-              Entrar
-            </Button>
-            <Button size="sm" onClick={() => navigate('/planos')} className="gap-1.5">
-              Começar <ArrowRight className="w-3.5 h-3.5" />
-            </Button>
+            {session ? (
+              <Button size="sm" onClick={() => navigate('/planos')} className="gap-1.5">
+                Escolher Plano <ArrowRight className="w-3.5 h-3.5" />
+              </Button>
+            ) : (
+              <>
+                <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
+                  Entrar
+                </Button>
+                <Button size="sm" onClick={() => navigate('/planos')} className="gap-1.5">
+                  Começar <ArrowRight className="w-3.5 h-3.5" />
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </nav>
