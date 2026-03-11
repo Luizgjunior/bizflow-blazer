@@ -56,6 +56,7 @@ export default function BackofficePage() {
         <TabsContent value="tenants"><TenantsTab /></TabsContent>
         <TabsContent value="consumo"><ConsumoTab /></TabsContent>
         <TabsContent value="users"><UsersTab /></TabsContent>
+        <TabsContent value="suporte"><SuporteTab /></TabsContent>
         <TabsContent value="webhook"><WebhookTab /></TabsContent>
         <TabsContent value="assinaturas"><AssinaturasTab /></TabsContent>
       </Tabs>
