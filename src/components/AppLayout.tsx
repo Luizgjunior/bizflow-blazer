@@ -38,10 +38,10 @@ const prefetchMap: Record<string, () => void> = {
 };
 
 const navItems = [
-  { path: '/', label: 'Dashboard', icon: LayoutDashboard },
+  { path: '/crm-dashboard', label: 'CRM Dashboard', icon: BarChart3 },
   { path: '/whatsapp-chat', label: 'Chat WhatsApp', icon: MessageSquare },
   { path: '/crm', label: 'CRM Kanban', icon: Kanban },
-  { path: '/crm-dashboard', label: 'CRM Dashboard', icon: BarChart3 },
+  { path: '/', label: 'Dashboard de Prospecção', icon: LayoutDashboard },
   { path: '/icps', label: 'ICPs', icon: Target },
   { path: '/runs', label: 'Runs', icon: Play },
   { path: '/leads', label: 'Leads', icon: Users },
