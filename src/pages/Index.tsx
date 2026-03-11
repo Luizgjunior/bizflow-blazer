@@ -7,11 +7,7 @@ const Index = () => {
   const { session, loading, profileLoading, isAdmin, subscription } = useAuth();
 
   if (loading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-6 h-6 text-primary animate-spin" />
-      </div>
-    );
+    return null;
   }
 
   if (!session) {
@@ -19,11 +15,7 @@ const Index = () => {
   }
 
   if (profileLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Loader2 className="w-6 h-6 text-primary animate-spin" />
-      </div>
-    );
+    return null;
   }
 
   // Non-admin without subscription goes to plans
