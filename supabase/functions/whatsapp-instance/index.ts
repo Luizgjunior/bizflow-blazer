@@ -5,13 +5,13 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-async function tryFetch(url: string, options: RequestInit): Promise<{ url: string; ok: boolean; data: any }> {
+async function tryFetch(url: string, options: RequestInit): Promise<{ url: string; ok: boolean; status: number; data: any }> {
   try {
     const res = await fetch(url, options);
     const data = await res.json();
-    return { url, ok: res.ok, data };
+    return { url, ok: res.ok, status: res.status, data };
   } catch (err) {
-    return { url, ok: false, data: { error: err.message } };
+    return { url, ok: false, status: 0, data: { error: err.message } };
   }
 }
 
@@ -66,41 +66,25 @@ Deno.serve(async (req) => {
       let instanceToken = existing?.instance_token;
 
       if (!existing) {
+        // Create new instance
         instanceName = `tenant_${tenantId.substring(0, 8)}`;
+        const createResult = await tryFetch(`${UAZAPI_URL}/instance/create`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "admintoken": UAZAPI_ADMIN_TOKEN,
+          },
+          body: JSON.stringify({ Name: instanceName, instanceName }),
+        });
+        console.log("Create response:", JSON.stringify(createResult.data).substring(0, 300));
 
-        // Try multiple create endpoints (v1 and v2 patterns)
-        const createEndpoints = [
-          { url: `${UAZAPI_URL}/instance/create`, method: "POST" },
-          { url: `${UAZAPI_URL}/instance/init`, method: "POST" },
-          { url: `${UAZAPI_URL}/v1/instance/create`, method: "POST" },
-          { url: `${UAZAPI_URL}/api/instance/create`, method: "POST" },
-        ];
-
-        let createData: any = null;
-        for (const ep of createEndpoints) {
-          const result = await tryFetch(ep.url, {
-            method: ep.method,
-            headers: {
-              "Content-Type": "application/json",
-              "admintoken": UAZAPI_ADMIN_TOKEN,
-            },
-            body: JSON.stringify({ Name: instanceName, instanceName }),
-          });
-          console.log(`Create attempt ${ep.url}:`, JSON.stringify(result.data));
-          
-          if (result.ok && !result.data.error && result.data.code !== 404) {
-            createData = result.data;
-            break;
-          }
-        }
-
-        if (!createData) {
+        if (!createResult.ok || createResult.data.error) {
           return new Response(JSON.stringify({ 
-            error: "Failed to create instance on UazAPI. Check admin token and URL.",
+            error: "Failed to create instance: " + (createResult.data.error || createResult.data.message || "Unknown error"),
           }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
         }
 
-        instanceToken = createData.token || createData.instance?.token || createData.data?.token || "";
+        instanceToken = createResult.data.token || createResult.data.instance?.token || "";
 
         await adminClient.from("whatsapp_instances").insert({
           tenant_id: tenantId,
@@ -120,28 +104,45 @@ Deno.serve(async (req) => {
           .eq("tenant_id", tenantId);
       }
 
-      // Try multiple QR code endpoints
-      const qrEndpoints = [
-        `${UAZAPI_URL}/instance/qr/${instanceName}`,
-        `${UAZAPI_URL}/instance/connectionState/${instanceName}`,
-        `${UAZAPI_URL}/instance/qr`,
-        `${UAZAPI_URL}/v1/instance/qr`,
-      ];
+      // Step 2: Connect/start the instance to generate QR code
+      // UazAPI v2: POST /instance/connect with token header
+      const connectResult = await tryFetch(`${UAZAPI_URL}/instance/connect`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "token": instanceToken || "",
+        },
+        body: JSON.stringify({}),
+      });
+      console.log("Connect response:", JSON.stringify(connectResult.data).substring(0, 500));
 
+      // Extract QR code from connect response
       let qrString: string | null = null;
-      for (const qrUrl of qrEndpoints) {
-        const result = await tryFetch(qrUrl, {
-          method: "GET",
-          headers: { "token": instanceToken || "" },
-        });
-        console.log(`QR attempt ${qrUrl}:`, JSON.stringify(result.data).substring(0, 200));
+      const cd = connectResult.data;
+      qrString = cd.qrcode || cd.base64 || cd.qr || cd.data?.qrcode || cd.data?.base64 || cd.instance?.qrcode || null;
+      if (typeof qrString !== 'string' || qrString.length < 10) qrString = null;
 
-        if (result.ok && result.data.code !== 404) {
-          const d = result.data;
-          const val = d.qrcode || d.base64 || d.qr || d.data?.qrcode || d.data?.base64 || d.data?.qr || d.data?.QRCode || null;
-          if (typeof val === 'string' && val.length > 10) {
-            qrString = val;
-            break;
+      // If no QR from connect, try getting it from instance info
+      if (!qrString) {
+        // Try multiple QR endpoints
+        for (const qrUrl of [
+          `${UAZAPI_URL}/instance/qr`,
+          `${UAZAPI_URL}/instance/info`,
+          `${UAZAPI_URL}/instance/connectionState`,
+        ]) {
+          const result = await tryFetch(qrUrl, {
+            method: "GET",
+            headers: { "token": instanceToken || "" },
+          });
+          console.log(`QR from ${qrUrl}:`, JSON.stringify(result.data).substring(0, 300));
+
+          if (result.ok && result.data.code !== 404) {
+            const d = result.data;
+            const val = d.qrcode || d.base64 || d.qr || d.data?.qrcode || d.data?.base64 || d.instance?.qrcode || null;
+            if (typeof val === 'string' && val.length > 10) {
+              qrString = val;
+              break;
+            }
           }
         }
       }
@@ -165,44 +166,48 @@ Deno.serve(async (req) => {
         });
       }
 
-      // Try multiple status endpoints
-      const statusEndpoints = [
-        `${UAZAPI_URL}/instance/qr/${instance.instance_name}`,
-        `${UAZAPI_URL}/instance/connectionState/${instance.instance_name}`,
-        `${UAZAPI_URL}/instance/connectionState`,
-      ];
+      // Check status + QR from instance info
+      const statusResult = await tryFetch(`${UAZAPI_URL}/instance/info`, {
+        method: "GET",
+        headers: { "token": instance.instance_token || "" },
+      });
 
-      let connected = false;
-      let phoneNumber = instance.phone_number || "";
-
-      for (const statusUrl of statusEndpoints) {
-        const result = await tryFetch(statusUrl, {
+      if (!statusResult.ok) {
+        // Fallback to connectionState
+        const fallback = await tryFetch(`${UAZAPI_URL}/instance/connectionState`, {
           method: "GET",
           headers: { "token": instance.instance_token || "" },
         });
-
-        if (result.ok && result.data.code !== 404) {
-          const d = result.data;
-          const state = d.state || d.data?.state || d.status;
-          connected = state === "connected" || state === "open";
-          if (connected) {
-            phoneNumber = d.phoneNumber || d.data?.phoneNumber || d.user?.id?.split("@")[0] || phoneNumber;
-          }
-          console.log(`Status from ${statusUrl}: state=${state}, connected=${connected}`);
-          break;
-        }
+        console.log("Status fallback:", JSON.stringify(fallback.data).substring(0, 200));
       }
+
+      const d = statusResult.ok ? statusResult.data : {};
+      const state = d.status || d.state || d.instance?.status || d.data?.state;
+      const connected = state === "connected" || state === "open";
 
       if (connected && instance.status !== "connected") {
+        const phoneNumber = d.owner || d.phoneNumber || d.instance?.owner || d.data?.phoneNumber || "";
+        const cleanPhone = phoneNumber.replace(/@.*/, "");
         await adminClient
           .from("whatsapp_instances")
-          .update({ status: "connected", phone_number: phoneNumber })
+          .update({ status: "connected", phone_number: cleanPhone })
           .eq("tenant_id", tenantId);
+
+        return new Response(JSON.stringify({
+          status: "connected",
+          phone_number: cleanPhone,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+
+      // Check if there's a QR code available (for polling while connecting)
+      let qrString: string | null = null;
+      const qr = d.qrcode || d.instance?.qrcode || d.data?.qrcode;
+      if (typeof qr === 'string' && qr.length > 10) qrString = qr;
 
       return new Response(JSON.stringify({
         status: connected ? "connected" : instance.status,
-        phone_number: phoneNumber,
+        phone_number: instance.phone_number,
+        qr_code: qrString,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
@@ -214,16 +219,10 @@ Deno.serve(async (req) => {
         .single();
 
       if (instance) {
-        // Try multiple logout endpoints
-        for (const logoutUrl of [
-          `${UAZAPI_URL}/instance/logout/${instance.instance_name}`,
-          `${UAZAPI_URL}/instance/logout`,
-        ]) {
-          await tryFetch(logoutUrl, {
-            method: "DELETE",
-            headers: { "token": instance.instance_token || "" },
-          });
-        }
+        await tryFetch(`${UAZAPI_URL}/instance/logout`, {
+          method: "DELETE",
+          headers: { "token": instance.instance_token || "" },
+        });
 
         await adminClient
           .from("whatsapp_instances")
