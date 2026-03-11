@@ -115,7 +115,7 @@ Deno.serve(async (req) => {
       }
 
       const phone = chatId.replace(/@.*/, "");
-      const res = await fetch(`${UAZAPI_URL}/message/text`, {
+      const res = await fetch(`${UAZAPI_URL}/message/sendText`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "token": token },
         body: JSON.stringify({ phone, message }),
