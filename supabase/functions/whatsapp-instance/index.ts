@@ -180,14 +180,24 @@ Deno.serve(async (req) => {
         }
       }
 
-      const state = statusData.status || statusData.state || statusData.instance?.status || statusData.data?.state || statusData.data?.status;
-      const connected = state === "connected" || state === "open";
+      // Handle status which can be a string ("connected") or object ({ connected: true })
+      const rawStatus = statusData.status;
+      const instanceStatus = statusData.instance?.status;
+      let connected = false;
+      
+      if (typeof rawStatus === 'object' && rawStatus !== null && rawStatus.connected === true) {
+        connected = true;
+      } else if (instanceStatus === "connected" || instanceStatus === "open") {
+        connected = true;
+      } else if (typeof rawStatus === 'string' && (rawStatus === "connected" || rawStatus === "open")) {
+        connected = true;
+      }
 
-      console.log("Parsed state:", state, "connected:", connected, "statusFound:", statusFound);
+      const jid = (typeof rawStatus === 'object' && rawStatus?.jid) || statusData.instance?.owner || statusData.owner || statusData.phoneNumber || "";
+      console.log("Parsed connected:", connected, "jid:", jid, "instanceStatus:", instanceStatus);
 
       if (connected && instance.status !== "connected") {
-        const phoneNumber = statusData.owner || statusData.phoneNumber || statusData.instance?.owner || statusData.data?.phoneNumber || statusData.user?.id || "";
-        const cleanPhone = typeof phoneNumber === 'string' ? phoneNumber.replace(/@.*/, "").replace(/[^0-9]/g, "") : "";
+        const cleanPhone = typeof jid === 'string' ? jid.replace(/@.*/, "").replace(/:/g, "").replace(/[^0-9]/g, "") : "";
         await adminClient
           .from("whatsapp_instances")
           .update({ status: "connected", phone_number: cleanPhone || "connected" })
