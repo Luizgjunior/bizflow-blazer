@@ -34,6 +34,7 @@ const prefetchMap: Record<string, () => void> = {
   '/crm': () => import('@/pages/CrmKanbanPage'),
   '/crm-dashboard': () => import('@/pages/CrmDashboardPage'),
   '/backoffice': () => import('@/pages/BackofficePage'),
+  '/ajuda': () => import('@/pages/AjudaPage'),
 };
 
 const navItems = [
