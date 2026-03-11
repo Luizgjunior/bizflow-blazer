@@ -35,3 +35,9 @@ verify_jwt = false
 
 [functions.stripe-financial]
 verify_jwt = false
+
+[functions.whatsapp-instance]
+verify_jwt = false
+
+[functions.send-whatsapp]
+verify_jwt = false

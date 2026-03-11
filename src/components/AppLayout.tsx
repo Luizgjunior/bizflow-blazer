@@ -9,6 +9,7 @@ import {
   Users,
   Download,
   Zap,
+  Send,
   Settings,
   LogOut,
   Menu,
@@ -26,9 +27,10 @@ const navItems = [
   { path: '/leads', label: 'Leads', icon: Users },
   { path: '/exports', label: 'Exports', icon: Download },
   { path: '/automacao', label: 'Automação', icon: Zap },
+  { path: '/disparos', label: 'Disparos', icon: Send },
 ];
 
-const bottomNavItems = navItems.slice(0, 5);
+const bottomNavItems = navItems.slice(0, 6);
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const location = useLocation();

@@ -5,7 +5,7 @@ import { useRef } from 'react';
 import {
   ArrowRight, BarChart3, Bot, CheckCircle2, ChevronDown,
   Crown, Database, Download, Filter, Globe, Layers, LineChart,
-  Lock, Rocket, Search, Shield, Sparkles, Target, Users, Zap,
+  Lock, MessageSquare, Rocket, Search, Shield, Sparkles, Target, Users, Zap,
   Webhook, Clock, TrendingUp, Mail
 } from 'lucide-react';
 import logoImg from '@/assets/logo.png';
@@ -62,6 +62,7 @@ const FEATURES = [
   { icon: Bot, title: 'Automações', desc: 'Agende execuções recorrentes. O sistema busca leads automaticamente conforme sua frequência.' },
   { icon: Download, title: 'Exportação CSV', desc: 'Exporte seus leads em CSV para integrar com qualquer CRM ou ferramenta do seu time de vendas.' },
   { icon: Webhook, title: 'Webhooks', desc: 'Receba leads em tempo real via webhook e integre com n8n, Make, Zapier ou seu próprio sistema.' },
+  { icon: MessageSquare, title: 'Disparos WhatsApp', desc: 'Conecte seu WhatsApp e envie mensagens em massa para seus leads — texto, mídia e templates.' },
 ];
 
 const STEPS = [
@@ -69,6 +70,7 @@ const STEPS = [
   { num: '02', title: 'Execute a Busca', desc: 'Com um clique, o sistema prospecta milhares de empresas que se encaixam no perfil.', icon: Rocket },
   { num: '03', title: 'Receba Leads Qualificados', desc: 'Leads com score, CNPJ, razão social e dados completos prontos para prospecção.', icon: TrendingUp },
   { num: '04', title: 'Exporte ou Integre', desc: 'Baixe em CSV ou receba via webhook direto no seu CRM.', icon: Globe },
+  { num: '05', title: 'Dispare pelo WhatsApp', desc: 'Conecte seu número e envie mensagens em massa para seus leads diretamente pelo sistema.', icon: MessageSquare },
 ];
 
 const PLANS = [
@@ -79,12 +81,12 @@ const PLANS = [
   {
     id: 'premium', name: 'Premium', price: 97, leads: '14.000',
     icon: Crown, popular: true,
-    features: ['14.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'Automações', 'Suporte prioritário'],
+    features: ['14.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'Automações', 'Disparos WhatsApp', 'Suporte prioritário'],
   },
   {
     id: 'enterprise', name: 'Enterprise', price: 197, leads: '32.000',
     icon: Rocket,
-    features: ['32.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'Automações', 'Webhook personalizado', 'Suporte dedicado'],
+    features: ['32.000 leads/mês', 'ICPs ilimitados', 'Exportações CSV', 'Automações', 'Disparos WhatsApp', 'Webhook personalizado', 'Suporte dedicado'],
   },
 ];
 
@@ -97,6 +99,7 @@ const FAQ = [
   { q: 'Posso integrar com meu CRM?', a: 'Sim! Você pode exportar leads em CSV ou usar webhooks para enviar dados em tempo real para qualquer ferramenta — CRM, n8n, Make, Zapier e mais.' },
   { q: 'O sistema funciona no celular?', a: 'Sim! O LeadFlow foi construído 100% mobile-first. Toda a experiência é otimizada para uso no smartphone.' },
   { q: 'Como funciona o suporte?', a: 'No plano Pro o suporte é por email. No Premium, você tem prioridade. No Enterprise, suporte dedicado com atendimento exclusivo.' },
+  { q: 'Como funciona o disparo de WhatsApp?', a: 'Basta conectar seu WhatsApp escaneando um QR Code dentro do sistema e criar sua campanha de disparo. Você pode enviar texto, mídia e templates para leads prospectados ou importados via planilha.' },
 ];
 
 const STATS = [
