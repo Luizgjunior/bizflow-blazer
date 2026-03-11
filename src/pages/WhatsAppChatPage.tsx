@@ -496,6 +496,69 @@ export default function WhatsAppChatPage() {
     }
   }, []);
 
+  // Auto-create CRM deals for new WhatsApp contacts
+  const autoCreateDealsRef = useRef(false);
+  useEffect(() => {
+    if (chats.length === 0 || autoCreateDealsRef.current) return;
+    autoCreateDealsRef.current = true;
+
+    const createDealsForNewContacts = async () => {
+      try {
+        // Get first pipeline stage for this tenant
+        const { data: stages } = await supabase
+          .from('crm_pipeline_stages')
+          .select('id, tenant_id')
+          .order('posicao')
+          .limit(1);
+
+        if (!stages || stages.length === 0) return;
+        const firstStage = stages[0];
+
+        // Get existing deals' phone numbers
+        const { data: existingDeals } = await supabase
+          .from('crm_deals')
+          .select('telefone');
+
+        const existingPhones = new Set((existingDeals || []).map(d => d.telefone).filter(Boolean));
+
+        // Create deals for contacts that don't have one yet (non-group only)
+        const newContacts = chats.filter(c => !c.isGroup && c.phone && !existingPhones.has(c.phone));
+
+        if (newContacts.length === 0) return;
+
+        const inserts = newContacts.slice(0, 50).map(c => ({
+          tenant_id: firstStage.tenant_id,
+          stage_id: firstStage.id,
+          titulo: c.name || c.phone,
+          telefone: c.phone,
+          contato_nome: c.name || null,
+        }));
+
+        await supabase.from('crm_deals').insert(inserts);
+
+        // Log activities
+        const { data: newDeals } = await supabase
+          .from('crm_deals')
+          .select('id, tenant_id')
+          .in('telefone', inserts.map(i => i.telefone));
+
+        if (newDeals && newDeals.length > 0) {
+          const actInserts = newDeals.map(d => ({
+            deal_id: d.id,
+            tenant_id: d.tenant_id,
+            tipo: 'whatsapp',
+            descricao: 'Deal criado automaticamente via WhatsApp',
+          }));
+          await supabase.from('crm_deal_activities').insert(actInserts);
+        }
+      } catch (err) {
+        console.error('Auto-create deals error:', err);
+      }
+    };
+
+    createDealsForNewContacts();
+  }, [chats]);
+
   // Initial load
   useEffect(() => {
     fetchChats();

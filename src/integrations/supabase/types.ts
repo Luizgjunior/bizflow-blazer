@@ -59,6 +59,162 @@ export type Database = {
           },
         ]
       }
+      crm_deal_activities: {
+        Row: {
+          created_at: string
+          deal_id: string
+          descricao: string
+          id: string
+          metadata: Json | null
+          tenant_id: string
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          deal_id: string
+          descricao: string
+          id?: string
+          metadata?: Json | null
+          tenant_id: string
+          tipo?: string
+        }
+        Update: {
+          created_at?: string
+          deal_id?: string
+          descricao?: string
+          id?: string
+          metadata?: Json | null
+          tenant_id?: string
+          tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_deal_activities_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "crm_deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_deal_activities_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_deals: {
+        Row: {
+          closed_at: string | null
+          cnpj: string | null
+          contato_nome: string | null
+          created_at: string
+          ganho: boolean
+          id: string
+          lead_id: string | null
+          notas: string | null
+          perdido: boolean
+          stage_id: string
+          telefone: string | null
+          tenant_id: string
+          titulo: string
+          updated_at: string
+          valor: number | null
+        }
+        Insert: {
+          closed_at?: string | null
+          cnpj?: string | null
+          contato_nome?: string | null
+          created_at?: string
+          ganho?: boolean
+          id?: string
+          lead_id?: string | null
+          notas?: string | null
+          perdido?: boolean
+          stage_id: string
+          telefone?: string | null
+          tenant_id: string
+          titulo: string
+          updated_at?: string
+          valor?: number | null
+        }
+        Update: {
+          closed_at?: string | null
+          cnpj?: string | null
+          contato_nome?: string | null
+          created_at?: string
+          ganho?: boolean
+          id?: string
+          lead_id?: string | null
+          notas?: string | null
+          perdido?: boolean
+          stage_id?: string
+          telefone?: string | null
+          tenant_id?: string
+          titulo?: string
+          updated_at?: string
+          valor?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_deals_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_deals_stage_id_fkey"
+            columns: ["stage_id"]
+            isOneToOne: false
+            referencedRelation: "crm_pipeline_stages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_deals_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_pipeline_stages: {
+        Row: {
+          cor: string
+          created_at: string
+          id: string
+          nome: string
+          posicao: number
+          tenant_id: string
+        }
+        Insert: {
+          cor?: string
+          created_at?: string
+          id?: string
+          nome: string
+          posicao?: number
+          tenant_id: string
+        }
+        Update: {
+          cor?: string
+          created_at?: string
+          id?: string
+          nome?: string
+          posicao?: number
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_pipeline_stages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exports: {
         Row: {
           created_at: string

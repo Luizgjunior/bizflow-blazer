@@ -21,6 +21,8 @@ const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const PlanosPage = lazy(() => import("./pages/PlanosPage"));
 const DisparosPage = lazy(() => import("./pages/DisparosPage"));
 const WhatsAppChatPage = lazy(() => import("./pages/WhatsAppChatPage"));
+const CrmKanbanPage = lazy(() => import("./pages/CrmKanbanPage"));
+const CrmDashboardPage = lazy(() => import("./pages/CrmDashboardPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 
 const queryClient = new QueryClient({
@@ -50,6 +52,8 @@ function AppRoutes() {
         <Route path="/automacao" element={<ProtectedRoute><AutomacaoPage /></ProtectedRoute>} />
         <Route path="/disparos" element={<ProtectedRoute><DisparosPage /></ProtectedRoute>} />
         <Route path="/whatsapp-chat" element={<ProtectedRoute><WhatsAppChatPage /></ProtectedRoute>} />
+        <Route path="/crm" element={<ProtectedRoute><CrmKanbanPage /></ProtectedRoute>} />
+        <Route path="/crm-dashboard" element={<ProtectedRoute><CrmDashboardPage /></ProtectedRoute>} />
         <Route path="/backoffice" element={<ProtectedRoute><BackofficePage /></ProtectedRoute>} />
         <Route path="*" element={<NotFound />} />
       </Routes>
