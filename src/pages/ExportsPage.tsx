@@ -16,7 +16,7 @@ export default function ExportsPage() {
   const { data: exports = [], isLoading } = useQuery({
     queryKey: ['exports', tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('exports').select('*, runs(icps(nome))').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('exports').select('*, runs(icps(nome))').eq('tenant_id', tenantId!).order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     },

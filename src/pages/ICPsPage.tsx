@@ -66,7 +66,7 @@ export default function ICPsPage() {
   const { data: icps = [], isLoading } = useQuery({
     queryKey: ['icps', tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('icps').select('*').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('icps').select('*').eq('tenant_id', tenantId!).order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     },

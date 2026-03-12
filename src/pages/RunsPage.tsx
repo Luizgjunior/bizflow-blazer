@@ -20,7 +20,7 @@ export default function RunsPage() {
   const { data: runs = [], isLoading, refetch } = useQuery({
     queryKey: ['runs', tenantId, statusFilter],
     queryFn: async () => {
-      let q = supabase.from('runs').select('*, icps(nome)').order('requested_at', { ascending: false });
+      let q = supabase.from('runs').select('*, icps(nome)').eq('tenant_id', tenantId!).order('requested_at', { ascending: false });
       if (statusFilter !== 'all') q = q.eq('status', statusFilter);
       const { data, error } = await q;
       if (error) throw error;

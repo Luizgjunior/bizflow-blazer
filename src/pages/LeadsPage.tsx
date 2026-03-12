@@ -41,6 +41,7 @@ export default function LeadsPage() {
     queryKey: ['leads', tenantId],
     queryFn: async () => {
       const { data, error } = await supabase.from('leads').select('*')
+        .eq('tenant_id', tenantId!)
         .not('tags', 'cs', '{"webhook"}')
         .order('score', { ascending: false });
       if (error) throw error;
@@ -51,7 +52,7 @@ export default function LeadsPage() {
   const { data: icps = [] } = useQuery({
     queryKey: ['icps-for-enrich', tenantId],
     queryFn: async () => {
-      const { data } = await supabase.from('icps').select('id, nome');
+      const { data } = await supabase.from('icps').select('id, nome').eq('tenant_id', tenantId!);
       return data ?? [];
     },
   });

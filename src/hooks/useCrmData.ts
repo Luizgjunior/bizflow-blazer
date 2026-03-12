@@ -55,9 +55,11 @@ export function usePipelineStages() {
   const query = useQuery({
     queryKey: ['crm-stages', tenantId],
     queryFn: async () => {
+      if (!tenantId) return [];
       const { data, error } = await supabase
         .from('crm_pipeline_stages')
         .select('*')
+        .eq('tenant_id', tenantId)
         .order('posicao');
       if (error) throw error;
       return data as PipelineStage[];
@@ -86,9 +88,11 @@ export function useCrmDeals() {
   return useQuery({
     queryKey: ['crm-deals', tenantId],
     queryFn: async () => {
+      if (!tenantId) return [];
       const { data, error } = await supabase
         .from('crm_deals')
         .select('*')
+        .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as CrmDeal[];
@@ -119,9 +123,11 @@ export function useRecentActivities() {
   return useQuery({
     queryKey: ['crm-recent-activities', tenantId],
     queryFn: async () => {
+      if (!tenantId) return [];
       const { data, error } = await supabase
         .from('crm_deal_activities')
         .select('*')
+        .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false })
         .limit(20);
       if (error) throw error;

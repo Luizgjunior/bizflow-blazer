@@ -98,6 +98,7 @@ export default function Dashboard() {
       const { data } = await supabase
         .from('leads')
         .select('*')
+        .eq('tenant_id', tenantId!)
         .contains('tags', ['webhook'])
         .order('created_at', { ascending: false })
         .limit(200);
@@ -112,6 +113,7 @@ export default function Dashboard() {
       const { count } = await supabase
         .from('leads')
         .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId!)
         .contains('tags', ['webhook']);
       return count ?? 0;
     },
@@ -126,6 +128,7 @@ export default function Dashboard() {
       const { count } = await supabase
         .from('leads')
         .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId!)
         .contains('tags', ['webhook'])
         .gte('created_at', todayStart.toISOString());
       return count ?? 0;
@@ -139,6 +142,7 @@ export default function Dashboard() {
       const { data } = await supabase
         .from('leads')
         .select('*')
+        .eq('tenant_id', tenantId!)
         .not('tags', 'cs', '{"webhook"}')
         .order('created_at', { ascending: false })
         .limit(200);
@@ -153,6 +157,7 @@ export default function Dashboard() {
       const { count } = await supabase
         .from('leads')
         .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId!)
         .not('tags', 'cs', '{"webhook"}');
       return count ?? 0;
     },
@@ -161,7 +166,7 @@ export default function Dashboard() {
   const { data: icpsCount = 0 } = useQuery({
     queryKey: ['icps-count', tenantId],
     queryFn: async () => {
-      const { count } = await supabase.from('icps').select('*', { count: 'exact', head: true });
+      const { count } = await supabase.from('icps').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId!);
       return count ?? 0;
     },
   });
@@ -172,6 +177,7 @@ export default function Dashboard() {
       const { data } = await supabase
         .from('runs')
         .select('*, icps(nome)')
+        .eq('tenant_id', tenantId!)
         .order('requested_at', { ascending: false })
         .limit(4);
       return data ?? [];
@@ -195,6 +201,7 @@ export default function Dashboard() {
         const { count: webhookCount } = await supabase
           .from('leads')
           .select('*', { count: 'exact', head: true })
+          .eq('tenant_id', tenantId!)
           .contains('tags', ['webhook'])
           .gte('created_at', dayStart.toISOString())
           .lte('created_at', dayEnd.toISOString());
@@ -202,6 +209,7 @@ export default function Dashboard() {
         const { count: apiCount } = await supabase
           .from('leads')
           .select('*', { count: 'exact', head: true })
+          .eq('tenant_id', tenantId!)
           .not('tags', 'cs', '{"webhook"}')
           .gte('created_at', dayStart.toISOString())
           .lte('created_at', dayEnd.toISOString());
