@@ -162,10 +162,10 @@ Deno.serve(async (req) => {
     const quantidade = payload.quantidade_leads || 100;
 
     // Call Casa dos Dados v5 to generate file
-    const cdBody = {
+    const cdBody: Record<string, any> = {
       nome: `LeadFlow_${icp.nome}_${run.id.slice(0, 8)}`,
       tipo: "csv",
-      quantidade,
+      total_linhas: quantidade,
       pesquisa,
     };
 

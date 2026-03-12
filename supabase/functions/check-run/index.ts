@@ -75,7 +75,7 @@ Deno.serve(async (req) => {
     }
 
     // Check file status at Casa dos Dados
-    const checkUrl = `https://api.casadosdados.com.br/v5/cnpj/pesquisa/arquivo/${run.casadosdados_job_id}`;
+    const checkUrl = `https://api.casadosdados.com.br/v4/public/cnpj/pesquisa/arquivo/${run.casadosdados_job_id}`;
     const checkResponse = await fetch(checkUrl, {
       headers: { "api-key": casaDosKey },
     });
