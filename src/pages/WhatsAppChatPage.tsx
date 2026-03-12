@@ -861,7 +861,22 @@ export default function WhatsAppChatPage() {
         timestampFormatted: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
         fromMe: true,
         type: mediaType,
-      };
+  };
+
+  const handleDeleteMessage = async (messageid: string) => {
+    if (!selectedChat) return;
+    try {
+      const data = await apiCall('deleteMessage', { chatId: selectedChat.chatId, messageid });
+      if (data.error) {
+        toast.error(data.error);
+        return;
+      }
+      setMessages(prev => prev.filter(m => m.messageid !== messageid));
+      toast.success('Mensagem apagada');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao apagar mensagem');
+    }
+  };
       setMessages(prev => [...prev, newMsg]);
       toast.success('Mídia enviada!');
     } catch (err: any) {
