@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import {
-  Search, Send, ArrowLeft, MessageSquare, Loader2, MoreVertical, CheckCheck, RefreshCw, Paperclip, X, Image as ImageIcon, FileText, Play,
+  Search, Send, ArrowLeft, MessageSquare, Loader2, MoreVertical, CheckCheck, RefreshCw, Paperclip, X, Image as ImageIcon, FileText, Play, Trash2,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
