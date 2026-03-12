@@ -54,7 +54,7 @@ export default function EmailCampaignsTab() {
   const [nome, setNome] = useState('');
   const [assunto, setAssunto] = useState('');
   const [mensagem, setMensagem] = useState('');
-  const [contactSource, setContactSource] = useState<'icp' | 'csv'>('icp');
+  const [contactSource, setContactSource] = useState<'icp' | 'csv' | 'manual'>('icp');
   const [csvContacts, setCsvContacts] = useState<{ email: string; nome: string }[]>([]);
   const [icps, setIcps] = useState<ICP[]>([]);
   const [selectedIcps, setSelectedIcps] = useState<string[]>([]);
