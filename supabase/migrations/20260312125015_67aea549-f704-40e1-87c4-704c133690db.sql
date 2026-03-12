@@ -1,0 +1,1 @@
+ALTER TABLE public.whatsapp_campaigns ADD COLUMN IF NOT EXISTS use_ai_variations boolean NOT NULL DEFAULT false;
