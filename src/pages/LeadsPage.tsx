@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Search, ChevronLeft, ChevronRight, Loader2, Save, Plus, X, Sparkles, FlameKindling, Flame, Snowflake } from 'lucide-react';
+import { Search, ChevronLeft, ChevronRight, Loader2, Save, Plus, X, Sparkles, FlameKindling, Flame, Snowflake, Phone, Mail } from 'lucide-react';
 import { toast } from 'sonner';
 import AppLayout from '@/components/AppLayout';
 import PageHeader from '@/components/PageHeader';
@@ -138,6 +138,16 @@ export default function LeadsPage() {
     return raw.score_breakdown || null;
   };
 
+  const getLeadPhone = (lead: any): string => {
+    const raw = lead.raw_json as Record<string, any> || {};
+    return raw['Telefones'] || raw['telefones'] || raw['telefone'] || raw['Telefone'] || '';
+  };
+
+  const getLeadEmail = (lead: any): string => {
+    const raw = lead.raw_json as Record<string, any> || {};
+    return raw['E-mail'] || raw['e-mail'] || raw['Email'] || raw['email'] || '';
+  };
+
   const filtered = allLeads.filter((l: any) => {
     const matchSearch = l.razao_social.toLowerCase().includes(search.toLowerCase()) || l.cnpj.includes(search);
     const matchUf = ufFilter === 'all' || l.uf === ufFilter;
@@ -202,9 +212,9 @@ export default function LeadsPage() {
                       onChange={selectAll} className="rounded border-input" />
                   </th>
                   <th className="text-left text-xs font-medium text-muted-foreground p-3">Empresa</th>
-                  <th className="text-left text-xs font-medium text-muted-foreground p-3">CNPJ</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground p-3">Telefone</th>
+                  <th className="text-left text-xs font-medium text-muted-foreground p-3">E-mail</th>
                   <th className="text-left text-xs font-medium text-muted-foreground p-3">UF</th>
-                  <th className="text-left text-xs font-medium text-muted-foreground p-3">CNAE</th>
                   <th className="text-left text-xs font-medium text-muted-foreground p-3">Situação</th>
                   <th className="text-center text-xs font-medium text-muted-foreground p-3">Score</th>
                   <th className="text-center text-xs font-medium text-muted-foreground p-3">Qualif.</th>
@@ -220,10 +230,25 @@ export default function LeadsPage() {
                         <input type="checkbox" checked={selectedIds.has(lead.id)}
                           onChange={() => toggleSelect(lead.id)} className="rounded border-input" />
                       </td>
-                      <td className="p-3" onClick={() => openLeadDetail(lead)}><p className="text-sm font-medium text-foreground">{lead.razao_social}</p><p className="text-[11px] text-muted-foreground">{lead.municipio}</p></td>
-                      <td className="p-3 text-xs text-muted-foreground font-mono" onClick={() => openLeadDetail(lead)}>{lead.cnpj}</td>
+                      <td className="p-3" onClick={() => openLeadDetail(lead)}>
+                        <p className="text-sm font-medium text-foreground">{lead.razao_social}</p>
+                        <p className="text-[11px] text-muted-foreground font-mono">{lead.cnpj}</p>
+                      </td>
+                      <td className="p-3 text-xs text-muted-foreground" onClick={() => openLeadDetail(lead)}>
+                        {getLeadPhone(lead) ? (
+                          <a href={`tel:${getLeadPhone(lead)}`} onClick={e => e.stopPropagation()} className="flex items-center gap-1 hover:text-primary transition-colors">
+                            <Phone className="w-3 h-3 shrink-0" />{getLeadPhone(lead)}
+                          </a>
+                        ) : '—'}
+                      </td>
+                      <td className="p-3 text-xs text-muted-foreground max-w-[180px]" onClick={() => openLeadDetail(lead)}>
+                        {getLeadEmail(lead) ? (
+                          <a href={`mailto:${getLeadEmail(lead)}`} onClick={e => e.stopPropagation()} className="flex items-center gap-1 hover:text-primary transition-colors">
+                            <Mail className="w-3 h-3 shrink-0" /><span className="truncate">{getLeadEmail(lead)}</span>
+                          </a>
+                        ) : '—'}
+                      </td>
                       <td className="p-3 text-sm text-muted-foreground" onClick={() => openLeadDetail(lead)}>{lead.uf}</td>
-                      <td className="p-3 text-xs text-muted-foreground" onClick={() => openLeadDetail(lead)}>{lead.cnae_principal}</td>
                       <td className="p-3" onClick={() => openLeadDetail(lead)}><Badge variant={lead.situacao === 'ATIVA' ? 'default' : 'destructive'} className="text-[10px]">{lead.situacao}</Badge></td>
                       <td className="p-3 text-center" onClick={() => openLeadDetail(lead)}><ScoreBadge score={lead.score ?? 0} /></td>
                       <td className="p-3 text-center" onClick={() => openLeadDetail(lead)}>
@@ -262,10 +287,24 @@ export default function LeadsPage() {
                       )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 mt-2">
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
                     <span className="text-[11px] text-muted-foreground">{lead.municipio}/{lead.uf}</span>
                     <Badge variant={lead.situacao === 'ATIVA' ? 'default' : 'destructive'} className="text-[10px]">{lead.situacao}</Badge>
                   </div>
+                  {(getLeadPhone(lead) || getLeadEmail(lead)) && (
+                    <div className="flex flex-col gap-1 mt-2 pt-2 border-t border-border">
+                      {getLeadPhone(lead) && (
+                        <a href={`tel:${getLeadPhone(lead)}`} onClick={e => e.stopPropagation()} className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-primary transition-colors">
+                          <Phone className="w-3 h-3 shrink-0" />{getLeadPhone(lead)}
+                        </a>
+                      )}
+                      {getLeadEmail(lead) && (
+                        <a href={`mailto:${getLeadEmail(lead)}`} onClick={e => e.stopPropagation()} className="flex items-center gap-1.5 text-[11px] text-muted-foreground hover:text-primary transition-colors">
+                          <Mail className="w-3 h-3 shrink-0" /><span className="truncate">{getLeadEmail(lead)}</span>
+                        </a>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
@@ -346,6 +385,8 @@ export default function LeadsPage() {
                 <div className="space-y-3">
                   {[
                     ['CNPJ', selectedLead.cnpj],
+                    ['Telefone', getLeadPhone(selectedLead)],
+                    ['E-mail', getLeadEmail(selectedLead)],
                     ['UF', selectedLead.uf],
                     ['Município', selectedLead.municipio],
                     ['CNAE Principal', selectedLead.cnae_principal],
@@ -353,7 +394,17 @@ export default function LeadsPage() {
                   ].map(([label, value]) => (
                     <div key={label as string} className="flex justify-between py-2 border-b border-border">
                       <span className="text-xs text-muted-foreground">{label}</span>
-                      <span className="text-sm font-medium text-foreground">{value || '—'}</span>
+                      {(label === 'Telefone' && value) ? (
+                        <a href={`tel:${value}`} className="text-sm font-medium text-primary hover:underline flex items-center gap-1">
+                          <Phone className="w-3 h-3" />{value}
+                        </a>
+                      ) : (label === 'E-mail' && value) ? (
+                        <a href={`mailto:${value}`} className="text-sm font-medium text-primary hover:underline flex items-center gap-1">
+                          <Mail className="w-3 h-3" />{value}
+                        </a>
+                      ) : (
+                        <span className="text-sm font-medium text-foreground">{value || '—'}</span>
+                      )}
                     </div>
                   ))}
                 </div>
