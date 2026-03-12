@@ -206,7 +206,7 @@ function ConsumoTab() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center">
                   <p className="text-base font-bold text-foreground">{t.leads_count.toLocaleString()}</p>
-                  <p className="text-[10px] text-muted-foreground uppercase">Leads</p>
+                  <p className="text-[10px] text-muted-foreground uppercase">Leads API</p>
                 </div>
                 <div className="text-center">
                   <p className="text-base font-bold text-foreground">{t.runs_count}</p>
