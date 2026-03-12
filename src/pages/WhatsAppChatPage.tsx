@@ -447,13 +447,14 @@ function FilePreview({ file, onRemove }: { file: File; onRemove: () => void }) {
 }
 
 /* ── Message View ── */
-function MessageView({ chat, messages, loading, onSend, onSendMedia, onBack }: {
+function MessageView({ chat, messages, loading, onSend, onSendMedia, onBack, onDelete }: {
   chat: Chat;
   messages: Message[];
   loading: boolean;
   onSend: (text: string) => void;
   onSendMedia: (file: File, caption: string) => Promise<void>;
   onBack: () => void;
+  onDelete: (messageid: string) => void;
 }) {
   const [text, setText] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
