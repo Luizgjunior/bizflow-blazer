@@ -445,12 +445,15 @@ function MessageView({ chat, messages, loading, onSend, onSendMedia, onBack }: {
                     </a>
                   )}
 
-                  {/* Text content (skip media-only labels when we have actual media rendered) */}
-                  {(msg.text && !(msg.mediaUrl && !msg.text.replace(/^(📷 Imagem|🎥 Vídeo|🎵 Áudio|📄 Documento|🏷️ Sticker)$/, '').trim() === '')) ? (
-                    <p className="text-sm whitespace-pre-wrap" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{msg.text}</p>
-                  ) : !msg.mediaUrl ? (
-                    <p className="text-sm whitespace-pre-wrap" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{msg.text || `[${msg.type}]`}</p>
-                  ) : null}
+                  {(() => {
+                    const isMediaLabel = msg.mediaUrl && /^(📷 Imagem|🎥 Vídeo|🎵 Áudio|📄 Documento|🏷️ Sticker)$/.test(msg.text);
+                    if (msg.text && !isMediaLabel) {
+                      return <p className="text-sm whitespace-pre-wrap" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{msg.text}</p>;
+                    } else if (!msg.mediaUrl) {
+                      return <p className="text-sm whitespace-pre-wrap" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{msg.text || `[${msg.type}]`}</p>;
+                    }
+                    return null;
+                  })()}
 
                   <div className={cn("flex items-center gap-1 mt-1", msg.fromMe ? "justify-end" : "justify-start")}>
                     <span className="text-[10px] text-muted-foreground">{msg.timestampFormatted}</span>
