@@ -88,9 +88,11 @@ export function useCrmDeals() {
   return useQuery({
     queryKey: ['crm-deals', tenantId],
     queryFn: async () => {
+      if (!tenantId) return [];
       const { data, error } = await supabase
         .from('crm_deals')
         .select('*')
+        .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as CrmDeal[];
