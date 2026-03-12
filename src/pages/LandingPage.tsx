@@ -234,7 +234,7 @@ export default function LandingPage() {
 
           <FadeIn delay={0.3}>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <Button size="lg" onClick={() => window.open('https://pay.cakto.com.br/n2jz5qi', '_blank')} className="w-full sm:w-auto gap-2 text-base">
+              <Button size="lg" onClick={() => document.getElementById('planos')?.scrollIntoView({ behavior: 'smooth' })} className="w-full sm:w-auto gap-2 text-base">
                 Começar Agora <ArrowRight className="w-4 h-4" />
               </Button>
               <Button size="lg" variant="outline" onClick={() => document.getElementById('como-funciona')?.scrollIntoView({ behavior: 'smooth' })} className="w-full sm:w-auto gap-2 text-base">
