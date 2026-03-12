@@ -861,6 +861,12 @@ export default function WhatsAppChatPage() {
         timestampFormatted: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
         fromMe: true,
         type: mediaType,
+      };
+      setMessages(prev => [...prev, newMsg]);
+      toast.success('Mídia enviada!');
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao enviar mídia');
+    }
   };
 
   const handleDeleteMessage = async (messageid: string) => {
@@ -875,12 +881,6 @@ export default function WhatsAppChatPage() {
       toast.success('Mensagem apagada');
     } catch (err: any) {
       toast.error(err.message || 'Erro ao apagar mensagem');
-    }
-  };
-      setMessages(prev => [...prev, newMsg]);
-      toast.success('Mídia enviada!');
-    } catch (err: any) {
-      toast.error(err.message || 'Erro ao enviar mídia');
     }
   };
 
