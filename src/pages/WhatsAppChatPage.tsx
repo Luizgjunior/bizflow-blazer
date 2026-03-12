@@ -896,6 +896,25 @@ export default function WhatsAppChatPage() {
     }
   };
 
+  const [deleteChatConfirm, setDeleteChatConfirm] = useState(false);
+  const handleDeleteChat = async () => {
+    if (!selectedChat) return;
+    try {
+      const data = await apiCall('deleteChat', { chatId: selectedChat.chatId });
+      if (data.error) {
+        toast.error(data.error);
+        return;
+      }
+      toast.success('Conversa excluída');
+      setSelectedChat(null);
+      setMessages([]);
+      setDeleteChatConfirm(false);
+      fetchChats(true);
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao excluir conversa');
+    }
+  };
+
   return (
     <AppLayout>
       <div className="space-y-3">
@@ -939,6 +958,7 @@ export default function WhatsAppChatPage() {
                     onSendMedia={handleSendMedia}
                     onBack={() => setSelectedChat(null)}
                     onDelete={handleDeleteMessage}
+                    onDeleteChat={() => setDeleteChatConfirm(true)}
                   />
                 </div>
               ) : (
