@@ -88,6 +88,7 @@ function parseMessage(raw: any): Message {
   const fromMe = raw.fromMe ?? raw.key?.fromMe ?? false;
   const senderName = raw.pushName || raw.senderName || raw.notify || '';
   const type = raw.type || raw.messageType || raw.wa_lastMessageType || 'text';
+  const messageid = raw.messageid || raw.messageId || raw.key?.id || '';
 
   // Extract text carefully — avoid falling through to raw.content which can be a huge base64 object
   let text = '';
@@ -124,26 +125,45 @@ function parseMessage(raw: any): Message {
     text = mediaTypeLabels[type];
   }
 
-  // Extract media URL and type
-  let mediaUrl: string | undefined;
+  // Determine media type from message type
   let mediaType: Message['mediaType'];
   let mimetype: string | undefined;
   const content = raw.content && typeof raw.content === 'object' ? raw.content : {};
-  const fileURL = raw.fileURL || content.URL || '';
+  const fileURL = raw.fileURL || '';
+  const contentURL = content.URL || '';
+  mimetype = content.mimetype || '';
+
+  const isMediaMessage = ['ImageMessage', 'VideoMessage', 'AudioMessage', 'DocumentMessage', 'StickerMessage'].includes(type);
+
+  if (type === 'ImageMessage' || type === 'StickerMessage') mediaType = 'image';
+  else if (type === 'VideoMessage') mediaType = 'video';
+  else if (type === 'AudioMessage') mediaType = 'audio';
+  else if (type === 'DocumentMessage') mediaType = 'document';
+  else if (mimetype) {
+    if (mimetype.startsWith('image/')) mediaType = 'image';
+    else if (mimetype.startsWith('video/')) mediaType = 'video';
+    else if (mimetype.startsWith('audio/')) mediaType = 'audio';
+    else if (isMediaMessage) mediaType = 'document';
+  }
+
+  // Determine media URL - prefer fileURL (non-encrypted), check if contentURL is encrypted
+  let mediaUrl: string | undefined;
+  let needsProxy = false;
 
   if (fileURL && typeof fileURL === 'string' && fileURL.startsWith('http')) {
     mediaUrl = fileURL;
-    mimetype = content.mimetype || '';
-    if (type === 'ImageMessage' || type === 'StickerMessage') mediaType = 'image';
-    else if (type === 'VideoMessage') mediaType = 'video';
-    else if (type === 'AudioMessage') mediaType = 'audio';
-    else if (type === 'DocumentMessage') mediaType = 'document';
-    else if (mimetype) {
-      if (mimetype.startsWith('image/')) mediaType = 'image';
-      else if (mimetype.startsWith('video/')) mediaType = 'video';
-      else if (mimetype.startsWith('audio/')) mediaType = 'audio';
-      else mediaType = 'document';
+  } else if (contentURL && typeof contentURL === 'string' && contentURL.startsWith('http')) {
+    // Check if URL is encrypted (.enc in path)
+    if (contentURL.includes('.enc') || content.mediaKey) {
+      // Encrypted media - needs proxy download
+      needsProxy = true;
+      mediaUrl = undefined; // Will be loaded via proxy
+    } else {
+      mediaUrl = contentURL;
     }
+  } else if (isMediaMessage && messageid) {
+    // No URL available but it's a media message - try proxy
+    needsProxy = true;
   }
 
   return {
@@ -157,6 +177,8 @@ function parseMessage(raw: any): Message {
     mediaUrl,
     mediaType,
     mimetype,
+    messageid,
+    needsProxy,
   };
 }
 
