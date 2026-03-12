@@ -55,9 +55,11 @@ export function usePipelineStages() {
   const query = useQuery({
     queryKey: ['crm-stages', tenantId],
     queryFn: async () => {
+      if (!tenantId) return [];
       const { data, error } = await supabase
         .from('crm_pipeline_stages')
         .select('*')
+        .eq('tenant_id', tenantId)
         .order('posicao');
       if (error) throw error;
       return data as PipelineStage[];
