@@ -122,6 +122,28 @@ function parseMessage(raw: any): Message {
     text = mediaTypeLabels[type];
   }
 
+  // Extract media URL and type
+  let mediaUrl: string | undefined;
+  let mediaType: Message['mediaType'];
+  let mimetype: string | undefined;
+  const content = raw.content && typeof raw.content === 'object' ? raw.content : {};
+  const fileURL = raw.fileURL || content.URL || '';
+
+  if (fileURL && typeof fileURL === 'string' && fileURL.startsWith('http')) {
+    mediaUrl = fileURL;
+    mimetype = content.mimetype || '';
+    if (type === 'ImageMessage' || type === 'StickerMessage') mediaType = 'image';
+    else if (type === 'VideoMessage') mediaType = 'video';
+    else if (type === 'AudioMessage') mediaType = 'audio';
+    else if (type === 'DocumentMessage') mediaType = 'document';
+    else if (mimetype) {
+      if (mimetype.startsWith('image/')) mediaType = 'image';
+      else if (mimetype.startsWith('video/')) mediaType = 'video';
+      else if (mimetype.startsWith('audio/')) mediaType = 'audio';
+      else mediaType = 'document';
+    }
+  }
+
   return {
     id,
     text,
@@ -130,6 +152,9 @@ function parseMessage(raw: any): Message {
     fromMe,
     senderName,
     type,
+    mediaUrl,
+    mediaType,
+    mimetype,
   };
 }
 
