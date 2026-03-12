@@ -541,37 +541,57 @@ function MessageView({ chat, messages, loading, onSend, onSendMedia, onBack, onD
             </div>
           ) : (
             messages.map((msg) => (
-              <div key={msg.id} className={cn("flex", msg.fromMe ? "justify-end" : "justify-start")}>
-                <div className={cn(
-                  "max-w-[80%] rounded-lg px-3 py-2 shadow-sm overflow-hidden",
-                  msg.fromMe
-                    ? "bg-primary/15 text-foreground rounded-br-sm"
-                    : "bg-card text-foreground rounded-bl-sm border border-border/50"
-                )}>
-                  {msg.senderName && !msg.fromMe && (
-                    <p className="text-[11px] font-semibold text-primary mb-0.5">{msg.senderName}</p>
+              <div key={msg.id} className={cn("flex group", msg.fromMe ? "justify-end" : "justify-start")}>
+                <div className="flex items-center gap-1">
+                  {msg.fromMe && msg.messageid && (
+                    <button
+                      onClick={() => onDelete(msg.messageid!)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                      title="Apagar mensagem"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
                   )}
+                  <div className={cn(
+                    "max-w-[80%] rounded-lg px-3 py-2 shadow-sm overflow-hidden",
+                    msg.fromMe
+                      ? "bg-primary/15 text-foreground rounded-br-sm"
+                      : "bg-card text-foreground rounded-bl-sm border border-border/50"
+                  )}>
+                    {msg.senderName && !msg.fromMe && (
+                      <p className="text-[11px] font-semibold text-primary mb-0.5">{msg.senderName}</p>
+                    )}
 
-                  {/* Media content */}
-                  {(msg.mediaUrl || msg.needsProxy) && msg.mediaType && (
-                    <MediaContent msg={msg} onLightbox={setLightboxUrl} />
-                  )}
+                    {/* Media content */}
+                    {(msg.mediaUrl || msg.needsProxy) && msg.mediaType && (
+                      <MediaContent msg={msg} onLightbox={setLightboxUrl} />
+                    )}
 
-                  {(() => {
-                    const hasMedia = msg.mediaUrl || msg.needsProxy;
-                    const isMediaLabel = hasMedia && /^(📷 Imagem|🎥 Vídeo|🎵 Áudio|📄 Documento|🏷️ Sticker)$/.test(msg.text);
-                    if (msg.text && !isMediaLabel) {
-                      return <p className="text-sm whitespace-pre-wrap" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{msg.text}</p>;
-                    } else if (!hasMedia) {
-                      return <p className="text-sm whitespace-pre-wrap" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{msg.text || `[${msg.type}]`}</p>;
-                    }
-                    return null;
-                  })()}
+                    {(() => {
+                      const hasMedia = msg.mediaUrl || msg.needsProxy;
+                      const isMediaLabel = hasMedia && /^(📷 Imagem|🎥 Vídeo|🎵 Áudio|📄 Documento|🏷️ Sticker)$/.test(msg.text);
+                      if (msg.text && !isMediaLabel) {
+                        return <p className="text-sm whitespace-pre-wrap" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{msg.text}</p>;
+                      } else if (!hasMedia) {
+                        return <p className="text-sm whitespace-pre-wrap" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{msg.text || `[${msg.type}]`}</p>;
+                      }
+                      return null;
+                    })()}
 
-                  <div className={cn("flex items-center gap-1 mt-1", msg.fromMe ? "justify-end" : "justify-start")}>
-                    <span className="text-[10px] text-muted-foreground">{msg.timestampFormatted}</span>
-                    {msg.fromMe && <CheckCheck className="w-3 h-3 text-primary" />}
+                    <div className={cn("flex items-center gap-1 mt-1", msg.fromMe ? "justify-end" : "justify-start")}>
+                      <span className="text-[10px] text-muted-foreground">{msg.timestampFormatted}</span>
+                      {msg.fromMe && <CheckCheck className="w-3 h-3 text-primary" />}
+                    </div>
                   </div>
+                  {!msg.fromMe && msg.messageid && (
+                    <button
+                      onClick={() => onDelete(msg.messageid!)}
+                      className="opacity-0 group-hover:opacity-100 transition-opacity p-1 rounded hover:bg-destructive/10 text-muted-foreground hover:text-destructive"
+                      title="Apagar mensagem"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
                 </div>
               </div>
             ))
