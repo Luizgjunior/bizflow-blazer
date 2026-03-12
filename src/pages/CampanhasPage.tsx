@@ -15,14 +15,16 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import {
   Send, Plus, FileSpreadsheet, Play, Eye, Loader2, CheckCircle2, XCircle, Clock,
   MessageSquare, Image, ListChecks, BarChart3, Timer, AlertTriangle,
-  Download, UserPlus, Trash2, Search, Edit, MoreVertical, Sparkles, Bot
+  Download, UserPlus, Trash2, Search, Edit, MoreVertical, Sparkles, Bot, Mail
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import EmailCampaignsTab from '@/components/EmailCampaignsTab';
 
 /* ── Types ── */
 type Campaign = {
@@ -47,7 +49,7 @@ function downloadCsvTemplate() {
 }
 
 export default function CampanhasPage() {
-  useDocumentTitle('Campanhas WhatsApp');
+  useDocumentTitle('Campanhas');
   const { profile } = useAuth();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [loading, setLoading] = useState(true);
@@ -252,7 +254,6 @@ export default function CampanhasPage() {
   const handleDelete = async (campaignId: string) => {
     setDeleting(true);
     try {
-      // Delete contacts first, then campaign
       await supabase.from('whatsapp_campaign_contacts').delete().eq('campaign_id', campaignId);
       const { error } = await supabase.from('whatsapp_campaigns').delete().eq('id', campaignId);
       if (error) throw error;
@@ -312,79 +313,100 @@ export default function CampanhasPage() {
   return (
     <AppLayout>
       <div className="space-y-4 sm:space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-lg sm:text-xl font-bold text-foreground tracking-tight">Campanhas</h1>
-            <p className="text-xs text-muted-foreground mt-0.5">Gerencie seus disparos WhatsApp em massa.</p>
-          </div>
-          <Button size="sm" onClick={() => setShowCreate(true)} className="gap-1.5 text-xs">
-            <Plus className="w-4 h-4" /> Nova Campanha
-          </Button>
+        <div>
+          <h1 className="text-lg sm:text-xl font-bold text-foreground tracking-tight">Campanhas</h1>
+          <p className="text-xs text-muted-foreground mt-0.5">Gerencie seus disparos em massa.</p>
         </div>
 
-        {/* Campaigns List */}
-        {loading ? (
-          <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
-        ) : campaigns.length === 0 ? (
-          <Card>
-            <CardContent className="py-10 text-center">
-              <Send className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
-              <p className="text-sm text-muted-foreground">Nenhuma campanha criada ainda.</p>
-              <Button size="sm" variant="outline" className="mt-3" onClick={() => setShowCreate(true)}>Criar primeira campanha</Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="space-y-3">
-            {campaigns.map((c) => (
-              <Card key={c.id}>
-                <CardContent className="p-3 sm:p-4">
-                  <div className="flex items-start justify-between gap-2 mb-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      {tipoIcon(c.tipo)}
-                      <span className="font-medium text-sm text-foreground truncate">{c.nome}</span>
-                      {statusBadge(c.status)}
-                    </div>
-                    <div className="flex gap-1 shrink-0">
-                      <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleViewDetails(c.id)}><Eye className="w-4 h-4" /></Button>
-                      {c.status === 'draft' && (
-                        <>
-                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => openEdit(c)}><Edit className="w-4 h-4" /></Button>
-                          <Button size="sm" className="h-8 gap-1 text-xs" onClick={() => handleSend(c.id)} disabled={sending === c.id}>
-                            {sending === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-                            Enviar
-                          </Button>
-                        </>
-                      )}
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0"><MoreVertical className="w-4 h-4" /></Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                          {c.status === 'draft' && <DropdownMenuItem onClick={() => openEdit(c)}><Edit className="w-3.5 h-3.5 mr-2" />Editar</DropdownMenuItem>}
-                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteConfirm(c.id)}><Trash2 className="w-3.5 h-3.5 mr-2" />Excluir</DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-muted-foreground">
-                    <span>{c.total_contatos} contatos</span>
-                    <span className="text-primary">{c.enviados} enviados</span>
-                    {c.falhas > 0 && <span className="text-destructive">{c.falhas} falhas</span>}
-                  </div>
-                  {(c.status === 'sending' || c.status === 'completed') && c.total_contatos > 0 && (
-                    <Progress value={((c.enviados + c.falhas) / c.total_contatos) * 100} className="mt-2 h-1.5" />
-                  )}
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+        <Tabs defaultValue="whatsapp" className="w-full">
+          <TabsList className="mb-4">
+            <TabsTrigger value="whatsapp" className="gap-1.5">
+              <MessageSquare className="w-4 h-4" /> WhatsApp
+            </TabsTrigger>
+            <TabsTrigger value="email" className="gap-1.5">
+              <Mail className="w-4 h-4" /> E-mail
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="whatsapp">
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">Gerencie seus disparos WhatsApp em massa.</p>
+                <Button size="sm" onClick={() => setShowCreate(true)} className="gap-1.5 text-xs">
+                  <Plus className="w-4 h-4" /> Nova Campanha
+                </Button>
+              </div>
+
+              {/* Campaigns List */}
+              {loading ? (
+                <div className="flex items-center justify-center py-12"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>
+              ) : campaigns.length === 0 ? (
+                <Card>
+                  <CardContent className="py-10 text-center">
+                    <Send className="w-10 h-10 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-sm text-muted-foreground">Nenhuma campanha criada ainda.</p>
+                    <Button size="sm" variant="outline" className="mt-3" onClick={() => setShowCreate(true)}>Criar primeira campanha</Button>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-3">
+                  {campaigns.map((c) => (
+                    <Card key={c.id}>
+                      <CardContent className="p-3 sm:p-4">
+                        <div className="flex items-start justify-between gap-2 mb-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            {tipoIcon(c.tipo)}
+                            <span className="font-medium text-sm text-foreground truncate">{c.nome}</span>
+                            {statusBadge(c.status)}
+                          </div>
+                          <div className="flex gap-1 shrink-0">
+                            <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleViewDetails(c.id)}><Eye className="w-4 h-4" /></Button>
+                            {c.status === 'draft' && (
+                              <>
+                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => openEdit(c)}><Edit className="w-4 h-4" /></Button>
+                                <Button size="sm" className="h-8 gap-1 text-xs" onClick={() => handleSend(c.id)} disabled={sending === c.id}>
+                                  {sending === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+                                  Enviar
+                                </Button>
+                              </>
+                            )}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button size="sm" variant="ghost" className="h-8 w-8 p-0"><MoreVertical className="w-4 h-4" /></Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                {c.status === 'draft' && <DropdownMenuItem onClick={() => openEdit(c)}><Edit className="w-3.5 h-3.5 mr-2" />Editar</DropdownMenuItem>}
+                                <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteConfirm(c.id)}><Trash2 className="w-3.5 h-3.5 mr-2" />Excluir</DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                          <span>{c.total_contatos} contatos</span>
+                          <span className="text-primary">{c.enviados} enviados</span>
+                          {c.falhas > 0 && <span className="text-destructive">{c.falhas} falhas</span>}
+                        </div>
+                        {(c.status === 'sending' || c.status === 'completed') && c.total_contatos > 0 && (
+                          <Progress value={((c.enviados + c.falhas) / c.total_contatos) * 100} className="mt-2 h-1.5" />
+                        )}
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          </TabsContent>
+
+          <TabsContent value="email">
+            <EmailCampaignsTab />
+          </TabsContent>
+        </Tabs>
 
         {/* Create Campaign Dialog */}
         <Dialog open={showCreate} onOpenChange={setShowCreate}>
           <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto p-4 sm:p-6">
             <DialogHeader>
-              <DialogTitle className="text-base">Nova Campanha</DialogTitle>
+              <DialogTitle className="text-base">Nova Campanha WhatsApp</DialogTitle>
               <DialogDescription className="text-xs">Configure os detalhes do disparo WhatsApp.</DialogDescription>
             </DialogHeader>
             <div className="space-y-5">
