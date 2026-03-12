@@ -142,6 +142,7 @@ export default function Dashboard() {
       const { data } = await supabase
         .from('leads')
         .select('*')
+        .eq('tenant_id', tenantId!)
         .not('tags', 'cs', '{"webhook"}')
         .order('created_at', { ascending: false })
         .limit(200);
