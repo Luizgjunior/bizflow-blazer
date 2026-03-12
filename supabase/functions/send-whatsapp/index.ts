@@ -198,11 +198,11 @@ Regras:
             body: JSON.stringify({
               phone,
               title: campaign.nome,
-              description: campaign.mensagem || "",
+              description: messageText,
               buttonText: "Ver opções",
               sections: [{
                 title: "Menu",
-                rows: [{ title: "Saiba mais", description: campaign.mensagem || "" }],
+                rows: [{ title: "Saiba mais", description: messageText }],
               }],
             }),
           });
