@@ -146,6 +146,8 @@ export default function EmailCampaignsTab() {
 
       if (contactSource === 'csv') {
         contactsToInsert = csvContacts.map((c) => ({ email: c.email, nome: c.nome || null, lead_id: null }));
+      } else if (contactSource === 'manual') {
+        contactsToInsert = manualContacts.map((c) => ({ email: c.email, nome: c.nome || null, lead_id: null }));
       } else {
         if (selectedIcps.length === 0) { toast.error('Selecione ao menos um ICP'); setCreating(false); return; }
         const { data: runs } = await supabase.from('runs').select('id').eq('tenant_id', tenantId!).in('icp_id', selectedIcps);
