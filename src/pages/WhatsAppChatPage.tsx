@@ -973,6 +973,21 @@ export default function WhatsAppChatPage() {
             </div>
           </div>
         </div>
+
+        <AlertDialog open={deleteChatConfirm} onOpenChange={setDeleteChatConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir conversa?</AlertDialogTitle>
+              <AlertDialogDescription>Esta ação excluirá toda a conversa com {selectedChat?.name}. Não é possível desfazer.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteChat} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppLayout>
   );
