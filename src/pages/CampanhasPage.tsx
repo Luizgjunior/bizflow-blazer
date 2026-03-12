@@ -182,10 +182,21 @@ export default function CampanhasPage() {
         const { data: leadsData } = await supabase.from('leads').select('id, razao_social, cnpj, raw_json').eq('tenant_id', tenantId!).in('run_id', runIds);
         contactsToInsert = (leadsData || []).map((l) => {
           const raw = (l as any).raw_json || {};
-          const phones = raw.telefones || raw.phones || [];
-          const phone = Array.isArray(phones) && phones.length > 0 ? phones[0] : '';
-          return { telefone: typeof phone === 'string' ? phone : (phone?.numero || phone?.phone || ''), nome: l.razao_social, cnpj: l.cnpj, lead_id: l.id };
-        }).filter((c) => c.telefone);
+          // Try multiple field name variations (API returns capitalized keys)
+          const phonesRaw = raw.Telefones || raw.telefones || raw.Telefone || raw.telefone || raw.phones || raw.phone || '';
+          let phone = '';
+          if (Array.isArray(phonesRaw) && phonesRaw.length > 0) {
+            const first = phonesRaw[0];
+            phone = typeof first === 'string' ? first : (first?.numero || first?.phone || '');
+          } else if (typeof phonesRaw === 'string' && phonesRaw.trim()) {
+            // Could be comma-separated or single value like "41-30714760"
+            phone = phonesRaw.split(',')[0].trim();
+          }
+          // Clean phone: remove non-digits, ensure country code
+          phone = phone.replace(/\D/g, '');
+          if (phone.length >= 10 && !phone.startsWith('55')) phone = '55' + phone;
+          return { telefone: phone, nome: l.razao_social, cnpj: l.cnpj, lead_id: l.id };
+        }).filter((c) => c.telefone && c.telefone.length >= 12);
       }
 
       if (contactsToInsert.length === 0) { toast.error('Nenhum contato com telefone válido'); setCreating(false); return; }
