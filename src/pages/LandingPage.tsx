@@ -461,7 +461,6 @@ export default function LandingPage() {
                     >
                       Falar com Consultor <ArrowRight className="w-4 h-4" />
                     </Button>
-                    </Button>
                   </div>
                 </FadeIn>
               );
