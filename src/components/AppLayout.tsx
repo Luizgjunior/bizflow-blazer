@@ -11,6 +11,7 @@ import {
   Download,
   Zap,
   Send,
+  Megaphone,
   Settings,
   LogOut,
   Menu,
@@ -31,6 +32,7 @@ const prefetchMap: Record<string, () => void> = {
   '/exports': () => import('@/pages/ExportsPage'),
   '/automacao': () => import('@/pages/AutomacaoPage'),
   '/disparos': () => import('@/pages/DisparosPage'),
+  '/campanhas': () => import('@/pages/CampanhasPage'),
   '/whatsapp-chat': () => import('@/pages/WhatsAppChatPage'),
   '/crm': () => import('@/pages/CrmKanbanPage'),
   '/crm-dashboard': () => import('@/pages/CrmDashboardPage'),
@@ -47,7 +49,7 @@ const navItems = [
   { path: '/runs', label: 'Runs', icon: Play },
   { path: '/leads', label: 'Leads', icon: Users },
   { path: '/exports', label: 'Exports', icon: Download },
-  { path: '/automacao', label: 'Automação', icon: Zap },
+  { path: '/campanhas', label: 'Campanhas', icon: Megaphone },
   { path: '/disparos', label: 'Conexão', icon: Send },
 ];
 
