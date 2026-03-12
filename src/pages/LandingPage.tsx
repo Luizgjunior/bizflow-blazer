@@ -153,11 +153,15 @@ const HIGHLIGHTS = [
 
 /* ───────────────────── component ───────────────────── */
 
+const WHATSAPP_URL = 'https://wa.me/5565981078369?text=Ol%C3%A1%2C%20quero%20conhecer%20os%20planos%20do%20LeadFlow!';
+
 export default function LandingPage() {
   useDocumentTitle('Prospecção B2B Inteligente');
   const navigate = useNavigate();
   const { session, signOut } = useAuth();
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+
+  const scrollTo = (id: string) => document.getElementById(id)?.scrollIntoView({ behavior: 'smooth' });
 
   return (
     <div className="min-h-screen bg-background text-foreground overflow-x-hidden">
@@ -169,14 +173,21 @@ export default function LandingPage() {
             <img src={logoImg} alt="LeadFlow" className="w-8 h-8 rounded-lg object-cover" />
             <span className="font-bold text-foreground text-sm">LeadFlow</span>
           </div>
+          <div className="hidden md:flex items-center gap-1">
+            <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => scrollTo('funcionalidades')}>Funcionalidades</Button>
+            <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => scrollTo('destaques')}>Destaques</Button>
+            <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => scrollTo('como-funciona')}>Como Funciona</Button>
+            <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => scrollTo('planos')}>Planos</Button>
+            <Button variant="ghost" size="sm" className="text-xs text-muted-foreground" onClick={() => scrollTo('faq')}>FAQ</Button>
+          </div>
           <div className="flex items-center gap-2">
             {session ? (
               <>
                 <Button variant="ghost" size="sm" onClick={() => signOut()} className="gap-1.5 text-muted-foreground">
                   <LogOut className="w-3.5 h-3.5" /> Sair
                 </Button>
-                <Button size="sm" onClick={() => navigate('/planos')} className="gap-1.5">
-                  Escolher Plano <ArrowRight className="w-3.5 h-3.5" />
+                <Button size="sm" onClick={() => scrollTo('planos')} className="gap-1.5">
+                  Começar <ArrowRight className="w-3.5 h-3.5" />
                 </Button>
               </>
             ) : (
@@ -184,7 +195,7 @@ export default function LandingPage() {
                 <Button variant="ghost" size="sm" onClick={() => navigate('/login')}>
                   Entrar
                 </Button>
-                <Button size="sm" onClick={() => navigate('/planos')} className="gap-1.5">
+                <Button size="sm" onClick={() => scrollTo('planos')} className="gap-1.5">
                   Começar <ArrowRight className="w-3.5 h-3.5" />
                 </Button>
               </>
@@ -192,7 +203,6 @@ export default function LandingPage() {
           </div>
         </div>
       </nav>
-
       {/* ─── HERO ─── */}
       <section className="relative pt-16 pb-20 px-4">
         <div className="absolute inset-0 overflow-hidden pointer-events-none">
