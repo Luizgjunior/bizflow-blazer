@@ -281,13 +281,14 @@ export default function CampanhasPage() {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
       const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
-      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/send-whatsapp`, {
+      // Fire-and-forget: don't await the response so it continues even if user leaves
+      fetch(`https://${projectId}.supabase.co/functions/v1/send-whatsapp`, {
         method: 'POST', headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ campaign_id: campaignId }),
-      });
-      const data = await res.json();
-      if (data.error) toast.error(data.error);
-      else { setReport(data); setShowReport(true); toast.success(`${data.enviados} enviados, ${data.falhas} falhas`); fetchCampaigns(); }
+      }).catch(err => console.error('Send error:', err));
+      toast.success('Disparo iniciado! Acompanhe o progresso abaixo.');
+      // Start polling for progress
+      fetchCampaigns();
     } catch (err: any) { toast.error(err.message || 'Erro ao enviar'); }
     finally { setSending(null); }
   };
