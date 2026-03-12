@@ -524,10 +524,11 @@ export default function LandingPage() {
               <Button
                 size="lg"
                 variant="secondary"
-                onClick={() => window.open(WHATSAPP_URL, '_blank')}
+                onClick={() => window.open(getWhatsAppUrl(), '_blank')}
                 className="w-full sm:w-auto gap-2 text-base font-semibold"
               >
                 Falar com Consultor <ArrowRight className="w-4 h-4" />
+              </Button>
               </Button>
             </div>
           </div>
