@@ -469,6 +469,44 @@ export default function EmailCampaignsTab() {
                 </div>
               )}
 
+              {contactSource === 'manual' && (
+                <div className="space-y-3">
+                  <div className="flex gap-2">
+                    <div className="flex-1">
+                      <Input value={manualEmail} onChange={(e) => setManualEmail(e.target.value)} placeholder="email@empresa.com" className="h-8 text-xs" />
+                    </div>
+                    <div className="flex-1">
+                      <Input value={manualNome} onChange={(e) => setManualNome(e.target.value)} placeholder="Nome (opcional)" className="h-8 text-xs" />
+                    </div>
+                    <Button size="sm" variant="outline" className="h-8 px-2.5" onClick={() => {
+                      const email = manualEmail.trim();
+                      if (!email.includes('@')) { toast.error('E-mail inválido'); return; }
+                      if (manualContacts.some(c => c.email === email)) { toast.error('E-mail já adicionado'); return; }
+                      setManualContacts([...manualContacts, { email, nome: manualNome.trim() }]);
+                      setManualEmail(''); setManualNome('');
+                    }}>
+                      <Plus className="w-3.5 h-3.5" />
+                    </Button>
+                  </div>
+                  {manualContacts.length > 0 && (
+                    <div className="max-h-40 overflow-y-auto border rounded-xl p-2 space-y-1 bg-card">
+                      {manualContacts.map((c, i) => (
+                        <div key={i} className="flex items-center justify-between p-2 rounded-lg bg-muted/30 text-xs">
+                          <div className="min-w-0 flex-1">
+                            <span className="font-medium text-foreground">{c.email}</span>
+                            {c.nome && <span className="text-muted-foreground ml-2">({c.nome})</span>}
+                          </div>
+                          <Button size="sm" variant="ghost" className="h-6 w-6 p-0" onClick={() => setManualContacts(manualContacts.filter((_, idx) => idx !== i))}>
+                            <Trash2 className="w-3 h-3 text-destructive" />
+                          </Button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {manualContacts.length > 0 && <Badge variant="secondary" className="gap-1.5"><CheckCircle2 className="w-3 h-3" />{manualContacts.length} contato(s)</Badge>}
+                </div>
+              )}
+
               {totalSelectedContacts > 0 && (
                 <div className="flex items-center gap-2 p-2.5 rounded-xl bg-primary/5 border border-primary/20">
                   <CheckCircle2 className="w-4 h-4 text-primary shrink-0" />
