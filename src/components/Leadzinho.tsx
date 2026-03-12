@@ -124,7 +124,7 @@ export default function Leadzinho() {
 
   return (
     <>
-      {/* Floating Button - LEFT side */}
+      {/* Floating Button */}
       <AnimatePresence>
         {!open && (
           <motion.button
@@ -132,7 +132,7 @@ export default function Leadzinho() {
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
             onClick={() => setOpen(true)}
-            className="fixed bottom-24 lg:bottom-6 right-4 lg:right-6 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-shadow flex items-center justify-center group"
+            className="fixed bottom-24 lg:bottom-6 left-4 lg:left-6 z-50 w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-shadow flex items-center justify-center group"
           >
             <Sparkles className="w-6 h-6 group-hover:scale-110 transition-transform" />
           </motion.button>
