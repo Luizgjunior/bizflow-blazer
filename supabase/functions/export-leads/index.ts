@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
+import * as XLSX from "https://esm.sh/xlsx@0.18.5";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,7 +16,6 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Auth check
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
       return new Response(JSON.stringify({ error: "Não autorizado" }), {
@@ -45,7 +45,6 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get run to get tenant_id
     const { data: run } = await supabase
       .from("runs")
       .select("tenant_id")
@@ -59,10 +58,9 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Get leads for this run
     const { data: leads, error: leadsError } = await supabase
       .from("leads")
-      .select("cnpj, razao_social, uf, municipio, cnae_principal, situacao, data_abertura, score, notas, tags")
+      .select("cnpj, razao_social, uf, municipio, cnae_principal, situacao, data_abertura, score, notas, tags, raw_json")
       .eq("run_id", run_id)
       .order("score", { ascending: false });
 
@@ -74,36 +72,56 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Generate CSV
-    const csvHeaders = [
-      "CNPJ", "Razão Social", "UF", "Município", "CNAE Principal",
-      "Situação", "Data Abertura", "Score", "Notas", "Tags"
-    ];
+    // Extract phone/email from raw_json
+    const extractPhone = (raw: any): string => {
+      if (!raw) return "";
+      return raw["Telefones"] || raw["telefones"] || raw["telefone"] || raw["Telefone"] || "";
+    };
 
-    const csvRows = leads.map((l) => [
-      l.cnpj,
-      escapeCSV(l.razao_social),
-      l.uf || "",
-      escapeCSV(l.municipio || ""),
-      l.cnae_principal || "",
-      l.situacao || "",
-      l.data_abertura || "",
-      String(l.score ?? 0),
-      escapeCSV(l.notas || ""),
-      (l.tags || []).join("; "),
-    ]);
+    const extractEmail = (raw: any): string => {
+      if (!raw) return "";
+      return raw["E-mail"] || raw["e-mail"] || raw["Email"] || raw["email"] || "";
+    };
 
-    const csvContent = [
-      csvHeaders.join(","),
-      ...csvRows.map((row) => row.join(",")),
-    ].join("\n");
+    // Build XLSX
+    const rows = leads.map((l) => ({
+      "CNPJ": l.cnpj,
+      "Razão Social": l.razao_social,
+      "Telefone": extractPhone(l.raw_json),
+      "E-mail": extractEmail(l.raw_json),
+      "UF": l.uf || "",
+      "Município": l.municipio || "",
+      "CNAE Principal": l.cnae_principal || "",
+      "Situação": l.situacao || "",
+      "Data Abertura": l.data_abertura || "",
+      "Score": l.score ?? 0,
+      "Notas": l.notas || "",
+      "Tags": (l.tags || []).join("; "),
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(rows);
+
+    // Auto-size columns
+    const colWidths = Object.keys(rows[0]).map((key) => {
+      const maxLen = Math.max(
+        key.length,
+        ...rows.map((r: any) => String(r[key]).length)
+      );
+      return { wch: Math.min(maxLen + 2, 40) };
+    });
+    ws["!cols"] = colWidths;
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Leads");
+
+    const xlsxBuffer = XLSX.write(wb, { type: "buffer", bookType: "xlsx" });
 
     // Upload to storage
-    const filePath = `${run.tenant_id}/export_${run_id}_${Date.now()}.csv`;
+    const filePath = `${run.tenant_id}/export_${run_id}_${Date.now()}.xlsx`;
     const { error: uploadError } = await supabase.storage
       .from("exports")
-      .upload(filePath, csvContent, {
-        contentType: "text/csv",
+      .upload(filePath, xlsxBuffer, {
+        contentType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         upsert: true,
       });
 
@@ -124,7 +142,7 @@ Deno.serve(async (req) => {
         tenant_id: run.tenant_id,
         run_id,
         file_url: signedUrl?.signedUrl || null,
-        tipo: "csv",
+        tipo: "xlsx",
         rows_count: leads.length,
       })
       .select()
@@ -149,10 +167,3 @@ Deno.serve(async (req) => {
     );
   }
 });
-
-function escapeCSV(value: string): string {
-  if (value.includes(",") || value.includes('"') || value.includes("\n")) {
-    return `"${value.replace(/"/g, '""')}"`;
-  }
-  return value;
-}
