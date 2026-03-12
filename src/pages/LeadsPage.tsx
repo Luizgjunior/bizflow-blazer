@@ -41,6 +41,7 @@ export default function LeadsPage() {
     queryKey: ['leads', tenantId],
     queryFn: async () => {
       const { data, error } = await supabase.from('leads').select('*')
+        .eq('tenant_id', tenantId!)
         .not('tags', 'cs', '{"webhook"}')
         .order('score', { ascending: false });
       if (error) throw error;
