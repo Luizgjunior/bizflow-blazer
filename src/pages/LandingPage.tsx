@@ -122,11 +122,18 @@ const STATS = [
 
 const HIGHLIGHTS = [
   {
+    icon: Shield,
+    badge: 'Anti-Bloqueio',
+    title: 'Sistema excepcional de proteção anti-bloqueio',
+    desc: 'Nosso sistema proprietário de proteção garante que sua conta WhatsApp permaneça segura durante os disparos. Tecnologia avançada que simula comportamento humano, garantindo entregas sem riscos.',
+    bullets: ['Proteção avançada contra banimento', 'Simulação de comportamento humano natural', 'IA gera variações únicas por contato', 'Tecnologia proprietária exclusiva LeadFlow'],
+  },
+  {
     icon: Phone,
     badge: 'WhatsApp',
     title: 'Chat e disparos WhatsApp integrados',
     desc: 'Conecte seu WhatsApp com QR Code e tenha tudo em um só lugar. Converse em tempo real com seus leads, envie campanhas em massa com texto e mídia, e acompanhe tudo sem sair da plataforma.',
-    bullets: ['Chat em tempo real estilo WhatsApp Web', 'Campanhas de disparo em massa', 'Suporte a texto, imagens e templates', 'Delays inteligentes anti-bloqueio'],
+    bullets: ['Chat em tempo real estilo WhatsApp Web', 'Campanhas de disparo em massa', 'Suporte a texto, imagens e templates', 'Sistema anti-bloqueio integrado'],
   },
   {
     icon: Kanban,
