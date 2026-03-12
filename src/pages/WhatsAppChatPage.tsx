@@ -552,33 +552,16 @@ function MessageView({ chat, messages, loading, onSend, onSendMedia, onBack }: {
                   )}
 
                   {/* Media content */}
-                  {msg.mediaUrl && msg.mediaType === 'image' && (
-                    <button onClick={() => setLightboxUrl(msg.mediaUrl!)} className="block mb-1.5 rounded-md overflow-hidden max-w-[280px] hover:opacity-90 transition-opacity">
-                      <img src={msg.mediaUrl} alt="Imagem" className="w-full h-auto rounded-md" loading="lazy" />
-                    </button>
-                  )}
-                  {msg.mediaUrl && msg.mediaType === 'video' && (
-                    <div className="mb-1.5 rounded-md overflow-hidden max-w-[280px]">
-                      <video src={msg.mediaUrl} controls className="w-full h-auto rounded-md" preload="metadata" />
-                    </div>
-                  )}
-                  {msg.mediaUrl && msg.mediaType === 'audio' && (
-                    <div className="mb-1.5 min-w-[200px]">
-                      <audio src={msg.mediaUrl} controls className="w-full h-10" preload="metadata" />
-                    </div>
-                  )}
-                  {msg.mediaUrl && msg.mediaType === 'document' && (
-                    <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 mb-1.5 rounded-md bg-muted/50 hover:bg-muted transition-colors">
-                      <FileText className="w-5 h-5 text-muted-foreground shrink-0" />
-                      <span className="text-xs text-primary underline truncate">Abrir documento</span>
-                    </a>
+                  {(msg.mediaUrl || msg.needsProxy) && msg.mediaType && (
+                    <MediaContent msg={msg} onLightbox={setLightboxUrl} />
                   )}
 
                   {(() => {
-                    const isMediaLabel = msg.mediaUrl && /^(📷 Imagem|🎥 Vídeo|🎵 Áudio|📄 Documento|🏷️ Sticker)$/.test(msg.text);
+                    const hasMedia = msg.mediaUrl || msg.needsProxy;
+                    const isMediaLabel = hasMedia && /^(📷 Imagem|🎥 Vídeo|🎵 Áudio|📄 Documento|🏷️ Sticker)$/.test(msg.text);
                     if (msg.text && !isMediaLabel) {
                       return <p className="text-sm whitespace-pre-wrap" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{msg.text}</p>;
-                    } else if (!msg.mediaUrl) {
+                    } else if (!hasMedia) {
                       return <p className="text-sm whitespace-pre-wrap" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{msg.text || `[${msg.type}]`}</p>;
                     }
                     return null;
