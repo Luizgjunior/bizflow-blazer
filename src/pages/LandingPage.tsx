@@ -514,10 +514,10 @@ export default function LandingPage() {
               <Button
                 size="lg"
                 variant="secondary"
-                onClick={() => window.open('https://pay.cakto.com.br/n2jz5qi', '_blank')}
+                onClick={() => window.open(WHATSAPP_URL, '_blank')}
                 className="w-full sm:w-auto gap-2 text-base font-semibold"
               >
-                Começar Agora <ArrowRight className="w-4 h-4" />
+                Falar com Consultor <ArrowRight className="w-4 h-4" />
               </Button>
             </div>
           </div>
