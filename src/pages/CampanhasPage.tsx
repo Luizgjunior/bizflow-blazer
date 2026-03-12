@@ -19,8 +19,9 @@ import { toast } from 'sonner';
 import {
   Send, Plus, FileSpreadsheet, Play, Eye, Loader2, CheckCircle2, XCircle, Clock,
   MessageSquare, Image, ListChecks, BarChart3, Timer, AlertTriangle,
-  Download, UserPlus, Trash2, Search, Edit, MoreVertical
+  Download, UserPlus, Trash2, Search, Edit, MoreVertical, Sparkles, Bot
 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 /* ── Types ── */
@@ -78,6 +79,10 @@ export default function CampanhasPage() {
   const [editSaving, setEditSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [useAiVariations, setUseAiVariations] = useState(false);
+  const [aiVariations, setAiVariations] = useState<string[]>([]);
+  const [generatingAi, setGeneratingAi] = useState(false);
+  const [showVariationsPreview, setShowVariationsPreview] = useState(false);
 
   const tenantId = profile?.tenant_id;
 
@@ -183,7 +188,7 @@ export default function CampanhasPage() {
 
       if (contactsToInsert.length === 0) { toast.error('Nenhum contato com telefone válido'); setCreating(false); return; }
       const { data: campaign, error: campErr } = await supabase.from('whatsapp_campaigns')
-        .insert({ tenant_id: tenantId!, nome, mensagem, media_url: mediaUrl, media_type: mediaType, tipo, total_contatos: contactsToInsert.length })
+        .insert({ tenant_id: tenantId!, nome, mensagem, media_url: mediaUrl, media_type: mediaType, tipo, total_contatos: contactsToInsert.length, use_ai_variations: useAiVariations } as any)
         .select().single();
       if (campErr) throw campErr;
       const { error: contactErr } = await supabase.from('whatsapp_campaign_contacts').insert(contactsToInsert.map((c) => ({ campaign_id: campaign.id, ...c })));
@@ -198,6 +203,28 @@ export default function CampanhasPage() {
     setNome(''); setTipo('texto'); setMensagem(''); setMediaFile(null);
     setContactSource('icp'); setCsvContacts([]); setSelectedIcps([]);
     setManualContacts([]); setManualPhone(''); setManualName('');
+    setUseAiVariations(false); setAiVariations([]); setShowVariationsPreview(false);
+  };
+
+  const handleGenerateVariations = async () => {
+    if (!mensagem.trim()) { toast.error('Escreva a mensagem antes de gerar variações'); return; }
+    setGeneratingAi(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/ai-message-variations`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: mensagem, count: 5 }),
+      });
+      const data = await res.json();
+      if (data.error) { toast.error(data.error); return; }
+      setAiVariations(data.variations || []);
+      setShowVariationsPreview(true);
+      toast.success(`${data.variations?.length || 0} variações geradas!`);
+    } catch (err: any) { toast.error(err.message || 'Erro ao gerar variações'); }
+    finally { setGeneratingAi(false); }
   };
 
   const openEdit = (c: Campaign) => {
@@ -383,8 +410,45 @@ export default function CampanhasPage() {
                 </div>
                 <div>
                   <Label className="text-xs">Mensagem *</Label>
-                  <Textarea value={mensagem} onChange={(e) => setMensagem(e.target.value)} placeholder="Digite a mensagem..." rows={3} className="mt-1 text-sm" />
+                  <Textarea value={mensagem} onChange={(e) => { setMensagem(e.target.value); setAiVariations([]); }} placeholder="Digite a mensagem..." rows={3} className="mt-1 text-sm" />
                   <p className="text-[10px] text-muted-foreground mt-1">Use {'{nome}'} para personalizar.</p>
+                </div>
+
+                {/* AI Variations Toggle */}
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-primary" />
+                      <div>
+                        <p className="text-xs font-semibold text-foreground">Variações com IA</p>
+                        <p className="text-[10px] text-muted-foreground">Gera mensagens únicas para cada contato</p>
+                      </div>
+                    </div>
+                    <Switch checked={useAiVariations} onCheckedChange={setUseAiVariations} />
+                  </div>
+                  {useAiVariations && (
+                    <div className="space-y-2">
+                      <Button type="button" size="sm" variant="outline" className="w-full gap-1.5 text-xs h-8" onClick={handleGenerateVariations} disabled={generatingAi || !mensagem.trim()}>
+                        {generatingAi ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bot className="w-3.5 h-3.5" />}
+                        {generatingAi ? 'Gerando...' : aiVariations.length > 0 ? 'Regenerar Variações' : 'Gerar Prévia de Variações'}
+                      </Button>
+                      {aiVariations.length > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="text-[10px] font-medium text-muted-foreground">Prévia ({aiVariations.length} variações):</p>
+                          <div className="max-h-32 overflow-y-auto space-y-1">
+                            {aiVariations.map((v, i) => (
+                              <div key={i} className="text-[11px] text-foreground bg-background rounded-lg p-2 border border-border">
+                                <span className="text-primary font-mono text-[9px] mr-1">#{i + 1}</span> {v}
+                              </div>
+                            ))}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground italic">
+                            💡 Ao disparar, a IA gerará uma variação única para cada contato automaticamente.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 {tipo === 'media' && (
                   <div>

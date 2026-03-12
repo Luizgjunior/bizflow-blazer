@@ -682,6 +682,7 @@ export type Database = {
           tenant_id: string
           tipo: string
           total_contatos: number
+          use_ai_variations: boolean
         }
         Insert: {
           created_at?: string
@@ -698,6 +699,7 @@ export type Database = {
           tenant_id: string
           tipo?: string
           total_contatos?: number
+          use_ai_variations?: boolean
         }
         Update: {
           created_at?: string
@@ -714,6 +716,7 @@ export type Database = {
           tenant_id?: string
           tipo?: string
           total_contatos?: number
+          use_ai_variations?: boolean
         }
         Relationships: [
           {

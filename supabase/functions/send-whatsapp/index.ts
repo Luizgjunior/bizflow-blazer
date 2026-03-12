@@ -82,6 +82,47 @@ Deno.serve(async (req) => {
 
     const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "";
     const instanceToken = instance.instance_token || "";
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
+
+    // Check if AI variations are enabled
+    const useAiVariations = campaign.use_ai_variations === true;
+
+    // Pre-generate AI variations if enabled
+    let aiVariations: string[] = [];
+    if (useAiVariations && campaign.mensagem) {
+      try {
+        const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            model: "google/gemini-3-flash-preview",
+            messages: [
+              {
+                role: "system",
+                content: `Você é um especialista em copywriting para WhatsApp. Gere variações de uma mensagem mantendo o mesmo significado e intenção, mas mudando palavras, estrutura e estilo para parecer natural e escrita por uma pessoa diferente a cada vez.
+Regras:
+- Mantenha o mesmo tom da mensagem original
+- Mantenha o mesmo comprimento aproximado
+- Varie sinônimos, ordem das frases, pontuação e emojis
+- Cada variação deve ser única
+- Se houver {nome} na mensagem, mantenha essa variável exatamente assim
+- NÃO adicione prefixos como "Variação 1:" ou números
+- Retorne APENAS as variações, uma por linha, separadas por |||`
+              },
+              { role: "user", content: `Gere ${Math.max(contacts!.length, 5)} variações desta mensagem:\n\n"${campaign.mensagem}"` }
+            ],
+          }),
+        });
+        if (aiRes.ok) {
+          const aiData = await aiRes.json();
+          const content = aiData.choices?.[0]?.message?.content || "";
+          aiVariations = content.split("|||").map((v: string) => v.trim()).filter((v: string) => v.length > 0);
+          console.log(`Generated ${aiVariations.length} AI variations`);
+        }
+      } catch (aiErr) {
+        console.error("AI variations error (proceeding without):", aiErr);
+      }
+    }
 
     // Update campaign status to sending
     const startedAt = new Date().toISOString();
@@ -127,6 +168,10 @@ Deno.serve(async (req) => {
 
       try {
         const phone = contact.telefone.replace(/\D/g, "");
+        // Pick AI variation or fallback to original message
+        const messageText = aiVariations.length > 0
+          ? aiVariations[i % aiVariations.length]
+          : (campaign.mensagem || "");
         let sendResult;
 
         if (campaign.tipo === "media" && campaign.media_url) {
@@ -140,7 +185,7 @@ Deno.serve(async (req) => {
               number: phone,
               type: campaign.media_type || "image",
               file: campaign.media_url,
-              caption: campaign.mensagem || "",
+              caption: messageText,
             }),
           });
         } else if (campaign.tipo === "template") {
@@ -153,11 +198,11 @@ Deno.serve(async (req) => {
             body: JSON.stringify({
               phone,
               title: campaign.nome,
-              description: campaign.mensagem || "",
+              description: messageText,
               buttonText: "Ver opções",
               sections: [{
                 title: "Menu",
-                rows: [{ title: "Saiba mais", description: campaign.mensagem || "" }],
+                rows: [{ title: "Saiba mais", description: messageText }],
               }],
             }),
           });
@@ -170,7 +215,7 @@ Deno.serve(async (req) => {
             },
             body: JSON.stringify({
               number: phone,
-              text: campaign.mensagem || "",
+              text: messageText,
             }),
           });
         }

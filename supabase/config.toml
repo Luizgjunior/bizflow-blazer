@@ -50,3 +50,6 @@ verify_jwt = false
 
 [functions.whatsapp-chats]
 verify_jwt = false
+
+[functions.ai-message-variations]
+verify_jwt = false
