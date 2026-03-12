@@ -1,21 +1,16 @@
 import { useAuth } from '@/contexts/AuthContext';
-import Dashboard from './Dashboard';
+import { Navigate } from 'react-router-dom';
 import LandingPage from './LandingPage';
-import { Loader2 } from 'lucide-react';
 
 const Index = () => {
   const { session, loading, profileLoading, isAdmin, subscription } = useAuth();
 
-  if (loading) {
-    return null;
+  if (loading || profileLoading) {
+    return <div className="min-h-screen bg-background" />;
   }
 
   if (!session) {
     return <LandingPage />;
-  }
-
-  if (profileLoading) {
-    return null;
   }
 
   // Non-admin without subscription goes to plans
@@ -23,7 +18,8 @@ const Index = () => {
     return <LandingPage />;
   }
 
-  return <Dashboard />;
+  // Redirect authenticated users to CRM Dashboard
+  return <Navigate to="/crm-dashboard" replace />;
 };
 
 export default Index;
