@@ -15,7 +15,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { toast } from 'sonner';
 import {
   Mail, Plus, FileSpreadsheet, Play, Eye, Loader2, CheckCircle2, XCircle, Clock,
-  BarChart3, Timer, AlertTriangle, Download, Trash2, Search, Edit, MoreVertical, Sparkles, Bot
+  BarChart3, Timer, AlertTriangle, Download, Trash2, Search, Edit, MoreVertical, Sparkles, Bot, UserPlus
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
