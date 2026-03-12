@@ -58,16 +58,43 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { data: leads, error: leadsError } = await supabase
+    // Get CNPJs already exported for this tenant (from previous exports/runs)
+    const { data: previousExports } = await supabase
+      .from("exports")
+      .select("run_id")
+      .eq("tenant_id", run.tenant_id);
+
+    const previousRunIds = (previousExports || [])
+      .map((e: any) => e.run_id)
+      .filter((id: string) => id !== run_id);
+
+    let alreadyExportedCnpjs = new Set<string>();
+    if (previousRunIds.length > 0) {
+      // Fetch CNPJs from previously exported runs
+      for (let i = 0; i < previousRunIds.length; i += 10) {
+        const batch = previousRunIds.slice(i, i + 10);
+        const { data: prevLeads } = await supabase
+          .from("leads")
+          .select("cnpj")
+          .in("run_id", batch);
+        (prevLeads || []).forEach((l: any) => alreadyExportedCnpjs.add(l.cnpj));
+      }
+    }
+
+    const { data: allLeads, error: leadsError } = await supabase
       .from("leads")
       .select("cnpj, razao_social, uf, municipio, cnae_principal, situacao, data_abertura, score, notas, tags, raw_json")
       .eq("run_id", run_id)
       .order("score", { ascending: false });
 
     if (leadsError) throw leadsError;
+
+    // Filter out already exported CNPJs
+    const leads = (allLeads || []).filter((l: any) => !alreadyExportedCnpjs.has(l.cnpj));
+
     if (!leads || leads.length === 0) {
       return new Response(
-        JSON.stringify({ error: "Nenhum lead encontrado para esta run" }),
+        JSON.stringify({ error: "Todos os leads desta run já foram exportados anteriormente" }),
         { status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
