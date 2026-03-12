@@ -20,7 +20,7 @@ import { toast } from 'sonner';
 import {
   Send, Plus, FileSpreadsheet, Play, Eye, Loader2, CheckCircle2, XCircle, Clock,
   MessageSquare, Image, ListChecks, BarChart3, Timer, AlertTriangle,
-  Download, UserPlus, Trash2, Search, Edit, MoreVertical, Sparkles, Bot, Mail
+  Download, UserPlus, Trash2, Search, Edit, MoreVertical, Sparkles, Bot, Mail, ShieldCheck
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -85,6 +85,8 @@ export default function CampanhasPage() {
   const [aiVariations, setAiVariations] = useState<string[]>([]);
   const [generatingAi, setGeneratingAi] = useState(false);
   const [showVariationsPreview, setShowVariationsPreview] = useState(false);
+  const [checkingWhatsapp, setCheckingWhatsapp] = useState(false);
+  const [whatsappCheckResult, setWhatsappCheckResult] = useState<{ valid: number; invalid: number; total: number } | null>(null);
 
   const tenantId = profile?.tenant_id;
 
@@ -159,6 +161,35 @@ export default function CampanhasPage() {
 
   const handleRemoveManualContact = (phone: string) => setManualContacts(manualContacts.filter(c => c.telefone !== phone));
 
+  const checkWhatsappNumbers = async (phones: string[]): Promise<Set<string>> => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return new Set(phones);
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const validNumbers = new Set<string>();
+      
+      // Process in batches of 50
+      for (let i = 0; i < phones.length; i += 50) {
+        const batch = phones.slice(i, i + 50);
+        const res = await fetch(`https://${projectId}.supabase.co/functions/v1/check-whatsapp`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ numbers: batch }),
+        });
+        if (res.ok) {
+          const data = await res.json();
+          data.results?.forEach((r: any) => { if (r.has_whatsapp) validNumbers.add(r.number); });
+        } else {
+          // If check fails, keep all numbers
+          batch.forEach(n => validNumbers.add(n));
+        }
+      }
+      return validNumbers;
+    } catch {
+      return new Set(phones);
+    }
+  };
+
   const handleCreate = async () => {
     if (!nome.trim()) { toast.error('Nome da campanha é obrigatório'); return; }
     if (!mensagem.trim() && tipo === 'texto') { toast.error('Mensagem é obrigatória'); return; }
@@ -190,17 +221,14 @@ export default function CampanhasPage() {
         const { data: leadsData } = await supabase.from('leads').select('id, razao_social, cnpj, raw_json').eq('tenant_id', tenantId!).in('run_id', runIds);
         contactsToInsert = (leadsData || []).map((l) => {
           const raw = (l as any).raw_json || {};
-          // Try multiple field name variations (API returns capitalized keys)
           const phonesRaw = raw.Telefones || raw.telefones || raw.Telefone || raw.telefone || raw.phones || raw.phone || '';
           let phone = '';
           if (Array.isArray(phonesRaw) && phonesRaw.length > 0) {
             const first = phonesRaw[0];
             phone = typeof first === 'string' ? first : (first?.numero || first?.phone || '');
           } else if (typeof phonesRaw === 'string' && phonesRaw.trim()) {
-            // Could be comma-separated or single value like "41-30714760"
             phone = phonesRaw.split(',')[0].trim();
           }
-          // Clean phone: remove non-digits, ensure country code
           phone = phone.replace(/\D/g, '');
           if (phone.length >= 10 && !phone.startsWith('55')) phone = '55' + phone;
           return { telefone: phone, nome: l.razao_social, cnpj: l.cnpj, lead_id: l.id };
@@ -208,16 +236,34 @@ export default function CampanhasPage() {
       }
 
       if (contactsToInsert.length === 0) { toast.error('Nenhum contato com telefone válido'); setCreating(false); return; }
+
+      // Check WhatsApp numbers
+      setCheckingWhatsapp(true);
+      toast.info('Verificando números no WhatsApp...');
+      const allPhones = contactsToInsert.map(c => c.telefone);
+      const validPhones = await checkWhatsappNumbers(allPhones);
+      const beforeCount = contactsToInsert.length;
+      contactsToInsert = contactsToInsert.filter(c => validPhones.has(c.telefone));
+      const invalidCount = beforeCount - contactsToInsert.length;
+      setWhatsappCheckResult({ valid: contactsToInsert.length, invalid: invalidCount, total: beforeCount });
+      setCheckingWhatsapp(false);
+
+      if (invalidCount > 0) {
+        toast.info(`${invalidCount} número(s) sem WhatsApp removidos`);
+      }
+
+      if (contactsToInsert.length === 0) { toast.error('Nenhum contato possui WhatsApp válido'); setCreating(false); return; }
+
       const { data: campaign, error: campErr } = await supabase.from('whatsapp_campaigns')
         .insert({ tenant_id: tenantId!, nome, mensagem, media_url: mediaUrl, media_type: mediaType, tipo, total_contatos: contactsToInsert.length, use_ai_variations: useAiVariations } as any)
         .select().single();
       if (campErr) throw campErr;
       const { error: contactErr } = await supabase.from('whatsapp_campaign_contacts').insert(contactsToInsert.map((c) => ({ campaign_id: campaign.id, ...c })));
       if (contactErr) throw contactErr;
-      toast.success(`Campanha criada com ${contactsToInsert.length} contatos!`);
+      toast.success(`Campanha criada com ${contactsToInsert.length} contatos válidos!`);
       setShowCreate(false); resetForm(); fetchCampaigns();
     } catch (err: any) { console.error(err); toast.error(err.message || 'Erro ao criar campanha'); }
-    finally { setCreating(false); }
+    finally { setCreating(false); setCheckingWhatsapp(false); }
   };
 
   const resetForm = () => {
@@ -225,6 +271,7 @@ export default function CampanhasPage() {
     setContactSource('icp'); setCsvContacts([]); setSelectedIcps([]);
     setManualContacts([]); setManualPhone(''); setManualName('');
     setUseAiVariations(false); setAiVariations([]); setShowVariationsPreview(false);
+    setWhatsappCheckResult(null); setCheckingWhatsapp(false);
   };
 
   const handleGenerateVariations = async () => {
@@ -601,9 +648,10 @@ export default function CampanhasPage() {
                 )}
               </div>
 
-              <Button onClick={handleCreate} disabled={creating} className="w-full gap-2 h-11">
-                {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                Criar Campanha
+              <Button onClick={handleCreate} disabled={creating || checkingWhatsapp} className="w-full gap-2 h-11">
+                {checkingWhatsapp ? <><ShieldCheck className="w-4 h-4 animate-pulse" /> Verificando WhatsApp...</>
+                  : creating ? <><Loader2 className="w-4 h-4 animate-spin" /> Criando...</>
+                  : <><Send className="w-4 h-4" /> Criar Campanha</>}
               </Button>
             </div>
           </DialogContent>

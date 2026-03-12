@@ -9,12 +9,15 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Random delay between 1s and 360s (never the same pattern)
+// Random delay between 3s and 30s
 function getRandomDelay(): number {
-  const min = 1000;   // 1 second
-  const max = 360000; // 360 seconds
+  const min = 3000;
+  const max = 30000;
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
+
+// Process a batch of contacts (max ~10 per invocation to avoid timeout)
+const BATCH_SIZE = 10;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -33,14 +36,12 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
     }
 
-    const userId = claimsData.claims.sub;
-    const { data: profile } = await supabase.from("profiles").select("tenant_id").eq("id", userId).single();
+    const { data: profile } = await supabase.from("profiles").select("tenant_id").eq("id", user.id).single();
     if (!profile?.tenant_id) {
       return new Response(JSON.stringify({ error: "No tenant found" }), { status: 400, headers: corsHeaders });
     }
@@ -84,13 +85,14 @@ Deno.serve(async (req) => {
     const instanceToken = instance.instance_token || "";
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
 
-    // Get pending contacts FIRST (needed for AI variation count)
+    // Get pending contacts (limited batch)
     const { data: contacts } = await adminClient
       .from("whatsapp_campaign_contacts")
       .select("*")
       .eq("campaign_id", campaign_id)
       .eq("status", "pending")
-      .order("created_at", { ascending: true });
+      .order("created_at", { ascending: true })
+      .limit(BATCH_SIZE);
 
     if (!contacts || contacts.length === 0) {
       await adminClient
@@ -98,17 +100,15 @@ Deno.serve(async (req) => {
         .update({ status: "completed", finished_at: new Date().toISOString() })
         .eq("id", campaign_id);
 
-      return new Response(JSON.stringify({ message: "No pending contacts" }), {
+      return new Response(JSON.stringify({ message: "No pending contacts", status: "completed" }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Check if AI variations are enabled
+    // Generate AI variations if enabled (only on first batch)
     const useAiVariations = campaign.use_ai_variations === true;
-
-    // Pre-generate AI variations if enabled
     let aiVariations: string[] = [];
-    if (useAiVariations && campaign.mensagem) {
+    if (useAiVariations && campaign.mensagem && (campaign.enviados || 0) === 0) {
       try {
         const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
@@ -143,91 +143,45 @@ Regras:
       }
     }
 
-    // Update campaign status to sending
-    const startedAt = new Date().toISOString();
-    await adminClient
-      .from("whatsapp_campaigns")
-      .update({ status: "sending", started_at: startedAt })
-      .eq("id", campaign_id);
-
-    if (!contacts || contacts.length === 0) {
+    // Update campaign status to sending (if not already)
+    if (campaign.status !== "sending") {
       await adminClient
         .from("whatsapp_campaigns")
-        .update({ status: "completed", finished_at: new Date().toISOString() })
+        .update({ status: "sending", started_at: new Date().toISOString() })
         .eq("id", campaign_id);
-
-      return new Response(JSON.stringify({ message: "No pending contacts" }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
     }
 
     let enviados = campaign.enviados || 0;
     let falhas = campaign.falhas || 0;
-    const delays: number[] = [];
-    const contactResults: { telefone: string; nome: string | null; status: string; error?: string; delay_ms: number; sent_at?: string }[] = [];
 
     for (let i = 0; i < contacts.length; i++) {
       const contact = contacts[i];
 
-      // Apply random delay before sending (skip first message)
-      let delayMs = 0;
-      if (i > 0) {
-        delayMs = getRandomDelay();
-        delays.push(delayMs);
+      // Apply random delay (skip first message of first batch)
+      if (i > 0 || enviados > 0) {
+        const delayMs = getRandomDelay();
         await sleep(delayMs);
       }
 
       try {
         const phone = contact.telefone.replace(/\D/g, "");
-        // Pick AI variation or fallback to original message
         const messageText = aiVariations.length > 0
-          ? aiVariations[i % aiVariations.length]
+          ? aiVariations[(enviados + i) % aiVariations.length]
           : (campaign.mensagem || "");
+        
         let sendResult;
 
         if (campaign.tipo === "media" && campaign.media_url) {
           sendResult = await fetch(`${UAZAPI_URL}/send/media`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "token": instanceToken,
-            },
-            body: JSON.stringify({
-              number: phone,
-              type: campaign.media_type || "image",
-              file: campaign.media_url,
-              caption: messageText,
-            }),
-          });
-        } else if (campaign.tipo === "template") {
-          sendResult = await fetch(`${UAZAPI_URL}/message/sendList`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "token": instanceToken,
-            },
-            body: JSON.stringify({
-              phone,
-              title: campaign.nome,
-              description: messageText,
-              buttonText: "Ver opções",
-              sections: [{
-                title: "Menu",
-                rows: [{ title: "Saiba mais", description: messageText }],
-              }],
-            }),
+            headers: { "Content-Type": "application/json", "token": instanceToken },
+            body: JSON.stringify({ number: phone, type: campaign.media_type || "image", file: campaign.media_url, caption: messageText }),
           });
         } else {
           sendResult = await fetch(`${UAZAPI_URL}/send/text`, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "token": instanceToken,
-            },
-            body: JSON.stringify({
-              number: phone,
-              text: messageText,
-            }),
+            headers: { "Content-Type": "application/json", "token": instanceToken },
+            body: JSON.stringify({ number: phone, text: messageText }),
           });
         }
 
@@ -235,20 +189,16 @@ Regras:
 
         if (sendResult.ok && !sendData.error) {
           enviados++;
-          const sentAt = new Date().toISOString();
           await adminClient
             .from("whatsapp_campaign_contacts")
-            .update({ status: "sent", sent_at: sentAt })
+            .update({ status: "sent", sent_at: new Date().toISOString() })
             .eq("id", contact.id);
-          contactResults.push({ telefone: contact.telefone, nome: contact.nome, status: "sent", delay_ms: delayMs, sent_at: sentAt });
         } else {
           falhas++;
-          const errMsg = sendData.error || "Send failed";
           await adminClient
             .from("whatsapp_campaign_contacts")
-            .update({ status: "failed", error_message: errMsg })
+            .update({ status: "failed", error_message: sendData.error || "Send failed" })
             .eq("id", contact.id);
-          contactResults.push({ telefone: contact.telefone, nome: contact.nome, status: "failed", error: errMsg, delay_ms: delayMs });
         }
       } catch (sendErr) {
         falhas++;
@@ -256,52 +206,48 @@ Regras:
           .from("whatsapp_campaign_contacts")
           .update({ status: "failed", error_message: sendErr.message })
           .eq("id", contact.id);
-        contactResults.push({ telefone: contact.telefone, nome: contact.nome, status: "failed", error: sendErr.message, delay_ms: delayMs });
       }
 
-      // Update counters in real-time
+      // Update counters after each message
       await adminClient
         .from("whatsapp_campaigns")
         .update({ enviados, falhas })
         .eq("id", campaign_id);
     }
 
-    // Mark campaign as completed
-    const finishedAt = new Date().toISOString();
-    await adminClient
-      .from("whatsapp_campaigns")
-      .update({ status: "completed", finished_at: finishedAt, enviados, falhas })
-      .eq("id", campaign_id);
+    // Check if there are more pending contacts
+    const { count: remaining } = await adminClient
+      .from("whatsapp_campaign_contacts")
+      .select("*", { count: "exact", head: true })
+      .eq("campaign_id", campaign_id)
+      .eq("status", "pending");
 
-    // Generate report
-    const totalDelayMs = delays.reduce((a, b) => a + b, 0);
-    const avgDelayMs = delays.length > 0 ? Math.round(totalDelayMs / delays.length) : 0;
-    const minDelayMs = delays.length > 0 ? Math.min(...delays) : 0;
-    const maxDelayMs = delays.length > 0 ? Math.max(...delays) : 0;
-    const durationMs = new Date(finishedAt).getTime() - new Date(startedAt).getTime();
+    if ((remaining ?? 0) === 0) {
+      await adminClient
+        .from("whatsapp_campaigns")
+        .update({ status: "completed", finished_at: new Date().toISOString(), enviados, falhas })
+        .eq("id", campaign_id);
 
-    const report = {
-      campaign_id,
-      campaign_name: campaign.nome,
-      started_at: startedAt,
-      finished_at: finishedAt,
-      duration_seconds: Math.round(durationMs / 1000),
-      total_contacts: contacts.length,
-      enviados,
-      falhas,
-      success_rate: contacts.length > 0 ? Math.round((enviados / contacts.length) * 100) : 0,
-      delay_stats: {
-        avg_seconds: Math.round(avgDelayMs / 1000),
-        min_seconds: Math.round(minDelayMs / 1000),
-        max_seconds: Math.round(maxDelayMs / 1000),
-        total_wait_seconds: Math.round(totalDelayMs / 1000),
+      return new Response(JSON.stringify({ status: "completed", enviados, falhas, remaining: 0 }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Self-invoke for the next batch (fire-and-forget)
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    fetch(`${supabaseUrl}/functions/v1/send-whatsapp`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": authHeader,
       },
-      contacts: contactResults,
-    };
+      body: JSON.stringify({ campaign_id }),
+    }).catch(err => console.error("Self-invoke error:", err));
 
-    return new Response(JSON.stringify(report), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({ status: "sending", enviados, falhas, remaining, batch_processed: contacts.length }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+    );
   } catch (err) {
     console.error("send-whatsapp error:", err);
     return new Response(JSON.stringify({ error: err.message }), {
