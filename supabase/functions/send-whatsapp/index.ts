@@ -215,7 +215,7 @@ Regras:
             },
             body: JSON.stringify({
               number: phone,
-              text: campaign.mensagem || "",
+              text: messageText,
             }),
           });
         }
