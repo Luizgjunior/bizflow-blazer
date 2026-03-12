@@ -461,7 +461,7 @@ export default function LandingPage() {
       </section>
 
       {/* ─── FAQ ─── */}
-      <section className="py-20 px-4 bg-muted/20">
+      <section id="faq" className="py-20 px-4 bg-muted/20">
         <div className="max-w-2xl mx-auto">
           <FadeIn className="text-center mb-12">
             <Badge variant="outline" className="mb-4 text-xs">Dúvidas</Badge>
