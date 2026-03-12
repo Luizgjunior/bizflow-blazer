@@ -11,6 +11,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Progress } from '@/components/ui/progress';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -18,8 +19,9 @@ import { toast } from 'sonner';
 import {
   Send, Plus, FileSpreadsheet, Play, Eye, Loader2, CheckCircle2, XCircle, Clock,
   MessageSquare, Image, ListChecks, BarChart3, Timer, AlertTriangle,
-  Download, UserPlus, Trash2, Search
+  Download, UserPlus, Trash2, Search, Edit, MoreVertical
 } from 'lucide-react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 /* ── Types ── */
 type Campaign = {
@@ -69,6 +71,13 @@ export default function CampanhasPage() {
   const [creating, setCreating] = useState(false);
   const [sending, setSending] = useState<string | null>(null);
   const [loadingIcps, setLoadingIcps] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editNome, setEditNome] = useState('');
+  const [editMensagem, setEditMensagem] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const tenantId = profile?.tenant_id;
 
@@ -191,6 +200,42 @@ export default function CampanhasPage() {
     setManualContacts([]); setManualPhone(''); setManualName('');
   };
 
+  const openEdit = (c: Campaign) => {
+    setEditingCampaign(c);
+    setEditNome(c.nome);
+    setEditMensagem(c.mensagem || '');
+    setShowEditDialog(true);
+  };
+
+  const handleEditSave = async () => {
+    if (!editingCampaign || !editNome.trim()) return;
+    setEditSaving(true);
+    try {
+      const { error } = await supabase.from('whatsapp_campaigns')
+        .update({ nome: editNome.trim(), mensagem: editMensagem.trim() || null })
+        .eq('id', editingCampaign.id);
+      if (error) throw error;
+      toast.success('Campanha atualizada');
+      setShowEditDialog(false);
+      fetchCampaigns();
+    } catch (err: any) { toast.error(err.message || 'Erro ao atualizar'); }
+    finally { setEditSaving(false); }
+  };
+
+  const handleDelete = async (campaignId: string) => {
+    setDeleting(true);
+    try {
+      // Delete contacts first, then campaign
+      await supabase.from('whatsapp_campaign_contacts').delete().eq('campaign_id', campaignId);
+      const { error } = await supabase.from('whatsapp_campaigns').delete().eq('id', campaignId);
+      if (error) throw error;
+      toast.success('Campanha excluída');
+      setDeleteConfirm(null);
+      fetchCampaigns();
+    } catch (err: any) { toast.error(err.message || 'Erro ao excluir'); }
+    finally { setDeleting(false); }
+  };
+
   const handleSend = async (campaignId: string) => {
     setSending(campaignId);
     try {
@@ -275,11 +320,23 @@ export default function CampanhasPage() {
                     <div className="flex gap-1 shrink-0">
                       <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleViewDetails(c.id)}><Eye className="w-4 h-4" /></Button>
                       {c.status === 'draft' && (
-                        <Button size="sm" className="h-8 gap-1 text-xs" onClick={() => handleSend(c.id)} disabled={sending === c.id}>
-                          {sending === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-                          Enviar
-                        </Button>
+                        <>
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => openEdit(c)}><Edit className="w-4 h-4" /></Button>
+                          <Button size="sm" className="h-8 gap-1 text-xs" onClick={() => handleSend(c.id)} disabled={sending === c.id}>
+                            {sending === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+                            Enviar
+                          </Button>
+                        </>
                       )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0"><MoreVertical className="w-4 h-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {c.status === 'draft' && <DropdownMenuItem onClick={() => openEdit(c)}><Edit className="w-3.5 h-3.5 mr-2" />Editar</DropdownMenuItem>}
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteConfirm(c.id)}><Trash2 className="w-3.5 h-3.5 mr-2" />Excluir</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
@@ -526,6 +583,47 @@ export default function CampanhasPage() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Edit Campaign Dialog */}
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent className="max-w-[95vw] sm:max-w-md p-4 sm:p-6">
+            <DialogHeader>
+              <DialogTitle className="text-base">Editar Campanha</DialogTitle>
+              <DialogDescription className="text-xs">Altere o nome ou a mensagem.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs">Nome *</Label>
+                <Input value={editNome} onChange={(e) => setEditNome(e.target.value)} className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">Mensagem</Label>
+                <Textarea value={editMensagem} onChange={(e) => setEditMensagem(e.target.value)} rows={3} className="mt-1 text-sm" />
+              </div>
+              <Button onClick={handleEditSave} disabled={editSaving} className="w-full gap-2">
+                {editSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Edit className="w-4 h-4" />}
+                Salvar
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation */}
+        <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir campanha?</AlertDialogTitle>
+              <AlertDialogDescription>Esta ação é irreversível. Todos os contatos associados serão removidos.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={() => deleteConfirm && handleDelete(deleteConfirm)} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                {deleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppLayout>
   );
