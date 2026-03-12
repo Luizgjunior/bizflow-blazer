@@ -421,7 +421,37 @@ function MessageView({ chat, messages, loading, onSend, onSendMedia, onBack }: {
                   {msg.senderName && !msg.fromMe && (
                     <p className="text-[11px] font-semibold text-primary mb-0.5">{msg.senderName}</p>
                   )}
-                  <p className="text-sm whitespace-pre-wrap" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{msg.text || `[${msg.type}]`}</p>
+
+                  {/* Media content */}
+                  {msg.mediaUrl && msg.mediaType === 'image' && (
+                    <button onClick={() => setLightboxUrl(msg.mediaUrl!)} className="block mb-1.5 rounded-md overflow-hidden max-w-[280px] hover:opacity-90 transition-opacity">
+                      <img src={msg.mediaUrl} alt="Imagem" className="w-full h-auto rounded-md" loading="lazy" />
+                    </button>
+                  )}
+                  {msg.mediaUrl && msg.mediaType === 'video' && (
+                    <div className="mb-1.5 rounded-md overflow-hidden max-w-[280px]">
+                      <video src={msg.mediaUrl} controls className="w-full h-auto rounded-md" preload="metadata" />
+                    </div>
+                  )}
+                  {msg.mediaUrl && msg.mediaType === 'audio' && (
+                    <div className="mb-1.5 min-w-[200px]">
+                      <audio src={msg.mediaUrl} controls className="w-full h-10" preload="metadata" />
+                    </div>
+                  )}
+                  {msg.mediaUrl && msg.mediaType === 'document' && (
+                    <a href={msg.mediaUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 mb-1.5 rounded-md bg-muted/50 hover:bg-muted transition-colors">
+                      <FileText className="w-5 h-5 text-muted-foreground shrink-0" />
+                      <span className="text-xs text-primary underline truncate">Abrir documento</span>
+                    </a>
+                  )}
+
+                  {/* Text content (skip media-only labels when we have actual media rendered) */}
+                  {(msg.text && !(msg.mediaUrl && !msg.text.replace(/^(📷 Imagem|🎥 Vídeo|🎵 Áudio|📄 Documento|🏷️ Sticker)$/, '').trim() === '')) ? (
+                    <p className="text-sm whitespace-pre-wrap" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{msg.text}</p>
+                  ) : !msg.mediaUrl ? (
+                    <p className="text-sm whitespace-pre-wrap" style={{ overflowWrap: 'anywhere', wordBreak: 'break-word' }}>{msg.text || `[${msg.type}]`}</p>
+                  ) : null}
+
                   <div className={cn("flex items-center gap-1 mt-1", msg.fromMe ? "justify-end" : "justify-start")}>
                     <span className="text-[10px] text-muted-foreground">{msg.timestampFormatted}</span>
                     {msg.fromMe && <CheckCheck className="w-3 h-3 text-primary" />}
