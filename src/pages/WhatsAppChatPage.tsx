@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import {
   Search, Send, ArrowLeft, MessageSquare, Loader2, MoreVertical, CheckCheck, RefreshCw, Paperclip, X, Image as ImageIcon, FileText, Play, Trash2,
 } from 'lucide-react';
@@ -447,7 +449,7 @@ function FilePreview({ file, onRemove }: { file: File; onRemove: () => void }) {
 }
 
 /* ── Message View ── */
-function MessageView({ chat, messages, loading, onSend, onSendMedia, onBack, onDelete }: {
+function MessageView({ chat, messages, loading, onSend, onSendMedia, onBack, onDelete, onDeleteChat }: {
   chat: Chat;
   messages: Message[];
   loading: boolean;
@@ -455,6 +457,7 @@ function MessageView({ chat, messages, loading, onSend, onSendMedia, onBack, onD
   onSendMedia: (file: File, caption: string) => Promise<void>;
   onBack: () => void;
   onDelete: (messageid: string) => void;
+  onDeleteChat: () => void;
 }) {
   const [text, setText] = useState('');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -523,9 +526,18 @@ function MessageView({ chat, messages, loading, onSend, onSendMedia, onBack, onD
             {chat.isGroup ? 'Grupo' : chat.phone}
           </p>
         </div>
-        <Button variant="ghost" size="icon" className="h-11 w-11 text-muted-foreground">
-          <MoreVertical className="w-4 h-4" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-11 w-11 text-muted-foreground">
+              <MoreVertical className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem className="text-destructive focus:text-destructive gap-2" onClick={onDeleteChat}>
+              <Trash2 className="w-3.5 h-3.5" /> Excluir conversa
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Messages Area */}
@@ -884,6 +896,25 @@ export default function WhatsAppChatPage() {
     }
   };
 
+  const [deleteChatConfirm, setDeleteChatConfirm] = useState(false);
+  const handleDeleteChat = async () => {
+    if (!selectedChat) return;
+    try {
+      const data = await apiCall('deleteChat', { chatId: selectedChat.chatId });
+      if (data.error) {
+        toast.error(data.error);
+        return;
+      }
+      toast.success('Conversa excluída');
+      setSelectedChat(null);
+      setMessages([]);
+      setDeleteChatConfirm(false);
+      fetchChats(true);
+    } catch (err: any) {
+      toast.error(err.message || 'Erro ao excluir conversa');
+    }
+  };
+
   return (
     <AppLayout>
       <div className="space-y-3">
@@ -927,6 +958,7 @@ export default function WhatsAppChatPage() {
                     onSendMedia={handleSendMedia}
                     onBack={() => setSelectedChat(null)}
                     onDelete={handleDeleteMessage}
+                    onDeleteChat={() => setDeleteChatConfirm(true)}
                   />
                 </div>
               ) : (
@@ -941,6 +973,21 @@ export default function WhatsAppChatPage() {
             </div>
           </div>
         </div>
+
+        <AlertDialog open={deleteChatConfirm} onOpenChange={setDeleteChatConfirm}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir conversa?</AlertDialogTitle>
+              <AlertDialogDescription>Esta ação excluirá toda a conversa com {selectedChat?.name}. Não é possível desfazer.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={handleDeleteChat} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppLayout>
   );

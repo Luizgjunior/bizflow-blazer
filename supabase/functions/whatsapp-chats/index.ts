@@ -432,6 +432,29 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ── DELETE CHAT ── UazAPI: POST /chat/delete
+    if (action === "deleteChat") {
+      const body = await req.json();
+      const { chatId } = body;
+
+      if (!chatId) {
+        return new Response(JSON.stringify({ error: "chatId required" }), { 
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+
+      const res = await fetch(`${UAZAPI_URL}/chat/delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "token": token },
+        body: JSON.stringify({ chatId }),
+      });
+      const data = await res.json();
+
+      return new Response(JSON.stringify(data), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // ── CHECK NUMBER ── UazAPI v2: POST /chat/check
     if (action === "checkNumber") {
       const body = await req.json();
