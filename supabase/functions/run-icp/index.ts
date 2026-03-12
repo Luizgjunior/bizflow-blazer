@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
       .from("leads")
       .select("*", { count: "exact", head: true })
       .eq("tenant_id", icp.tenant_id)
-      .not("tags", "cs", '{"webhook"}');
+      .not("run_id", "is", null);
 
     if (tenant && (existingLeads ?? 0) >= tenant.limites_consulta) {
       return new Response(
