@@ -185,7 +185,7 @@ Regras:
               number: phone,
               type: campaign.media_type || "image",
               file: campaign.media_url,
-              caption: campaign.mensagem || "",
+              caption: messageText,
             }),
           });
         } else if (campaign.tipo === "template") {
