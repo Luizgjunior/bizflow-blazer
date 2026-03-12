@@ -310,11 +310,30 @@ Deno.serve(async (req) => {
       }
 
       try {
-        const res = await fetch(`${UAZAPI_URL}/chat/downloadMediaMessage`, {
+        // Try GET method first (UazAPI v2 uses GET for this endpoint)
+        let res = await fetch(`${UAZAPI_URL}/chat/getMediaURL`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "token": token },
           body: JSON.stringify({ messageid }),
         });
+
+        // If 405, try alternative endpoint
+        if (res.status === 405) {
+          await res.text(); // consume body
+          res = await fetch(`${UAZAPI_URL}/chat/downloadMediaMessage/${messageid}`, {
+            method: "GET",
+            headers: { "token": token },
+          });
+        }
+
+        // If still 405, try POST to getMediaURL
+        if (res.status === 405) {
+          await res.text(); // consume body
+          res = await fetch(`${UAZAPI_URL}/message/downloadMedia/${messageid}`, {
+            method: "GET",
+            headers: { "token": token },
+          });
+        }
         
         console.log("downloadMediaMessage response status:", res.status, "content-type:", res.headers.get("content-type"));
 
