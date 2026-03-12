@@ -261,6 +261,24 @@ export default function Dashboard() {
   const activeRuns = runs.filter((r: any) => r.status === 'running' || r.status === 'queued').length;
   const errorRuns = runs.filter((r: any) => r.status === 'error');
 
+  // Email campaign metrics
+  const { data: emailMetrics } = useQuery({
+    queryKey: ['email-metrics', tenantId],
+    queryFn: async () => {
+      const { data: campaigns } = await supabase
+        .from('email_campaigns')
+        .select('enviados, falhas, total_contatos, status')
+        .eq('tenant_id', tenantId!);
+      if (!campaigns) return { total: 0, enviados: 0, falhas: 0, taxa: 0 };
+      const enviados = campaigns.reduce((s, c) => s + (c.enviados || 0), 0);
+      const falhas = campaigns.reduce((s, c) => s + (c.falhas || 0), 0);
+      const total = campaigns.length;
+      const taxa = enviados + falhas > 0 ? Math.round((enviados / (enviados + falhas)) * 100) : 0;
+      return { total, enviados, falhas, taxa };
+    },
+    enabled: !!tenantId,
+  });
+
   // Extrair todos os campos do raw_json para exibição
   const getLeadDetails = (lead: any): Array<{ key: string; label: string; value: string }> => {
     const raw = (lead.raw_json as Record<string, any>) || {};
