@@ -298,7 +298,29 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── GET MEDIA (proxy download) ── UazAPI v2: POST /message/download
+    // ── DELETE MESSAGE ── UazAPI v2: POST /message/delete
+    if (action === "deleteMessage") {
+      const body = await req.json();
+      const { chatId, messageid } = body;
+
+      if (!chatId || !messageid) {
+        return new Response(JSON.stringify({ error: "chatId and messageid required" }), { 
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+
+      const res = await fetch(`${UAZAPI_URL}/message/delete`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", "token": token },
+        body: JSON.stringify({ id: messageid, chatid: chatId }),
+      });
+      const data = await res.json();
+      console.log("message/delete response:", res.status, JSON.stringify(data).substring(0, 500));
+
+      return new Response(JSON.stringify(data), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
     if (action === "getMedia") {
       const body = await req.json();
       const { messageid } = body;
