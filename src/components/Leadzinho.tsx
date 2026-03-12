@@ -139,7 +139,7 @@ export default function Leadzinho() {
         )}
       </AnimatePresence>
 
-      {/* Chat Window - LEFT side */}
+      {/* Chat Window */}
       <AnimatePresence>
         {open && (
           <motion.div
@@ -147,7 +147,7 @@ export default function Leadzinho() {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed bottom-24 lg:bottom-6 right-4 lg:right-6 z-50 w-[360px] max-w-[calc(100vw-2rem)] h-[500px] max-h-[calc(100vh-8rem)] rounded-2xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden"
+            className="fixed bottom-24 lg:bottom-6 left-4 lg:left-6 z-50 w-[360px] max-w-[calc(100vw-2rem)] h-[500px] max-h-[calc(100vh-8rem)] rounded-2xl border border-border bg-card shadow-2xl flex flex-col overflow-hidden"
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-primary/5">
