@@ -3,7 +3,7 @@ import { createClient } from "https://esm.sh/@supabase/supabase-js@2.49.1";
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 Deno.serve(async (req) => {
@@ -162,10 +162,10 @@ Deno.serve(async (req) => {
     const quantidade = payload.quantidade_leads || 100;
 
     // Call Casa dos Dados v5 to generate file
-    const cdBody = {
+    const cdBody: Record<string, any> = {
       nome: `LeadFlow_${icp.nome}_${run.id.slice(0, 8)}`,
       tipo: "csv",
-      quantidade,
+      total_linhas: quantidade,
       pesquisa,
     };
 
