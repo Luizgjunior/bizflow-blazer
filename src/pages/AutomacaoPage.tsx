@@ -24,7 +24,7 @@ export default function AutomacaoPage() {
   const { data: automations = [], isLoading } = useQuery({
     queryKey: ['automations', tenantId],
     queryFn: async () => {
-      const { data, error } = await supabase.from('automations').select('*, icps(nome)').order('created_at', { ascending: false });
+      const { data, error } = await supabase.from('automations').select('*, icps(nome)').eq('tenant_id', tenantId!).order('created_at', { ascending: false });
       if (error) throw error;
       return data;
     },
