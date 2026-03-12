@@ -298,6 +298,95 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── GET MEDIA (proxy download) ── UazAPI v2: POST /chat/downloadMediaMessage
+    if (action === "getMedia") {
+      const body = await req.json();
+      const { messageid } = body;
+
+      if (!messageid) {
+        return new Response(JSON.stringify({ error: "messageid required" }), { 
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+
+      try {
+        const res = await fetch(`${UAZAPI_URL}/chat/downloadMediaMessage`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "token": token },
+          body: JSON.stringify({ messageid }),
+        });
+        
+        console.log("downloadMediaMessage response status:", res.status, "content-type:", res.headers.get("content-type"));
+
+        if (!res.ok) {
+          const errText = await res.text();
+          console.error("downloadMediaMessage error:", errText.substring(0, 500));
+          return new Response(JSON.stringify({ error: "Failed to download media" }), {
+            status: res.status, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        const contentType = res.headers.get("content-type") || "application/octet-stream";
+        
+        // Check if response is JSON (might contain a URL instead of binary)
+        if (contentType.includes("application/json")) {
+          const jsonData = await res.json();
+          console.log("downloadMediaMessage returned JSON:", JSON.stringify(jsonData).substring(0, 500));
+          
+          // If it returns a URL, proxy that URL
+          const mediaUrl = jsonData.url || jsonData.fileURL || jsonData.file || jsonData.media;
+          if (mediaUrl && typeof mediaUrl === 'string' && mediaUrl.startsWith('http')) {
+            const mediaRes = await fetch(mediaUrl);
+            const mediaBuffer = await mediaRes.arrayBuffer();
+            return new Response(mediaBuffer, {
+              headers: {
+                ...corsHeaders,
+                "Content-Type": mediaRes.headers.get("content-type") || "application/octet-stream",
+                "Cache-Control": "public, max-age=3600",
+              },
+            });
+          }
+          
+          // If it returns base64
+          if (jsonData.base64 || jsonData.data) {
+            const b64 = jsonData.base64 || jsonData.data;
+            const mimeType = jsonData.mimetype || jsonData.mime || contentType;
+            const binaryString = atob(b64.replace(/^data:[^;]+;base64,/, ''));
+            const bytes = new Uint8Array(binaryString.length);
+            for (let i = 0; i < binaryString.length; i++) {
+              bytes[i] = binaryString.charCodeAt(i);
+            }
+            return new Response(bytes, {
+              headers: {
+                ...corsHeaders,
+                "Content-Type": mimeType,
+                "Cache-Control": "public, max-age=3600",
+              },
+            });
+          }
+          
+          return new Response(JSON.stringify({ error: "Unexpected media response format" }), {
+            status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        // Binary response - proxy it directly
+        const buffer = await res.arrayBuffer();
+        return new Response(buffer, {
+          headers: {
+            ...corsHeaders,
+            "Content-Type": contentType,
+            "Cache-Control": "public, max-age=3600",
+          },
+        });
+      } catch (mediaErr) {
+        console.error("getMedia error:", mediaErr);
+        return new Response(JSON.stringify({ error: mediaErr.message }), {
+          status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
+
     // ── CHECK NUMBER ── UazAPI v2: POST /chat/check
     if (action === "checkNumber") {
       const body = await req.json();
