@@ -128,6 +128,7 @@ export default function Dashboard() {
       const { count } = await supabase
         .from('leads')
         .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId!)
         .contains('tags', ['webhook'])
         .gte('created_at', todayStart.toISOString());
       return count ?? 0;
