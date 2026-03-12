@@ -103,10 +103,69 @@ Deno.serve(async (req) => {
           phone_number: existing.phone_number 
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       } else {
-        await adminClient
-          .from("whatsapp_instances")
-          .update({ status: "connecting" })
-          .eq("tenant_id", tenantId);
+        // Check if current token is still valid by trying to connect first
+        const testConnect = await tryFetch(`${UAZAPI_URL}/instance/connect`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "token": instanceToken || "" },
+          body: JSON.stringify({}),
+        });
+        
+        // If token is invalid (401), delete old instance and re-create
+        if (testConnect.data?.code === 401 || testConnect.data?.message === "Invalid token.") {
+          console.log("Token invalid, re-creating instance...");
+          
+          // Try to delete old instance from provider
+          await tryFetch(`${UAZAPI_URL}/instance/delete`, {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json", "admintoken": UAZAPI_ADMIN_TOKEN },
+            body: JSON.stringify({ name: existing.instance_name }),
+          });
+          
+          // Delete local record
+          await adminClient.from("whatsapp_instances").delete().eq("tenant_id", tenantId);
+          
+          // Re-create instance
+          instanceName = `tenant_${tenantId.substring(0, 8)}`;
+          const reCreateResult = await tryFetch(`${UAZAPI_URL}/instance/init`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "admintoken": UAZAPI_ADMIN_TOKEN },
+            body: JSON.stringify({ name: instanceName }),
+          });
+          console.log("Re-create (init) response:", JSON.stringify(reCreateResult.data).substring(0, 500));
+          
+          if (!reCreateResult.ok || reCreateResult.data.error) {
+            return new Response(JSON.stringify({ 
+              error: "Failed to re-create instance: " + (reCreateResult.data.error || reCreateResult.data.message || JSON.stringify(reCreateResult.data)),
+            }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          }
+          
+          instanceToken = reCreateResult.data.token 
+            || reCreateResult.data.instance?.token 
+            || reCreateResult.data.data?.token 
+            || "";
+          
+          await adminClient.from("whatsapp_instances").insert({
+            tenant_id: tenantId,
+            instance_name: instanceName,
+            instance_token: instanceToken,
+            status: "connecting",
+          });
+        } else {
+          await adminClient
+            .from("whatsapp_instances")
+            .update({ status: "connecting" })
+            .eq("tenant_id", tenantId);
+            
+          // If test connect already returned a QR, use it
+          const cd = testConnect.data;
+          const qrVal = cd.qrcode || cd.base64 || cd.qr || cd.data?.qrcode || cd.data?.base64 || null;
+          if (typeof qrVal === 'string' && qrVal.length > 10) {
+            return new Response(JSON.stringify({
+              status: "connecting",
+              qr_code: qrVal,
+            }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+          }
+        }
       }
 
       // UazAPI v2: POST /instance/connect to generate QR code
