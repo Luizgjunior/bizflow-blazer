@@ -123,9 +123,11 @@ export function useRecentActivities() {
   return useQuery({
     queryKey: ['crm-recent-activities', tenantId],
     queryFn: async () => {
+      if (!tenantId) return [];
       const { data, error } = await supabase
         .from('crm_deal_activities')
         .select('*')
+        .eq('tenant_id', tenantId)
         .order('created_at', { ascending: false })
         .limit(20);
       if (error) throw error;
