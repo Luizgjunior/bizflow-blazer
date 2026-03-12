@@ -173,6 +173,7 @@ export default function Dashboard() {
       const { data } = await supabase
         .from('runs')
         .select('*, icps(nome)')
+        .eq('tenant_id', tenantId!)
         .order('requested_at', { ascending: false })
         .limit(4);
       return data ?? [];
