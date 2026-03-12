@@ -524,9 +524,18 @@ function MessageView({ chat, messages, loading, onSend, onSendMedia, onBack, onD
             {chat.isGroup ? 'Grupo' : chat.phone}
           </p>
         </div>
-        <Button variant="ghost" size="icon" className="h-11 w-11 text-muted-foreground">
-          <MoreVertical className="w-4 h-4" />
-        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="h-11 w-11 text-muted-foreground">
+              <MoreVertical className="w-4 h-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem className="text-destructive focus:text-destructive gap-2" onClick={onDeleteChat}>
+              <Trash2 className="w-3.5 h-3.5" /> Excluir conversa
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Messages Area */}
