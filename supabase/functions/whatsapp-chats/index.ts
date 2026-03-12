@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
       .eq("tenant_id", profile.tenant_id)
       .single();
 
-    if (!instance || instance.status !== "connected") {
+    if (!instance) {
       return new Response(JSON.stringify({ error: "WhatsApp not connected" }), { 
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } 
       });
@@ -51,23 +51,128 @@ Deno.serve(async (req) => {
 
     const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "";
     const token = instance.instance_token || "";
+
+    // If instance is not marked as connected, check live status from UazAPI
+    if (instance.status !== "connected") {
+      try {
+        const statusRes = await fetch(`${UAZAPI_URL}/instance/status`, {
+          method: "GET",
+          headers: { "Content-Type": "application/json", "token": token },
+        });
+        const statusData = await statusRes.json();
+        console.log("Live status check:", JSON.stringify(statusData).substring(0, 500));
+
+        const rawStatus = statusData.status;
+        const instanceStatus = statusData.instance?.status;
+        let connected = false;
+
+        if (typeof rawStatus === 'object' && rawStatus !== null && rawStatus.connected === true) {
+          connected = true;
+        } else if (instanceStatus === "connected" || instanceStatus === "open") {
+          connected = true;
+        } else if (typeof rawStatus === 'string' && (rawStatus === "connected" || rawStatus === "open")) {
+          connected = true;
+        }
+
+        if (connected) {
+          const jid = (typeof rawStatus === 'object' && rawStatus?.jid) || statusData.instance?.owner || statusData.owner || statusData.phoneNumber || "";
+          const cleanPhone = typeof jid === 'string' ? jid.replace(/@.*/, "").replace(/:/g, "").replace(/[^0-9]/g, "") : "";
+          await adminClient
+            .from("whatsapp_instances")
+            .update({ status: "connected", phone_number: cleanPhone || "connected" })
+            .eq("tenant_id", profile.tenant_id);
+          console.log("Updated instance status to connected");
+        } else {
+          return new Response(JSON.stringify({ error: "WhatsApp not connected" }), { 
+            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } 
+          });
+        }
+      } catch (statusErr) {
+        console.error("Status check error:", statusErr);
+        return new Response(JSON.stringify({ error: "WhatsApp not connected" }), { 
+          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } 
+        });
+      }
+    }
+
     const url = new URL(req.url);
     const action = url.searchParams.get("action");
 
     // ── LIST CHATS ──
     if (action === "chats") {
-      const res = await fetch(`${UAZAPI_URL}/chat/find`, {
+      // Try multiple approaches to get chats
+      let chats: any[] = [];
+      
+      // Approach 1: POST /chat/find with sort
+      const res1 = await fetch(`${UAZAPI_URL}/chat/find`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "token": token },
         body: JSON.stringify({
           operator: "AND",
           sort: "-wa_lastMsgTimestamp",
-          limit: 50,
+          limit: 100,
           offset: 0,
         }),
       });
-      const data = await res.json();
-      const chats = Array.isArray(data) ? data : (data.data || data.chats || []);
+      const data1 = await res1.json();
+      console.log("chat/find response status:", res1.status, "type:", typeof data1, "isArray:", Array.isArray(data1), "keys:", typeof data1 === 'object' && data1 !== null ? Object.keys(data1) : [], "sample:", JSON.stringify(data1).substring(0, 800));
+      
+      if (Array.isArray(data1)) {
+        chats = data1;
+      } else if (data1.data && Array.isArray(data1.data)) {
+        chats = data1.data;
+      } else if (data1.chats && Array.isArray(data1.chats)) {
+        chats = data1.chats;
+      } else if (data1.result && Array.isArray(data1.result)) {
+        chats = data1.result;
+      }
+
+      // Approach 2: If no chats, try GET /chat/list
+      if (chats.length === 0) {
+        try {
+          const res2 = await fetch(`${UAZAPI_URL}/chat/list`, {
+            method: "GET",
+            headers: { "Content-Type": "application/json", "token": token },
+          });
+          const data2 = await res2.json();
+          console.log("chat/list response status:", res2.status, "sample:", JSON.stringify(data2).substring(0, 800));
+          
+          if (Array.isArray(data2)) {
+            chats = data2;
+          } else if (data2.data && Array.isArray(data2.data)) {
+            chats = data2.data;
+          } else if (data2.chats && Array.isArray(data2.chats)) {
+            chats = data2.chats;
+          }
+        } catch (e) {
+          console.log("chat/list fallback failed:", e.message);
+        }
+      }
+
+      // Approach 3: If still no chats, try POST /chat/find without filters
+      if (chats.length === 0) {
+        try {
+          const res3 = await fetch(`${UAZAPI_URL}/chat/find`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "token": token },
+            body: JSON.stringify({}),
+          });
+          const data3 = await res3.json();
+          console.log("chat/find (no filter) response:", res3.status, "sample:", JSON.stringify(data3).substring(0, 800));
+          
+          if (Array.isArray(data3)) {
+            chats = data3;
+          } else if (data3.data && Array.isArray(data3.data)) {
+            chats = data3.data;
+          } else if (data3.chats && Array.isArray(data3.chats)) {
+            chats = data3.chats;
+          }
+        } catch (e) {
+          console.log("chat/find (no filter) fallback failed:", e.message);
+        }
+      }
+
+      console.log("Total chats found:", chats.length);
 
       return new Response(JSON.stringify({ chats }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

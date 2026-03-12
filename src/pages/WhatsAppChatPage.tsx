@@ -49,19 +49,23 @@ function formatTs(ts: number): string {
 }
 
 function parseChat(raw: any): Chat {
-  const chatId = raw.wa_chatid || raw.id || '';
-  const name = raw.wa_contactName || raw.wa_name || raw.name || raw.lead_name || chatId.replace(/@.*/, '');
+  // UazAPI v2 returns: wa_chatid, phone, wa_contactName, wa_name, name, lead_name, etc.
+  const chatId = raw.wa_chatid || raw.chatid || raw.id || '';
   const phone = raw.phone || chatId.replace(/@.*/, '');
-  const lastMsg = raw.wa_lastMessageTextVote || '';
-  const ts = raw.wa_lastMsgTimestamp || 0;
-  const unread = raw.wa_unreadCount || 0;
-  const isGroup = raw.wa_isGroup || false;
+  const name = raw.wa_contactName || raw.wa_name || raw.name || raw.lead_name || raw.lead_fullName || phone;
+  const lastMsg = raw.wa_lastMessageTextVote || raw.lastMessage || '';
+  const ts = raw.wa_lastMsgTimestamp || raw.timestamp || raw.t || 0;
+  const unread = raw.wa_unreadCount || raw.unreadCount || 0;
+  const isGroup = raw.wa_isGroup || raw.isGroup || (chatId.includes('@g.us')) || false;
   const image = raw.imagePreview || raw.image || '';
 
+  // Build chatId from phone if not available
+  const finalChatId = chatId || (phone ? `${phone}@s.whatsapp.net` : '');
+
   return {
-    id: raw.id || chatId,
-    chatId,
-    name: name || phone,
+    id: raw.id || finalChatId || phone,
+    chatId: finalChatId,
+    name: name || phone || 'Desconhecido',
     lastMessage: lastMsg,
     timestamp: ts,
     timestampFormatted: formatTs(ts),
