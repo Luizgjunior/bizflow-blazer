@@ -73,6 +73,9 @@ export default function EmailCampaignsTab() {
   const [useAiVariations, setUseAiVariations] = useState(false);
   const [aiVariations, setAiVariations] = useState<string[]>([]);
   const [generatingAi, setGeneratingAi] = useState(false);
+  const [manualEmail, setManualEmail] = useState('');
+  const [manualNome, setManualNome] = useState('');
+  const [manualContacts, setManualContacts] = useState<{ email: string; nome: string }[]>([]);
 
   const tenantId = profile?.tenant_id;
 
