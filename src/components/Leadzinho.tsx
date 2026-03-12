@@ -73,7 +73,6 @@ export default function Leadzinho() {
         throw new Error(err.error || `Erro ${resp.status}`);
       }
 
-      // Get conversation ID from header
       const convId = resp.headers.get('X-Conversation-Id');
       if (convId) setConversationId(convId);
 
@@ -110,7 +109,6 @@ export default function Leadzinho() {
     } catch (e: any) {
       console.error('Leadzinho error:', e);
       toast.error(e.message || 'Erro ao enviar mensagem');
-      // Remove the user message if failed
       setMessages(prev => prev.filter((_, i) => i < prev.length - 1));
     } finally {
       setIsLoading(false);
@@ -126,7 +124,7 @@ export default function Leadzinho() {
 
   return (
     <>
-      {/* Floating Button */}
+      {/* Floating Button - LEFT side */}
       <AnimatePresence>
         {!open && (
           <motion.button
@@ -141,7 +139,7 @@ export default function Leadzinho() {
         )}
       </AnimatePresence>
 
-      {/* Chat Window */}
+      {/* Chat Window - LEFT side */}
       <AnimatePresence>
         {open && (
           <motion.div
