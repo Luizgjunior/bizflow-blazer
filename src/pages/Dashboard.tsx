@@ -322,6 +322,44 @@ export default function Dashboard() {
           <StatCard title="Execuções" value={runs.length} icon={TrendingUp} variant="accent" />
         </div>
 
+        {/* Email Campaign Metrics */}
+        {emailMetrics && emailMetrics.total > 0 && (
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="p-1.5 rounded-lg bg-primary/10">
+                <Mail className="w-4 h-4 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">Campanhas de E-mail</h2>
+                <p className="text-[10px] text-muted-foreground">{emailMetrics.total} campanha(s) criada(s)</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center p-3 rounded-lg bg-muted/30">
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                </div>
+                <p className="text-lg font-bold text-foreground">{emailMetrics.enviados.toLocaleString()}</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Enviados</p>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-muted/30">
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <XCircle className="w-3.5 h-3.5 text-destructive" />
+                </div>
+                <p className="text-lg font-bold text-foreground">{emailMetrics.falhas.toLocaleString()}</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Falhas</p>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-muted/30">
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <TrendingUp className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <p className="text-lg font-bold text-foreground">{emailMetrics.taxa}%</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Taxa Sucesso</p>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* Consumo do tenant */}
         {tenantUsage && (
           <div className="rounded-xl border border-border bg-card p-4">
