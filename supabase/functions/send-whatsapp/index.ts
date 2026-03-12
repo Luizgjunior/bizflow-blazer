@@ -168,6 +168,10 @@ Regras:
 
       try {
         const phone = contact.telefone.replace(/\D/g, "");
+        // Pick AI variation or fallback to original message
+        const messageText = aiVariations.length > 0
+          ? aiVariations[i % aiVariations.length]
+          : (campaign.mensagem || "");
         let sendResult;
 
         if (campaign.tipo === "media" && campaign.media_url) {
