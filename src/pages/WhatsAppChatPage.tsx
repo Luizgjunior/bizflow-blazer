@@ -34,6 +34,9 @@ type Message = {
   fromMe: boolean;
   senderName?: string;
   type: string;
+  mediaUrl?: string;
+  mediaType?: 'image' | 'video' | 'audio' | 'document' | 'sticker';
+  mimetype?: string;
 };
 
 function formatTs(ts: number): string {
