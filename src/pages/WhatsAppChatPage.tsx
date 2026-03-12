@@ -37,6 +37,8 @@ type Message = {
   mediaUrl?: string;
   mediaType?: 'image' | 'video' | 'audio' | 'document' | 'sticker';
   mimetype?: string;
+  messageid?: string;
+  needsProxy?: boolean;
 };
 
 function formatTs(ts: number): string {
