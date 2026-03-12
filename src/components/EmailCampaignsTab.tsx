@@ -273,6 +273,7 @@ export default function EmailCampaignsTab() {
 
   const filteredIcps = icps.filter(i => i.nome.toLowerCase().includes(icpSearch.toLowerCase()));
   const totalSelectedContacts = contactSource === 'csv' ? csvContacts.length
+    : contactSource === 'manual' ? manualContacts.length
     : icps.filter(i => selectedIcps.includes(i.id)).reduce((sum, i) => sum + (i.emailCount || 0), 0);
 
   return (
