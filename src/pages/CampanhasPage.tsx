@@ -271,6 +271,7 @@ export default function CampanhasPage() {
     setContactSource('icp'); setCsvContacts([]); setSelectedIcps([]);
     setManualContacts([]); setManualPhone(''); setManualName('');
     setUseAiVariations(false); setAiVariations([]); setShowVariationsPreview(false);
+    setWhatsappCheckResult(null); setCheckingWhatsapp(false);
   };
 
   const handleGenerateVariations = async () => {
