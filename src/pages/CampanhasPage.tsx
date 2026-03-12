@@ -319,14 +319,15 @@ export default function CampanhasPage() {
         </div>
 
         <Tabs defaultValue="whatsapp" className="w-full">
-          <TabsList className="mb-4">
+          {/* TabsList com aba E-mail ocultada temporariamente - aguardando verificação do domínio Resend */}
+          {/*<TabsList className="mb-4">
             <TabsTrigger value="whatsapp" className="gap-1.5">
               <MessageSquare className="w-4 h-4" /> WhatsApp
             </TabsTrigger>
             <TabsTrigger value="email" className="gap-1.5">
               <Mail className="w-4 h-4" /> E-mail
             </TabsTrigger>
-          </TabsList>
+          </TabsList>*/}
 
           <TabsContent value="whatsapp">
             <div className="space-y-4">
