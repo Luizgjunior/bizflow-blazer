@@ -49,7 +49,7 @@ const navItems = [
   { path: '/runs', label: 'Runs', icon: Play },
   { path: '/leads', label: 'Leads', icon: Users },
   { path: '/exports', label: 'Exports', icon: Download },
-  { path: '/automacao', label: 'Automação', icon: Zap },
+  { path: '/campanhas', label: 'Campanhas', icon: Megaphone },
   { path: '/disparos', label: 'Conexão', icon: Send },
 ];
 

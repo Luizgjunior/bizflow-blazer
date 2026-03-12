@@ -56,6 +56,7 @@ function AppRoutes() {
         <Route path="/exports" element={<ProtectedRoute><ExportsPage /></ProtectedRoute>} />
         <Route path="/automacao" element={<ProtectedRoute><AutomacaoPage /></ProtectedRoute>} />
         <Route path="/disparos" element={<ProtectedRoute><DisparosPage /></ProtectedRoute>} />
+        <Route path="/campanhas" element={<ProtectedRoute><CampanhasPage /></ProtectedRoute>} />
         <Route path="/whatsapp-chat" element={<ProtectedRoute><WhatsAppChatPage /></ProtectedRoute>} />
         <Route path="/crm" element={<ProtectedRoute><CrmKanbanPage /></ProtectedRoute>} />
         <Route path="/crm-dashboard" element={<ProtectedRoute><CrmDashboardPage /></ProtectedRoute>} />
