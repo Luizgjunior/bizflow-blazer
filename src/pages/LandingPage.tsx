@@ -151,9 +151,18 @@ const HIGHLIGHTS = [
   },
 ];
 
-/* ───────────────────── component ───────────────────── */
+/* ───────────────────── helpers ───────────────────── */
 
-const WHATSAPP_URL = 'https://wa.me/5565981078369?text=Ol%C3%A1%2C%20quero%20conhecer%20os%20planos%20do%20LeadFlow!';
+function getWhatsAppUrl(planName?: string) {
+  const baseNumber = '5565981078369';
+  const message = planName
+    ? `Olá! Tenho interesse no plano ${planName} do LeadFlow. Pode me passar mais informações?`
+    : 'Olá! Quero conhecer os planos do LeadFlow!';
+  const encodedMessage = encodeURIComponent(message);
+  return `https://wa.me/${baseNumber}?text=${encodedMessage}`;
+}
+
+const WHATSAPP_URL = getWhatsAppUrl();
 
 export default function LandingPage() {
   useDocumentTitle('Prospecção B2B Inteligente');
