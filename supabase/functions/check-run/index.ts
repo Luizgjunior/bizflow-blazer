@@ -96,24 +96,54 @@ Deno.serve(async (req) => {
       );
     }
 
-    const checkData = await checkResponse.json();
-    const downloadLink = checkData.link;
+    // Casa dos Dados v4 may return: 
+    // 1) JSON with a "link" field, or 
+    // 2) The file directly (ZIP/CSV binary)
+    const contentType = checkResponse.headers.get("content-type") || "";
+    let csvText: string;
 
-    if (!downloadLink) {
-      return new Response(
-        JSON.stringify({ status: "running", message: "Arquivo ainda sendo processado" }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+    if (contentType.includes("application/json")) {
+      const checkData = await checkResponse.json();
+      const downloadLink = checkData.link;
+
+      if (!downloadLink) {
+        return new Response(
+          JSON.stringify({ status: "running", message: "Arquivo ainda sendo processado" }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      console.log("Downloading CSV from:", downloadLink);
+      const csvResponse = await fetch(downloadLink);
+      if (!csvResponse.ok) {
+        throw new Error(`Failed to download CSV: ${csvResponse.status}`);
+      }
+      csvText = await csvResponse.text();
+    } else if (contentType.includes("application/zip") || contentType.includes("application/octet-stream")) {
+      // File returned directly as ZIP - decompress it
+      console.log("Received ZIP file directly from API, decompressing...");
+      const { unzipSync } = await import("https://esm.sh/fflate@0.8.2");
+      
+      const zipBytes = new Uint8Array(await checkResponse.arrayBuffer());
+      const unzipped = unzipSync(zipBytes);
+      
+      // Find CSV file in extracted contents
+      const csvFileName = Object.keys(unzipped).find(name => name.endsWith(".csv"));
+      if (!csvFileName) {
+        throw new Error("No CSV file found in ZIP archive");
+      }
+      
+      csvText = new TextDecoder().decode(unzipped[csvFileName]);
+    } else {
+      // Try reading as text (might be CSV directly)
+      console.log("Received response with content-type:", contentType);
+      csvText = await checkResponse.text();
+      
+      // Check if it looks like a ZIP (starts with PK)
+      if (csvText.startsWith("PK")) {
+        throw new Error("Received ZIP file but could not determine content type. Retrying...");
+      }
     }
-
-    // Download the CSV
-    console.log("Downloading CSV from:", downloadLink);
-    const csvResponse = await fetch(downloadLink);
-    if (!csvResponse.ok) {
-      throw new Error(`Failed to download CSV: ${csvResponse.status}`);
-    }
-
-    const csvText = await csvResponse.text();
 
     // Upload CSV to storage
     const filePath = `${run.tenant_id}/${run.id}.csv`;
