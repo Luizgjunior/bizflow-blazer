@@ -320,11 +320,23 @@ export default function CampanhasPage() {
                     <div className="flex gap-1 shrink-0">
                       <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => handleViewDetails(c.id)}><Eye className="w-4 h-4" /></Button>
                       {c.status === 'draft' && (
-                        <Button size="sm" className="h-8 gap-1 text-xs" onClick={() => handleSend(c.id)} disabled={sending === c.id}>
-                          {sending === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
-                          Enviar
-                        </Button>
+                        <>
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => openEdit(c)}><Edit className="w-4 h-4" /></Button>
+                          <Button size="sm" className="h-8 gap-1 text-xs" onClick={() => handleSend(c.id)} disabled={sending === c.id}>
+                            {sending === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+                            Enviar
+                          </Button>
+                        </>
                       )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button size="sm" variant="ghost" className="h-8 w-8 p-0"><MoreVertical className="w-4 h-4" /></Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          {c.status === 'draft' && <DropdownMenuItem onClick={() => openEdit(c)}><Edit className="w-3.5 h-3.5 mr-2" />Editar</DropdownMenuItem>}
+                          <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteConfirm(c.id)}><Trash2 className="w-3.5 h-3.5 mr-2" />Excluir</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 text-xs text-muted-foreground">
