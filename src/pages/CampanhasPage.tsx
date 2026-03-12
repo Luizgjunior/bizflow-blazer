@@ -203,6 +203,28 @@ export default function CampanhasPage() {
     setNome(''); setTipo('texto'); setMensagem(''); setMediaFile(null);
     setContactSource('icp'); setCsvContacts([]); setSelectedIcps([]);
     setManualContacts([]); setManualPhone(''); setManualName('');
+    setUseAiVariations(false); setAiVariations([]); setShowVariationsPreview(false);
+  };
+
+  const handleGenerateVariations = async () => {
+    if (!mensagem.trim()) { toast.error('Escreva a mensagem antes de gerar variações'); return; }
+    setGeneratingAi(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      const res = await fetch(`https://${projectId}.supabase.co/functions/v1/ai-message-variations`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: mensagem, count: 5 }),
+      });
+      const data = await res.json();
+      if (data.error) { toast.error(data.error); return; }
+      setAiVariations(data.variations || []);
+      setShowVariationsPreview(true);
+      toast.success(`${data.variations?.length || 0} variações geradas!`);
+    } catch (err: any) { toast.error(err.message || 'Erro ao gerar variações'); }
+    finally { setGeneratingAi(false); }
   };
 
   const openEdit = (c: Campaign) => {
