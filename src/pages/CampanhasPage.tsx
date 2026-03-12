@@ -188,7 +188,7 @@ export default function CampanhasPage() {
 
       if (contactsToInsert.length === 0) { toast.error('Nenhum contato com telefone válido'); setCreating(false); return; }
       const { data: campaign, error: campErr } = await supabase.from('whatsapp_campaigns')
-        .insert({ tenant_id: tenantId!, nome, mensagem, media_url: mediaUrl, media_type: mediaType, tipo, total_contatos: contactsToInsert.length })
+        .insert({ tenant_id: tenantId!, nome, mensagem, media_url: mediaUrl, media_type: mediaType, tipo, total_contatos: contactsToInsert.length, use_ai_variations: useAiVariations } as any)
         .select().single();
       if (campErr) throw campErr;
       const { error: contactErr } = await supabase.from('whatsapp_campaign_contacts').insert(contactsToInsert.map((c) => ({ campaign_id: campaign.id, ...c })));
