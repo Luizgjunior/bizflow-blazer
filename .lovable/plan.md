@@ -1,68 +1,79 @@
 
 
-# Plano: Disparo Massivo de E-mail via Resend
+# Plano: Migrar para Stripe com 3 planos de assinatura
 
 ## Resumo
 
-Integrar e-mail em massa usando uma **única conta Resend do administrador** (chave API + remetente verificado) compartilhada por todos os tenants. Adicionar aba "E-mail" na página de Campanhas existente, com fluxo idêntico ao WhatsApp.
+Substituir a integração Cakto pela Stripe para gerenciar assinaturas mensais com 3 planos. Quando o pagamento falhar ou a assinatura for cancelada, o tenant perde acesso a extrações.
 
-## Pré-requisitos
+## Planos
 
-- Secret `RESEND_API_KEY` — já será solicitada ao usuário antes da implementação
-- Secret `RESEND_FROM_EMAIL` — e-mail remetente verificado no Resend (ex: `noreply@seudominio.com`)
+| Plano | Preço | Leads |
+|-------|-------|-------|
+| Pro | R$ 47/mes | 6.000 |
+| Premium | R$ 97/mes | 14.000 |
+| Enterprise | R$ 197/mes | 32.000 |
 
 ## Etapas
 
-### 1. Criar tabelas no banco
+### 1. Habilitar integração Stripe
+- Ativar o Stripe no projeto (vai pedir a chave secreta)
+- Criar os 3 produtos e preços na Stripe via ferramenta do Lovable
 
-**`email_campaigns`**: mesma estrutura de `whatsapp_campaigns` adaptada para e-mail
-- `id`, `tenant_id`, `nome`, `assunto` (subject), `mensagem` (corpo texto/HTML), `status` (draft/sending/completed), `total_contatos`, `enviados`, `falhas`, `use_ai_variations`, `started_at`, `finished_at`, `created_at`
+### 2. Atualizar banco de dados
+- Adicionar colunas na tabela `tenants`: `stripe_customer_id`, `stripe_subscription_id`, `stripe_status` (substituindo os campos `cakto_*`)
+- Remover colunas Cakto (`cakto_customer_email`, `cakto_subscription_id`)
+- Atualizar valores do enum de plano para `pro`, `premium`, `enterprise`
 
-**`email_campaign_contacts`**: mesma estrutura de `whatsapp_campaign_contacts` adaptada
-- `id`, `campaign_id`, `email`, `nome`, `lead_id`, `status` (pending/sent/failed), `error_message`, `sent_at`, `created_at`
+### 3. Criar Edge Function `stripe-webhook`
+- Receber eventos do Stripe: `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.deleted`
+- No `checkout.session.completed`: criar usuario (se nao existir), ativar tenant, definir plano e limites conforme o preco pago
+- No `invoice.paid`: manter `ativo = true`
+- No `invoice.payment_failed` / `subscription.deleted`: setar `ativo = false` (bloqueia extrações)
 
-RLS: mesmas políticas tenant-scoped das tabelas WhatsApp.
+### 4. Criar Edge Function `create-checkout`
+- Recebe o `price_id` do plano escolhido
+- Cria (ou recupera) um Stripe Customer pelo email do usuario
+- Gera uma Checkout Session do Stripe em modo `subscription`
+- Retorna a URL do checkout para redirect
 
-### 2. Criar Edge Function `send-email`
+### 5. Criar pagina de planos (`/planos`)
+- Pagina publica ou acessivel por usuarios logados sem assinatura
+- Exibe os 3 cards de plano com preço, limite de leads e botao "Assinar"
+- Ao clicar, chama `create-checkout` e redireciona para o Stripe Checkout
 
-- Valida autenticação e tenant
-- Busca contatos pendentes da campanha
-- Se `use_ai_variations` ativo, gera variações via IA (mesma lógica do WhatsApp)
-- Loop com delay randômico (500ms-5s) chamando `POST https://api.resend.com/emails` com:
-  - `from`: `RESEND_FROM_EMAIL` (secret global)
-  - `to`: e-mail do contato
-  - `subject`: assunto da campanha
-  - `html`: corpo com `{nome}` substituído
-- Atualiza status de cada contato e contadores em tempo real
-- Gera relatório final
+### 6. Atualizar ProtectedRoute
+- Apos login, verificar se o tenant esta `ativo`
+- Se `ativo = false`, redirecionar para `/planos` em vez do dashboard
+- Admins globais ficam isentos dessa verificação
 
-### 3. Adicionar aba "E-mail" na página de Campanhas
+### 7. Bloquear extrações para inadimplentes
+- Na pagina de ICPs, antes de executar um ICP (run), verificar `tenant.ativo`
+- Se inativo, mostrar toast informando que a assinatura esta pendente
 
-- Tabs: **WhatsApp** | **E-mail** na `CampanhasPage`
-- Aba E-mail com mesma UX: lista de campanhas, criar campanha (nome, assunto, corpo com `{nome}`), toggle IA
-- Fonte de contatos: ICPs (extrai e-mails do `raw_json` dos leads) ou CSV (`email;nome`)
-- Botão disparar, relatório pós-envio
+### 8. Atualizar Backoffice
+- Substituir aba "Cakto" por aba "Assinaturas" mostrando status Stripe de cada tenant
+- Exibir: nome do tenant, plano, status da assinatura, stripe_customer_id
 
-### 4. Extrair e-mails dos leads
+### 9. Limpar codigo Cakto
+- Remover/substituir o webhook-cakto pela nova logica Stripe
+- Remover referencias a Cakto no frontend
 
-- Na importação por ICP, buscar campo `email` ou `emails` do `raw_json` de cada lead
-- Filtrar apenas leads com e-mail válido
-- Template CSV para e-mail: `email;nome`
+---
 
-## Arquitetura
+## Detalhes tecnicos
 
-```text
-┌──────────────┐     ┌──────────────┐     ┌─────────┐
-│  Frontend    │────▶│  send-email  │────▶│ Resend  │
-│  (Aba Email) │     │ Edge Function│     │   API   │
-└──────────────┘     └──────────────┘     └─────────┘
-                           │
-                     ┌─────▼──────┐
-                     │ email_     │
-                     │ campaigns  │
-                     │ + contacts │
-                     └────────────┘
-```
+**Mapeamento plano → limites (aplicado no webhook)**:
+- `pro` → 6000
+- `premium` → 14000  
+- `enterprise` → 32000
 
-Chave Resend e remetente são secrets globais — todos os tenants enviam pelo mesmo domínio verificado.
+**Fluxo do usuario**:
+1. Usuario acessa `/planos` e escolhe um plano
+2. E redirecionado ao Stripe Checkout (cartao de credito)
+3. Apos pagamento, webhook cria conta + tenant + ativa
+4. Usuario acessa via "Primeiro Acesso" e define senha
+5. Todo mes o Stripe cobra automaticamente; se falhar, `ativo = false`
+
+**Edge Function `stripe-webhook`**: usara `verify_jwt = false` no config.toml e validara a assinatura do webhook via `Stripe-Signature` header com o secret `STRIPE_WEBHOOK_SECRET`.
 
