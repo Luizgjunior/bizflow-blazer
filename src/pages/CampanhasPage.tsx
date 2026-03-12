@@ -19,8 +19,9 @@ import { toast } from 'sonner';
 import {
   Send, Plus, FileSpreadsheet, Play, Eye, Loader2, CheckCircle2, XCircle, Clock,
   MessageSquare, Image, ListChecks, BarChart3, Timer, AlertTriangle,
-  Download, UserPlus, Trash2, Search, Edit, MoreVertical
+  Download, UserPlus, Trash2, Search, Edit, MoreVertical, Sparkles, Bot
 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 /* ── Types ── */
