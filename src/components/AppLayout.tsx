@@ -11,6 +11,7 @@ import {
   Download,
   Zap,
   Send,
+  Megaphone,
   Settings,
   LogOut,
   Menu,
