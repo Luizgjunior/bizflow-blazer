@@ -71,6 +71,13 @@ export default function CampanhasPage() {
   const [creating, setCreating] = useState(false);
   const [sending, setSending] = useState<string | null>(null);
   const [loadingIcps, setLoadingIcps] = useState(false);
+  const [editingCampaign, setEditingCampaign] = useState<Campaign | null>(null);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editNome, setEditNome] = useState('');
+  const [editMensagem, setEditMensagem] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const tenantId = profile?.tenant_id;
 
