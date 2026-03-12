@@ -32,6 +32,7 @@ const prefetchMap: Record<string, () => void> = {
   '/exports': () => import('@/pages/ExportsPage'),
   '/automacao': () => import('@/pages/AutomacaoPage'),
   '/disparos': () => import('@/pages/DisparosPage'),
+  '/campanhas': () => import('@/pages/CampanhasPage'),
   '/whatsapp-chat': () => import('@/pages/WhatsAppChatPage'),
   '/crm': () => import('@/pages/CrmKanbanPage'),
   '/crm-dashboard': () => import('@/pages/CrmDashboardPage'),
