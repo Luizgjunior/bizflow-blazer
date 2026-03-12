@@ -212,6 +212,111 @@ async function apiCall(action: string, body?: any) {
   return res.json();
 }
 
+async function fetchMediaBlob(messageid: string): Promise<string | null> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return null;
+    const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+    const url = `https://${projectId}.supabase.co/functions/v1/whatsapp-chats?action=getMedia`;
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${session.access_token}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ messageid }),
+    });
+    if (!res.ok) return null;
+    const contentType = res.headers.get('content-type') || '';
+    if (contentType.includes('application/json')) return null; // Error response
+    const blob = await res.blob();
+    return URL.createObjectURL(blob);
+  } catch {
+    return null;
+  }
+}
+
+/* ── Media Content Component (handles proxy loading) ── */
+function MediaContent({ msg, onLightbox }: { msg: Message; onLightbox: (url: string) => void }) {
+  const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  useEffect(() => {
+    if (msg.needsProxy && msg.messageid && !msg.mediaUrl && !blobUrl && !loading && !failed) {
+      setLoading(true);
+      fetchMediaBlob(msg.messageid).then(url => {
+        if (url) {
+          setBlobUrl(url);
+        } else {
+          setFailed(true);
+        }
+        setLoading(false);
+      });
+    }
+    return () => {
+      if (blobUrl) URL.revokeObjectURL(blobUrl);
+    };
+  }, [msg.needsProxy, msg.messageid, msg.mediaUrl]);
+
+  const url = msg.mediaUrl || blobUrl;
+
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 p-3 rounded-md bg-muted/30 mb-1.5 min-w-[200px]">
+        <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+        <span className="text-xs text-muted-foreground">Carregando mídia...</span>
+      </div>
+    );
+  }
+
+  if (!url && failed) {
+    return (
+      <div className="flex items-center gap-2 p-2 rounded-md bg-muted/30 mb-1.5">
+        <Play className="w-4 h-4 text-muted-foreground" />
+        <span className="text-xs text-muted-foreground">Mídia indisponível</span>
+      </div>
+    );
+  }
+
+  if (!url) return null;
+
+  if (msg.mediaType === 'image') {
+    return (
+      <button onClick={() => onLightbox(url)} className="block mb-1.5 rounded-md overflow-hidden max-w-[280px] hover:opacity-90 transition-opacity">
+        <img src={url} alt="Imagem" className="w-full h-auto rounded-md" loading="lazy" />
+      </button>
+    );
+  }
+
+  if (msg.mediaType === 'video') {
+    return (
+      <div className="mb-1.5 rounded-md overflow-hidden max-w-[280px]">
+        <video src={url} controls className="w-full h-auto rounded-md" preload="metadata" />
+      </div>
+    );
+  }
+
+  if (msg.mediaType === 'audio') {
+    return (
+      <div className="mb-1.5 min-w-[200px]">
+        <audio src={url} controls className="w-full h-10" preload="metadata" />
+      </div>
+    );
+  }
+
+  if (msg.mediaType === 'document') {
+    return (
+      <a href={url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 p-2 mb-1.5 rounded-md bg-muted/50 hover:bg-muted transition-colors">
+        <FileText className="w-5 h-5 text-muted-foreground shrink-0" />
+        <span className="text-xs text-primary underline truncate">Abrir documento</span>
+      </a>
+    );
+  }
+
+  return null;
+}
+
 function getMediaType(file: File): string {
   if (file.type.startsWith('image/')) return 'image';
   if (file.type.startsWith('video/')) return 'video';
