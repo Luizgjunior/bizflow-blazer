@@ -648,9 +648,10 @@ export default function CampanhasPage() {
                 )}
               </div>
 
-              <Button onClick={handleCreate} disabled={creating} className="w-full gap-2 h-11">
-                {creating ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                Criar Campanha
+              <Button onClick={handleCreate} disabled={creating || checkingWhatsapp} className="w-full gap-2 h-11">
+                {checkingWhatsapp ? <><ShieldCheck className="w-4 h-4 animate-pulse" /> Verificando WhatsApp...</>
+                  : creating ? <><Loader2 className="w-4 h-4 animate-spin" /> Criando...</>
+                  : <><Send className="w-4 h-4" /> Criar Campanha</>}
               </Button>
             </div>
           </DialogContent>
