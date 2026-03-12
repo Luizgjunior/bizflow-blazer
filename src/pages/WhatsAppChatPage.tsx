@@ -926,6 +926,7 @@ export default function WhatsAppChatPage() {
                     onSend={handleSend}
                     onSendMedia={handleSendMedia}
                     onBack={() => setSelectedChat(null)}
+                    onDelete={handleDeleteMessage}
                   />
                 </div>
               ) : (
