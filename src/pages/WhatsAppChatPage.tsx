@@ -899,8 +899,9 @@ export default function WhatsAppChatPage() {
   const [deleteChatConfirm, setDeleteChatConfirm] = useState(false);
   const handleDeleteChat = async () => {
     if (!selectedChat) return;
+    const deletedChatId = selectedChat.chatId;
     try {
-      const data = await apiCall('deleteChat', { chatId: selectedChat.chatId });
+      const data = await apiCall('deleteChat', { chatId: deletedChatId });
       if (data.error) {
         toast.error(data.error);
         return;
@@ -909,7 +910,8 @@ export default function WhatsAppChatPage() {
       setSelectedChat(null);
       setMessages([]);
       setDeleteChatConfirm(false);
-      fetchChats(true);
+      // Remove locally instead of refetching (API may still return it)
+      setChats(prev => prev.filter(c => (c.wa_chatid || c.id || c.chatid) !== deletedChatId));
     } catch (err: any) {
       toast.error(err.message || 'Erro ao excluir conversa');
     }
