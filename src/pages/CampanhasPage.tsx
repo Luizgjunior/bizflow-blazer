@@ -97,6 +97,14 @@ export default function CampanhasPage() {
 
   useEffect(() => { fetchCampaigns(); }, [fetchCampaigns]);
 
+  // Poll for progress when any campaign is "sending"
+  useEffect(() => {
+    const hasSending = campaigns.some(c => c.status === 'sending');
+    if (!hasSending) return;
+    const interval = setInterval(fetchCampaigns, 3000);
+    return () => clearInterval(interval);
+  }, [campaigns, fetchCampaigns]);
+
   const fetchIcps = useCallback(async () => {
     if (!tenantId) return;
     setLoadingIcps(true);
