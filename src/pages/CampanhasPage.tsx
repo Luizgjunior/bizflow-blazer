@@ -583,6 +583,47 @@ export default function CampanhasPage() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Edit Campaign Dialog */}
+        <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+          <DialogContent className="max-w-[95vw] sm:max-w-md p-4 sm:p-6">
+            <DialogHeader>
+              <DialogTitle className="text-base">Editar Campanha</DialogTitle>
+              <DialogDescription className="text-xs">Altere o nome ou a mensagem.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs">Nome *</Label>
+                <Input value={editNome} onChange={(e) => setEditNome(e.target.value)} className="mt-1" />
+              </div>
+              <div>
+                <Label className="text-xs">Mensagem</Label>
+                <Textarea value={editMensagem} onChange={(e) => setEditMensagem(e.target.value)} rows={3} className="mt-1 text-sm" />
+              </div>
+              <Button onClick={handleEditSave} disabled={editSaving} className="w-full gap-2">
+                {editSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Edit className="w-4 h-4" />}
+                Salvar
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation */}
+        <AlertDialog open={!!deleteConfirm} onOpenChange={() => setDeleteConfirm(null)}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir campanha?</AlertDialogTitle>
+              <AlertDialogDescription>Esta ação é irreversível. Todos os contatos associados serão removidos.</AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction onClick={() => deleteConfirm && handleDelete(deleteConfirm)} disabled={deleting} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+                {deleting ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </AppLayout>
   );
