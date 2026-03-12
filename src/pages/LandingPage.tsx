@@ -151,9 +151,18 @@ const HIGHLIGHTS = [
   },
 ];
 
-/* ───────────────────── component ───────────────────── */
+/* ───────────────────── helpers ───────────────────── */
 
-const WHATSAPP_URL = 'https://wa.me/5565981078369?text=Ol%C3%A1%2C%20quero%20conhecer%20os%20planos%20do%20LeadFlow!';
+function getWhatsAppUrl(planName?: string) {
+  const baseNumber = '5565981078369';
+  const message = planName
+    ? `Olá! Tenho interesse no plano ${planName} do LeadFlow. Pode me passar mais informações?`
+    : 'Olá! Quero conhecer os planos do LeadFlow!';
+  const encodedMessage = encodeURIComponent(message);
+  return `https://wa.me/${baseNumber}?text=${encodedMessage}`;
+}
+
+const WHATSAPP_URL = getWhatsAppUrl();
 
 export default function LandingPage() {
   useDocumentTitle('Prospecção B2B Inteligente');
@@ -448,9 +457,9 @@ export default function LandingPage() {
                     <Button
                       className="w-full gap-2"
                       variant={plan.popular ? 'default' : 'outline'}
-                      onClick={() => window.open(WHATSAPP_URL, '_blank')}
+                      onClick={() => window.open(getWhatsAppUrl(plan.name), '_blank')}
                     >
-                      Contratar {plan.name} <ArrowRight className="w-4 h-4" />
+                      Falar com Consultor <ArrowRight className="w-4 h-4" />
                     </Button>
                   </div>
                 </FadeIn>
@@ -514,7 +523,7 @@ export default function LandingPage() {
               <Button
                 size="lg"
                 variant="secondary"
-                onClick={() => window.open(WHATSAPP_URL, '_blank')}
+                onClick={() => window.open(getWhatsAppUrl(), '_blank')}
                 className="w-full sm:w-auto gap-2 text-base font-semibold"
               >
                 Falar com Consultor <ArrowRight className="w-4 h-4" />
