@@ -298,7 +298,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    // ── GET MEDIA (proxy download) ── UazAPI v2: POST /chat/downloadMediaMessage
+    // ── GET MEDIA (proxy download) ── UazAPI v2: POST /message/download
     if (action === "getMedia") {
       const body = await req.json();
       const { messageid } = body;
@@ -310,28 +310,32 @@ Deno.serve(async (req) => {
       }
 
       try {
-        // Try GET method first (UazAPI v2 uses GET for this endpoint)
-        let res = await fetch(`${UAZAPI_URL}/chat/getMediaURL`, {
+        // UazAPI v2 correct endpoint: POST /message/download with { id }
+        let res = await fetch(`${UAZAPI_URL}/message/download`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "token": token },
-          body: JSON.stringify({ messageid }),
+          body: JSON.stringify({ id: messageid }),
         });
 
-        // If 405, try alternative endpoint
-        if (res.status === 405) {
-          await res.text(); // consume body
-          res = await fetch(`${UAZAPI_URL}/chat/downloadMediaMessage/${messageid}`, {
-            method: "GET",
-            headers: { "token": token },
+        // Fallback: try with messageid field name
+        if (!res.ok) {
+          const errBody = await res.text();
+          console.log("message/download attempt 1 failed:", res.status, errBody.substring(0, 300));
+          res = await fetch(`${UAZAPI_URL}/message/download`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "token": token },
+            body: JSON.stringify({ messageid }),
           });
         }
 
-        // If still 405, try POST to getMediaURL
-        if (res.status === 405) {
-          await res.text(); // consume body
-          res = await fetch(`${UAZAPI_URL}/message/downloadMedia/${messageid}`, {
-            method: "GET",
-            headers: { "token": token },
+        // Fallback 2: try /chat/getMediaURL
+        if (!res.ok) {
+          const errBody2 = await res.text();
+          console.log("message/download attempt 2 failed:", res.status, errBody2.substring(0, 300));
+          res = await fetch(`${UAZAPI_URL}/chat/getMediaURL`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", "token": token },
+            body: JSON.stringify({ messageid }),
           });
         }
         
