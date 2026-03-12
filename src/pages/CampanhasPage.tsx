@@ -410,8 +410,45 @@ export default function CampanhasPage() {
                 </div>
                 <div>
                   <Label className="text-xs">Mensagem *</Label>
-                  <Textarea value={mensagem} onChange={(e) => setMensagem(e.target.value)} placeholder="Digite a mensagem..." rows={3} className="mt-1 text-sm" />
+                  <Textarea value={mensagem} onChange={(e) => { setMensagem(e.target.value); setAiVariations([]); }} placeholder="Digite a mensagem..." rows={3} className="mt-1 text-sm" />
                   <p className="text-[10px] text-muted-foreground mt-1">Use {'{nome}'} para personalizar.</p>
+                </div>
+
+                {/* AI Variations Toggle */}
+                <div className="rounded-xl border border-primary/20 bg-primary/5 p-3 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-primary" />
+                      <div>
+                        <p className="text-xs font-semibold text-foreground">Variações com IA</p>
+                        <p className="text-[10px] text-muted-foreground">Gera mensagens únicas para cada contato</p>
+                      </div>
+                    </div>
+                    <Switch checked={useAiVariations} onCheckedChange={setUseAiVariations} />
+                  </div>
+                  {useAiVariations && (
+                    <div className="space-y-2">
+                      <Button type="button" size="sm" variant="outline" className="w-full gap-1.5 text-xs h-8" onClick={handleGenerateVariations} disabled={generatingAi || !mensagem.trim()}>
+                        {generatingAi ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Bot className="w-3.5 h-3.5" />}
+                        {generatingAi ? 'Gerando...' : aiVariations.length > 0 ? 'Regenerar Variações' : 'Gerar Prévia de Variações'}
+                      </Button>
+                      {aiVariations.length > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="text-[10px] font-medium text-muted-foreground">Prévia ({aiVariations.length} variações):</p>
+                          <div className="max-h-32 overflow-y-auto space-y-1">
+                            {aiVariations.map((v, i) => (
+                              <div key={i} className="text-[11px] text-foreground bg-background rounded-lg p-2 border border-border">
+                                <span className="text-primary font-mono text-[9px] mr-1">#{i + 1}</span> {v}
+                              </div>
+                            ))}
+                          </div>
+                          <p className="text-[10px] text-muted-foreground italic">
+                            💡 Ao disparar, a IA gerará uma variação única para cada contato automaticamente.
+                          </p>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
                 {tipo === 'media' && (
                   <div>
