@@ -79,6 +79,10 @@ export default function CampanhasPage() {
   const [editSaving, setEditSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [useAiVariations, setUseAiVariations] = useState(false);
+  const [aiVariations, setAiVariations] = useState<string[]>([]);
+  const [generatingAi, setGeneratingAi] = useState(false);
+  const [showVariationsPreview, setShowVariationsPreview] = useState(false);
 
   const tenantId = profile?.tenant_id;
 
