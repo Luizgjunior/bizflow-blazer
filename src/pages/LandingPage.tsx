@@ -68,6 +68,7 @@ const FEATURES = [
   { icon: Kanban, title: 'CRM Integrado', desc: 'Pipeline visual estilo Kanban para acompanhar negociações. Deals criados automaticamente via WhatsApp.' },
   { icon: Shield, title: 'Anti-Bloqueio Avançado', desc: 'Sistema exclusivo de proteção que mantém sua conta segura. Dispare com tranquilidade sem risco de banimento.' },
   { icon: Sparkles, title: 'IA para Mensagens', desc: 'Inteligência artificial gera variações únicas da sua mensagem para cada contato, aumentando engajamento e evitando detecção.' },
+  { icon: Mail, title: 'Disparo de E-mail em Massa', desc: 'Envie campanhas de e-mail personalizadas para seus leads com suporte a variações por IA, importação de CSV e relatórios detalhados.' },
 ];
 
 const STEPS = [

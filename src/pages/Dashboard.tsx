@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Users, Target, Play, TrendingUp, AlertTriangle, ArrowRight, Loader2, Webhook, Search, Calendar, X, Building2, MapPin, FileText, Hash, BarChart3 } from 'lucide-react';
+import { Users, Target, Play, TrendingUp, AlertTriangle, ArrowRight, Loader2, Webhook, Search, Calendar, X, Building2, MapPin, FileText, Hash, BarChart3, Mail, CheckCircle2, XCircle } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line } from 'recharts';
@@ -261,6 +261,24 @@ export default function Dashboard() {
   const activeRuns = runs.filter((r: any) => r.status === 'running' || r.status === 'queued').length;
   const errorRuns = runs.filter((r: any) => r.status === 'error');
 
+  // Email campaign metrics
+  const { data: emailMetrics } = useQuery({
+    queryKey: ['email-metrics', tenantId],
+    queryFn: async () => {
+      const { data: campaigns } = await supabase
+        .from('email_campaigns')
+        .select('enviados, falhas, total_contatos, status')
+        .eq('tenant_id', tenantId!);
+      if (!campaigns) return { total: 0, enviados: 0, falhas: 0, taxa: 0 };
+      const enviados = campaigns.reduce((s, c) => s + (c.enviados || 0), 0);
+      const falhas = campaigns.reduce((s, c) => s + (c.falhas || 0), 0);
+      const total = campaigns.length;
+      const taxa = enviados + falhas > 0 ? Math.round((enviados / (enviados + falhas)) * 100) : 0;
+      return { total, enviados, falhas, taxa };
+    },
+    enabled: !!tenantId,
+  });
+
   // Extrair todos os campos do raw_json para exibição
   const getLeadDetails = (lead: any): Array<{ key: string; label: string; value: string }> => {
     const raw = (lead.raw_json as Record<string, any>) || {};
@@ -303,6 +321,44 @@ export default function Dashboard() {
           <StatCard title="ICPs Ativos" value={icpsCount} icon={Target} />
           <StatCard title="Execuções" value={runs.length} icon={TrendingUp} variant="accent" />
         </div>
+
+        {/* Email Campaign Metrics */}
+        {emailMetrics && emailMetrics.total > 0 && (
+          <div className="rounded-xl border border-border bg-card p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <div className="p-1.5 rounded-lg bg-primary/10">
+                <Mail className="w-4 h-4 text-primary" />
+              </div>
+              <div>
+                <h2 className="text-sm font-semibold text-foreground">Campanhas de E-mail</h2>
+                <p className="text-[10px] text-muted-foreground">{emailMetrics.total} campanha(s) criada(s)</p>
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center p-3 rounded-lg bg-muted/30">
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <CheckCircle2 className="w-3.5 h-3.5 text-success" />
+                </div>
+                <p className="text-lg font-bold text-foreground">{emailMetrics.enviados.toLocaleString()}</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Enviados</p>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-muted/30">
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <XCircle className="w-3.5 h-3.5 text-destructive" />
+                </div>
+                <p className="text-lg font-bold text-foreground">{emailMetrics.falhas.toLocaleString()}</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Falhas</p>
+              </div>
+              <div className="text-center p-3 rounded-lg bg-muted/30">
+                <div className="flex items-center justify-center gap-1.5 mb-1">
+                  <TrendingUp className="w-3.5 h-3.5 text-primary" />
+                </div>
+                <p className="text-lg font-bold text-foreground">{emailMetrics.taxa}%</p>
+                <p className="text-[10px] text-muted-foreground uppercase">Taxa Sucesso</p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Consumo do tenant */}
         {tenantUsage && (
