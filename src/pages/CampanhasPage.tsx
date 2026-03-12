@@ -85,6 +85,8 @@ export default function CampanhasPage() {
   const [aiVariations, setAiVariations] = useState<string[]>([]);
   const [generatingAi, setGeneratingAi] = useState(false);
   const [showVariationsPreview, setShowVariationsPreview] = useState(false);
+  const [checkingWhatsapp, setCheckingWhatsapp] = useState(false);
+  const [whatsappCheckResult, setWhatsappCheckResult] = useState<{ valid: number; invalid: number; total: number } | null>(null);
 
   const tenantId = profile?.tenant_id;
 
