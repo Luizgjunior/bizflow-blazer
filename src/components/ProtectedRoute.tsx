@@ -7,11 +7,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   const { session, loading, profileLoading, isAdmin, subscription } = useAuth();
 
   if (loading || profileLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="w-5 h-5 text-primary animate-spin" />
-      </div>
-    );
+    return <div className="min-h-screen bg-background" />;
   }
 
   if (!session) {
