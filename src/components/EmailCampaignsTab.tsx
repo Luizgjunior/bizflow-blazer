@@ -147,7 +147,13 @@ export default function EmailCampaignsTab() {
       if (contactSource === 'csv') {
         contactsToInsert = csvContacts.map((c) => ({ email: c.email, nome: c.nome || null, lead_id: null }));
       } else if (contactSource === 'manual') {
-        contactsToInsert = manualContacts.map((c) => ({ email: c.email, nome: c.nome || null, lead_id: null }));
+        // Auto-add email typed in the field but not yet added via "+"
+        let finalManualContacts = [...manualContacts];
+        const pendingEmail = manualEmail.trim();
+        if (pendingEmail.includes('@') && !finalManualContacts.some(c => c.email === pendingEmail)) {
+          finalManualContacts.push({ email: pendingEmail, nome: manualNome.trim() });
+        }
+        contactsToInsert = finalManualContacts.map((c) => ({ email: c.email, nome: c.nome || null, lead_id: null }));
       } else {
         if (selectedIcps.length === 0) { toast.error('Selecione ao menos um ICP'); setCreating(false); return; }
         const { data: runs } = await supabase.from('runs').select('id').eq('tenant_id', tenantId!).in('icp_id', selectedIcps);
