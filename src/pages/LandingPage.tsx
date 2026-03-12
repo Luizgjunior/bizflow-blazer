@@ -262,7 +262,7 @@ export default function LandingPage() {
       </section>
 
       {/* ─── FEATURES ─── */}
-      <section className="py-20 px-4">
+      <section id="funcionalidades" className="py-20 px-4">
         <div className="max-w-5xl mx-auto">
           <FadeIn className="text-center mb-14">
             <Badge variant="outline" className="mb-4 text-xs">Funcionalidades</Badge>
