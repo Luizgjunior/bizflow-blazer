@@ -150,12 +150,35 @@ Deno.serve(async (req) => {
     if (payload.com_telefone) pesquisa.com_telefone = true;
     if (payload.com_email) pesquisa.com_email = true;
 
+    // Build exclusion list: manual exclusions + all CNPJs already in the tenant
+    const manualExclusions: string[] = [];
     if (payload.exclusoes) {
-      const cnpjsToExclude = payload.exclusoes
+      payload.exclusoes
         .split(",")
         .map((s: string) => s.trim())
-        .filter((s: string) => /^\d{14}$/.test(s));
-      if (cnpjsToExclude.length) pesquisa.excluir = { cnpj: cnpjsToExclude };
+        .filter((s: string) => /^\d{14}$/.test(s))
+        .forEach((cnpj: string) => manualExclusions.push(cnpj));
+    }
+
+    // Fetch all existing CNPJs for this tenant to avoid duplicates from Casa dos Dados
+    const existingCnpjs: string[] = [];
+    let offset = 0;
+    const batchSize = 1000;
+    while (true) {
+      const { data: batch } = await supabase
+        .from("leads")
+        .select("cnpj")
+        .eq("tenant_id", icp.tenant_id)
+        .range(offset, offset + batchSize - 1);
+      if (!batch || batch.length === 0) break;
+      batch.forEach((l: any) => existingCnpjs.push(l.cnpj.replace(/[^\d]/g, "")));
+      if (batch.length < batchSize) break;
+      offset += batchSize;
+    }
+
+    const allExclusions = [...new Set([...manualExclusions, ...existingCnpjs])];
+    if (allExclusions.length > 0) {
+      pesquisa.excluir = { cnpj: allExclusions };
     }
 
     // Determine quantity
