@@ -23,6 +23,7 @@ const BackofficePage = lazy(() => import("./pages/BackofficePage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const PlanosPage = lazy(() => import("./pages/PlanosPage"));
 const DisparosPage = lazy(() => import("./pages/DisparosPage"));
+const CampanhasPage = lazy(() => import("./pages/CampanhasPage"));
 const WhatsAppChatPage = lazy(() => import("./pages/WhatsAppChatPage"));
 const CrmKanbanPage = lazy(() => import("./pages/CrmKanbanPage"));
 
