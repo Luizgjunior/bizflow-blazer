@@ -200,7 +200,43 @@ export default function CampanhasPage() {
     setManualContacts([]); setManualPhone(''); setManualName('');
   };
 
-  const handleSend = async (campaignId: string) => {
+  const openEdit = (c: Campaign) => {
+    setEditingCampaign(c);
+    setEditNome(c.nome);
+    setEditMensagem(c.mensagem || '');
+    setShowEditDialog(true);
+  };
+
+  const handleEditSave = async () => {
+    if (!editingCampaign || !editNome.trim()) return;
+    setEditSaving(true);
+    try {
+      const { error } = await supabase.from('whatsapp_campaigns')
+        .update({ nome: editNome.trim(), mensagem: editMensagem.trim() || null })
+        .eq('id', editingCampaign.id);
+      if (error) throw error;
+      toast.success('Campanha atualizada');
+      setShowEditDialog(false);
+      fetchCampaigns();
+    } catch (err: any) { toast.error(err.message || 'Erro ao atualizar'); }
+    finally { setEditSaving(false); }
+  };
+
+  const handleDelete = async (campaignId: string) => {
+    setDeleting(true);
+    try {
+      // Delete contacts first, then campaign
+      await supabase.from('whatsapp_campaign_contacts').delete().eq('campaign_id', campaignId);
+      const { error } = await supabase.from('whatsapp_campaigns').delete().eq('id', campaignId);
+      if (error) throw error;
+      toast.success('Campanha excluída');
+      setDeleteConfirm(null);
+      fetchCampaigns();
+    } catch (err: any) { toast.error(err.message || 'Erro ao excluir'); }
+    finally { setDeleting(false); }
+  };
+
+
     setSending(campaignId);
     try {
       const { data: { session } } = await supabase.auth.getSession();
