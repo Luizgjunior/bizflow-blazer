@@ -215,6 +215,113 @@ export type Database = {
           },
         ]
       }
+      email_campaign_contacts: {
+        Row: {
+          campaign_id: string
+          created_at: string
+          email: string
+          error_message: string | null
+          id: string
+          lead_id: string | null
+          nome: string | null
+          sent_at: string | null
+          status: string
+        }
+        Insert: {
+          campaign_id: string
+          created_at?: string
+          email: string
+          error_message?: string | null
+          id?: string
+          lead_id?: string | null
+          nome?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Update: {
+          campaign_id?: string
+          created_at?: string
+          email?: string
+          error_message?: string | null
+          id?: string
+          lead_id?: string | null
+          nome?: string | null
+          sent_at?: string | null
+          status?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_campaign_contacts_campaign_id_fkey"
+            columns: ["campaign_id"]
+            isOneToOne: false
+            referencedRelation: "email_campaigns"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "email_campaign_contacts_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_campaigns: {
+        Row: {
+          assunto: string
+          created_at: string
+          enviados: number
+          falhas: number
+          finished_at: string | null
+          id: string
+          mensagem: string | null
+          nome: string
+          started_at: string | null
+          status: string
+          tenant_id: string
+          total_contatos: number
+          use_ai_variations: boolean
+        }
+        Insert: {
+          assunto?: string
+          created_at?: string
+          enviados?: number
+          falhas?: number
+          finished_at?: string | null
+          id?: string
+          mensagem?: string | null
+          nome: string
+          started_at?: string | null
+          status?: string
+          tenant_id: string
+          total_contatos?: number
+          use_ai_variations?: boolean
+        }
+        Update: {
+          assunto?: string
+          created_at?: string
+          enviados?: number
+          falhas?: number
+          finished_at?: string | null
+          id?: string
+          mensagem?: string | null
+          nome?: string
+          started_at?: string | null
+          status?: string
+          tenant_id?: string
+          total_contatos?: number
+          use_ai_variations?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "email_campaigns_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exports: {
         Row: {
           created_at: string
