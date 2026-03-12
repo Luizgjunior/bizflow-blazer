@@ -236,7 +236,7 @@ export default function CampanhasPage() {
     finally { setDeleting(false); }
   };
 
-
+  const handleSend = async (campaignId: string) => {
     setSending(campaignId);
     try {
       const { data: { session } } = await supabase.auth.getSession();
