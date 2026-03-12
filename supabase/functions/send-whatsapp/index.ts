@@ -84,6 +84,25 @@ Deno.serve(async (req) => {
     const instanceToken = instance.instance_token || "";
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
 
+    // Get pending contacts FIRST (needed for AI variation count)
+    const { data: contacts } = await adminClient
+      .from("whatsapp_campaign_contacts")
+      .select("*")
+      .eq("campaign_id", campaign_id)
+      .eq("status", "pending")
+      .order("created_at", { ascending: true });
+
+    if (!contacts || contacts.length === 0) {
+      await adminClient
+        .from("whatsapp_campaigns")
+        .update({ status: "completed", finished_at: new Date().toISOString() })
+        .eq("id", campaign_id);
+
+      return new Response(JSON.stringify({ message: "No pending contacts" }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // Check if AI variations are enabled
     const useAiVariations = campaign.use_ai_variations === true;
 
@@ -109,7 +128,7 @@ Regras:
 - NÃO adicione prefixos como "Variação 1:" ou números
 - Retorne APENAS as variações, uma por linha, separadas por |||`
               },
-              { role: "user", content: `Gere ${Math.max(contacts!.length, 5)} variações desta mensagem:\n\n"${campaign.mensagem}"` }
+              { role: "user", content: `Gere ${Math.max(contacts.length, 5)} variações desta mensagem:\n\n"${campaign.mensagem}"` }
             ],
           }),
         });
@@ -130,14 +149,6 @@ Regras:
       .from("whatsapp_campaigns")
       .update({ status: "sending", started_at: startedAt })
       .eq("id", campaign_id);
-
-    // Get pending contacts
-    const { data: contacts } = await adminClient
-      .from("whatsapp_campaign_contacts")
-      .select("*")
-      .eq("campaign_id", campaign_id)
-      .eq("status", "pending")
-      .order("created_at", { ascending: true });
 
     if (!contacts || contacts.length === 0) {
       await adminClient
