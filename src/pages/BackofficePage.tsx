@@ -159,7 +159,7 @@ function ConsumoTab() {
       const results = [];
       for (const tenant of tenants) {
         const [leads, runs, exports] = await Promise.all([
-          supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
+          supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id).not('run_id', 'is', null),
           supabase.from('runs').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
           supabase.from('exports').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
         ]);
