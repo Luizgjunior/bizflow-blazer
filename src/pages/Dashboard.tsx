@@ -153,6 +153,7 @@ export default function Dashboard() {
       const { count } = await supabase
         .from('leads')
         .select('*', { count: 'exact', head: true })
+        .eq('tenant_id', tenantId!)
         .not('tags', 'cs', '{"webhook"}');
       return count ?? 0;
     },
