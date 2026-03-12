@@ -184,6 +184,7 @@ export default function EmailCampaignsTab() {
     setNome(''); setAssunto(''); setMensagem('');
     setContactSource('icp'); setCsvContacts([]); setSelectedIcps([]);
     setUseAiVariations(false); setAiVariations([]);
+    setManualEmail(''); setManualNome(''); setManualContacts([]);
   };
 
   const handleGenerateVariations = async () => {
