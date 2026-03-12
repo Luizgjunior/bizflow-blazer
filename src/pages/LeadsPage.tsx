@@ -52,7 +52,7 @@ export default function LeadsPage() {
   const { data: icps = [] } = useQuery({
     queryKey: ['icps-for-enrich', tenantId],
     queryFn: async () => {
-      const { data } = await supabase.from('icps').select('id, nome');
+      const { data } = await supabase.from('icps').select('id, nome').eq('tenant_id', tenantId!);
       return data ?? [];
     },
   });

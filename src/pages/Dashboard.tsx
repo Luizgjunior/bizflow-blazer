@@ -161,7 +161,7 @@ export default function Dashboard() {
   const { data: icpsCount = 0 } = useQuery({
     queryKey: ['icps-count', tenantId],
     queryFn: async () => {
-      const { count } = await supabase.from('icps').select('*', { count: 'exact', head: true });
+      const { count } = await supabase.from('icps').select('*', { count: 'exact', head: true }).eq('tenant_id', tenantId!);
       return count ?? 0;
     },
   });

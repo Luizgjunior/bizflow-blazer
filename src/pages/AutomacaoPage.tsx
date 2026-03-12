@@ -33,7 +33,7 @@ export default function AutomacaoPage() {
   const { data: icps = [] } = useQuery({
     queryKey: ['icps-for-auto', tenantId],
     queryFn: async () => {
-      const { data } = await supabase.from('icps').select('id, nome');
+      const { data } = await supabase.from('icps').select('id, nome').eq('tenant_id', tenantId!);
       return data ?? [];
     },
   });
