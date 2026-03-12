@@ -507,6 +507,15 @@ function MessageView({ chat, messages, loading, onSend, onSendMedia, onBack }: {
           {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
         </Button>
       </div>
+
+      {/* Image Lightbox */}
+      <Dialog open={!!lightboxUrl} onOpenChange={() => setLightboxUrl(null)}>
+        <DialogContent className="max-w-[95vw] max-h-[95vh] p-2 sm:p-4 bg-background/95 backdrop-blur-sm">
+          {lightboxUrl && (
+            <img src={lightboxUrl} alt="Imagem ampliada" className="w-full h-auto max-h-[85vh] object-contain rounded-lg" />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
