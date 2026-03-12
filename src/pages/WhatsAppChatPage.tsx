@@ -911,7 +911,7 @@ export default function WhatsAppChatPage() {
       setMessages([]);
       setDeleteChatConfirm(false);
       // Remove locally instead of refetching (API may still return it)
-      setChats(prev => prev.filter(c => (c.wa_chatid || c.id || c.chatid) !== deletedChatId));
+      setChats(prev => prev.filter(c => c.chatId !== deletedChatId));
     } catch (err: any) {
       toast.error(err.message || 'Erro ao excluir conversa');
     }
