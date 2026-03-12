@@ -159,7 +159,7 @@ function ConsumoTab() {
       const results = [];
       for (const tenant of tenants) {
         const [leads, runs, exports] = await Promise.all([
-          supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
+          supabase.from('leads').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id).not('run_id', 'is', null),
           supabase.from('runs').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
           supabase.from('exports').select('*', { count: 'exact', head: true }).eq('tenant_id', tenant.id),
         ]);
@@ -206,7 +206,7 @@ function ConsumoTab() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="text-center">
                   <p className="text-base font-bold text-foreground">{t.leads_count.toLocaleString()}</p>
-                  <p className="text-[10px] text-muted-foreground uppercase">Leads</p>
+                  <p className="text-[10px] text-muted-foreground uppercase">Leads API</p>
                 </div>
                 <div className="text-center">
                   <p className="text-base font-bold text-foreground">{t.runs_count}</p>
