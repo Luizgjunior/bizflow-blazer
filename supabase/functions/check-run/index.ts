@@ -122,33 +122,18 @@ Deno.serve(async (req) => {
     } else if (contentType.includes("application/zip") || contentType.includes("application/octet-stream")) {
       // File returned directly as ZIP - decompress it
       console.log("Received ZIP file directly from API, decompressing...");
-      const { decompress } = await import("https://deno.land/x/zip@v1.2.5/mod.ts");
+      const { unzipSync } = await import("https://esm.sh/fflate@0.8.2");
       
       const zipBytes = new Uint8Array(await checkResponse.arrayBuffer());
-      
-      // Write ZIP to temp file, decompress, read CSV
-      const tempDir = await Deno.makeTempDir();
-      const zipPath = `${tempDir}/data.zip`;
-      await Deno.writeFile(zipPath, zipBytes);
-      await decompress(zipPath, tempDir);
+      const unzipped = unzipSync(zipBytes);
       
       // Find CSV file in extracted contents
-      let csvPath = "";
-      for await (const entry of Deno.readDir(tempDir)) {
-        if (entry.name.endsWith(".csv")) {
-          csvPath = `${tempDir}/${entry.name}`;
-          break;
-        }
-      }
-      
-      if (!csvPath) {
-        // If no CSV found, try reading all extracted files
+      const csvFileName = Object.keys(unzipped).find(name => name.endsWith(".csv"));
+      if (!csvFileName) {
         throw new Error("No CSV file found in ZIP archive");
       }
       
-      csvText = await Deno.readTextFile(csvPath);
-      // Cleanup
-      await Deno.remove(tempDir, { recursive: true }).catch(() => {});
+      csvText = new TextDecoder().decode(unzipped[csvFileName]);
     } else {
       // Try reading as text (might be CSV directly)
       console.log("Received response with content-type:", contentType);
