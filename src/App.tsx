@@ -12,6 +12,7 @@ import Index from "./pages/Index";
 import Dashboard from "./pages/Dashboard";
 import LoginPage from "./pages/LoginPage";
 import LeadsPage from "./pages/LeadsPage";
+import CrmDashboardPage from "./pages/CrmDashboardPage";
 
 // Lazy loaded (less frequent pages)
 const ICPsPage = lazy(() => import("./pages/ICPsPage"));
