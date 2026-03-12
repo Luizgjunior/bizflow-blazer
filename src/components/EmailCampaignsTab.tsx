@@ -411,10 +411,11 @@ export default function EmailCampaignsTab() {
                 <div className="w-5 h-5 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-[10px] font-bold">2</div>
                 Contatos
               </div>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {[
                   { key: 'icp' as const, icon: Search, label: 'ICPs' },
                   { key: 'csv' as const, icon: FileSpreadsheet, label: 'Planilha' },
+                  { key: 'manual' as const, icon: UserPlus, label: 'Manual' },
                 ].map(({ key, icon: Icon, label }) => (
                   <button key={key} type="button" onClick={() => setContactSource(key)}
                     className={`flex flex-col items-center gap-1.5 p-3 rounded-xl border-2 transition-all text-xs ${
