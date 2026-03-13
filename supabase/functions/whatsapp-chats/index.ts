@@ -254,7 +254,7 @@ Deno.serve(async (req) => {
       const res = await fetch(`${UAZAPI_URL}/chat/read`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "token": token },
-        body: JSON.stringify({ number: chatId, read: true }),
+        body: JSON.stringify({ chatid: chatId }),
       });
       const data = await res.json();
 
