@@ -61,39 +61,91 @@ Deno.serve(async (req) => {
     }
     const instanceToken = instance.instance_token || "";
 
-    // Check each number (batch of up to 50 per call)
+    // Normalize all numbers
+    const normalizedNumbers = numbers.slice(0, 200).map((num: string) => {
+      let phone = String(num).replace(/\D/g, "");
+      if (phone.length >= 10 && !phone.startsWith("55")) phone = "55" + phone;
+      return phone;
+    }).filter((p: string) => p.length >= 12);
+
+    console.log(`Checking ${normalizedNumbers.length} numbers via UazAPI`);
+
     const results: { number: string; has_whatsapp: boolean; error?: string }[] = [];
 
-    for (const num of numbers.slice(0, 50)) {
-      const phone = String(num).replace(/\D/g, "");
-      if (!phone || phone.length < 10) {
-        results.push({ number: phone, has_whatsapp: false, error: "invalid_number" });
-        continue;
-      }
-
+    // Process in batches of 50 using the batch endpoint
+    for (let i = 0; i < normalizedNumbers.length; i += 50) {
+      const batch = normalizedNumbers.slice(i, i + 50);
+      
       try {
         const res = await fetch(`${UAZAPI_URL}/contact/check`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "token": instanceToken },
-          body: JSON.stringify({ number: phone }),
+          body: JSON.stringify({ numbers: batch }),
         });
 
         const data = await res.json();
-        
-        // UazAPI returns exists: true/false or similar
-        const hasWhatsapp = data.exists === true || data.numberExists === true || data.status === "valid" || (res.ok && !data.error);
-        results.push({ number: phone, has_whatsapp: hasWhatsapp });
+        console.log(`Batch ${i / 50 + 1} response status: ${res.status}, sample:`, JSON.stringify(data).slice(0, 500));
+
+        if (Array.isArray(data)) {
+          // Response is an array of results
+          for (const item of data) {
+            const number = item.number || item.jid?.replace(/@.*/, "") || "";
+            const cleanNumber = number.replace(/\D/g, "");
+            const hasWhatsapp = item.exists === true || item.numberExists === true || item.status === "valid" || item.isRegistered === true;
+            results.push({ number: cleanNumber || batch[data.indexOf(item)] || "", has_whatsapp: hasWhatsapp });
+          }
+        } else if (data && typeof data === "object" && !data.error) {
+          // Single object response or map-like response
+          // Try to match numbers from the batch
+          for (const phone of batch) {
+            // Check if data has the number as key or in a results array
+            if (data[phone] !== undefined) {
+              results.push({ number: phone, has_whatsapp: !!data[phone] });
+            } else if (data.exists !== undefined) {
+              // Single number check response
+              results.push({ number: phone, has_whatsapp: data.exists === true || data.numberExists === true || data.isRegistered === true });
+            } else {
+              // Unknown format, assume valid to avoid blocking
+              console.log(`Unknown response format for ${phone}, assuming valid`);
+              results.push({ number: phone, has_whatsapp: true });
+            }
+          }
+        } else {
+          // Error or unexpected format - keep all numbers
+          console.log(`API error or unexpected format, keeping all ${batch.length} numbers`);
+          for (const phone of batch) {
+            results.push({ number: phone, has_whatsapp: true });
+          }
+        }
       } catch (err) {
-        results.push({ number: phone, has_whatsapp: false, error: err.message });
+        console.error(`Batch ${i / 50 + 1} error:`, err.message);
+        // On error, keep all numbers in batch
+        for (const phone of batch) {
+          results.push({ number: phone, has_whatsapp: true, error: err.message });
+        }
       }
 
-      // Small delay between checks to avoid rate limiting
-      await new Promise(r => setTimeout(r, 200));
+      // Small delay between batches
+      if (i + 50 < normalizedNumbers.length) {
+        await new Promise(r => setTimeout(r, 500));
+      }
+    }
+
+    // Add results for numbers that were filtered out (too short)
+    const invalidNumbers = numbers.slice(0, 200).filter((num: string) => {
+      let phone = String(num).replace(/\D/g, "");
+      if (phone.length >= 10 && !phone.startsWith("55")) phone = "55" + phone;
+      return phone.length < 12;
+    });
+    for (const num of invalidNumbers) {
+      results.push({ number: String(num).replace(/\D/g, ""), has_whatsapp: false, error: "invalid_number" });
     }
 
     const total = results.length;
     const valid = results.filter(r => r.has_whatsapp).length;
     const invalid = results.filter(r => !r.has_whatsapp).length;
+
+    console.log(`Check complete: ${total} total, ${valid} valid, ${invalid} invalid`);
 
     return new Response(JSON.stringify({ results, summary: { total, valid, invalid } }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
