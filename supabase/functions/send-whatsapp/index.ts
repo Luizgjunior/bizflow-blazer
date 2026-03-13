@@ -30,24 +30,35 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    const { campaign_id, tenant_id: payloadTenantId } = await req.json();
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
-    if (userError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
+    let tenantId: string;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const token = authHeader.replace("Bearer ", "");
+
+    // If called with service role key (self-invoke), use tenant_id from payload
+    if (token === serviceRoleKey && payloadTenantId) {
+      tenantId = payloadTenantId;
+      console.log(`Self-invoke batch for tenant ${tenantId}, campaign ${campaign_id}`);
+    } else {
+      // Normal user call - validate auth
+      const supabase = createClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_ANON_KEY")!,
+        { global: { headers: { Authorization: authHeader } } }
+      );
+
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError || !user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
+      }
+
+      const { data: profile } = await supabase.from("profiles").select("tenant_id").eq("id", user.id).single();
+      if (!profile?.tenant_id) {
+        return new Response(JSON.stringify({ error: "No tenant found" }), { status: 400, headers: corsHeaders });
+      }
+      tenantId = profile.tenant_id;
     }
-
-    const { data: profile } = await supabase.from("profiles").select("tenant_id").eq("id", user.id).single();
-    if (!profile?.tenant_id) {
-      return new Response(JSON.stringify({ error: "No tenant found" }), { status: 400, headers: corsHeaders });
-    }
-
-    const tenantId = profile.tenant_id;
-    const { campaign_id } = await req.json();
 
     if (!campaign_id) {
       return new Response(JSON.stringify({ error: "campaign_id required" }), { status: 400, headers: corsHeaders });
