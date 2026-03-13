@@ -45,6 +45,9 @@ Deno.serve(async (req) => {
 
     const tenantId = profile.tenant_id;
     const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "";
+    if (!UAZAPI_URL) {
+      return new Response(JSON.stringify({ error: "UAZAPI_URL not configured" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
 
     const url = new URL(req.url);
