@@ -77,7 +77,7 @@ Deno.serve(async (req) => {
       const batch = normalizedNumbers.slice(i, i + 50);
       
       try {
-        const res = await fetch(`${UAZAPI_URL}/contact/check`, {
+        const res = await fetch(`${UAZAPI_URL}/chat/check`, {
           method: "POST",
           headers: { "Content-Type": "application/json", "token": instanceToken },
           body: JSON.stringify({ numbers: batch }),
