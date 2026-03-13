@@ -681,14 +681,28 @@ export default function WhatsAppChatPage() {
     selectedChatRef.current = selectedChat;
   }, [selectedChat]);
 
+  const wasConnectedRef = useRef(true);
+
   const fetchChats = useCallback(async (silent = false) => {
     if (!silent) setLoadingChats(true);
     try {
       const data = await apiCall('chats');
       if (data.error) {
-        if (!silent) toast.error(data.error);
+        // WhatsApp desconectou — limpa todo o histórico local automaticamente
+        if (data.error === 'WhatsApp not connected') {
+          if (wasConnectedRef.current) {
+            wasConnectedRef.current = false;
+            setChats([]);
+            setMessages([]);
+            setSelectedChat(null);
+            if (!silent) toast.info('WhatsApp desconectado. Histórico de conversas limpo.');
+          }
+        } else {
+          if (!silent) toast.error(data.error);
+        }
         return;
       }
+      wasConnectedRef.current = true;
       const parsed = (data.chats || []).map(parseChat);
       parsed.sort((a: Chat, b: Chat) => (b.timestamp || 0) - (a.timestamp || 0));
       setChats(parsed);
