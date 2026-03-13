@@ -246,9 +246,17 @@ Deno.serve(async (req) => {
         }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
-      // If not connected, try to get fresh QR code
-      let qrString: string | null = null;
+      // If not connected, update DB to reflect disconnected status and try to get fresh QR code
       if (!connected) {
+        if (instance.status === "connected") {
+          await adminClient
+            .from("whatsapp_instances")
+            .update({ status: "disconnected", phone_number: null })
+            .eq("tenant_id", tenantId);
+          console.log("Updated instance status to disconnected in DB");
+        }
+
+        let qrString: string | null = null;
         const connectResult = await tryFetch(`${UAZAPI_URL}/instance/connect`, {
           method: "POST",
           headers: { 
@@ -262,12 +270,17 @@ Deno.serve(async (req) => {
           const val = cd.qrcode || cd.base64 || cd.qr || cd.data?.qrcode || cd.data?.base64 || null;
           if (typeof val === 'string' && val.length > 10) qrString = val;
         }
+
+        return new Response(JSON.stringify({
+          status: "disconnected",
+          phone_number: null,
+          qr_code: qrString,
+        }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       return new Response(JSON.stringify({
-        status: connected ? "connected" : instance.status,
+        status: "connected",
         phone_number: instance.phone_number,
-        qr_code: qrString,
       }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
