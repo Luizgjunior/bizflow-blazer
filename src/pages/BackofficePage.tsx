@@ -790,9 +790,9 @@ function AssinaturasTab() {
   for (const key of Object.keys(monthlyRevenue)) {
     const [year, month] = key.split('-').map(Number);
     const monthEnd = new Date(year, month, 0, 23, 59, 59);
-    const activeByMonth = tenants.filter((t: any) => {
+    const activeByMonth = activeTenants.filter((t: any) => {
       const created = new Date(t.created_at);
-      return created <= monthEnd && t.ativo;
+      return created <= monthEnd;
     });
     monthlyRevenue[key] = activeByMonth.reduce((sum: number, t: any) => sum + (PLAN_PRICES[t.plano] || 0), 0);
   }

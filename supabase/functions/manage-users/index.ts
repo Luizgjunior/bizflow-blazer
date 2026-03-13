@@ -30,9 +30,9 @@ Deno.serve(async (req) => {
       global: { headers: { Authorization: authHeader } },
     });
 
-    const { data: claimsData, error: claimsError } =
-      await callerClient.auth.getClaims(authHeader.replace("Bearer ", ""));
-    if (claimsError || !claimsData?.claims?.sub) {
+    const { data: { user: callerUser }, error: callerError } =
+      await callerClient.auth.getUser();
+    if (callerError || !callerUser) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -43,7 +43,7 @@ Deno.serve(async (req) => {
 
     // Check admin role
     const { data: isAdmin } = await adminClient.rpc("has_role", {
-      _user_id: claimsData.claims.sub,
+      _user_id: callerUser.id,
       _role: "admin_global",
     });
     if (!isAdmin) {
