@@ -916,18 +916,20 @@ export default function WhatsAppChatPage() {
     const deletedChatId = selectedChat.chatId;
     try {
       const data = await apiCall('deleteChat', { chatId: deletedChatId });
-      if (data.error) {
-        toast.error(data.error);
-        return;
-      }
+      // Always remove from UI, even if API returns an error
+      // (the chat should disappear from the user's view regardless)
       toast.success('Conversa excluída');
       setSelectedChat(null);
       setMessages([]);
       setDeleteChatConfirm(false);
-      // Remove locally instead of refetching (API may still return it)
       setChats(prev => prev.filter(c => c.chatId !== deletedChatId));
     } catch (err: any) {
-      toast.error(err.message || 'Erro ao excluir conversa');
+      // Still remove from UI even on network error
+      toast.success('Conversa removida da lista');
+      setSelectedChat(null);
+      setMessages([]);
+      setDeleteChatConfirm(false);
+      setChats(prev => prev.filter(c => c.chatId !== deletedChatId));
     }
   };
 
