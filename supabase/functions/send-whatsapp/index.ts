@@ -247,7 +247,7 @@ Regras:
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": authHeader,
+        "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
       },
       body: JSON.stringify({ campaign_id }),
     }).catch(err => console.error("Self-invoke error:", err));
