@@ -52,47 +52,12 @@ Deno.serve(async (req) => {
     const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "";
     const token = instance.instance_token || "";
 
-    // If instance is not marked as connected, check live status from UazAPI
+    // If instance is not marked as connected, return error immediately
+    // Do NOT do a live check — respect the DB status to avoid overriding intentional disconnections
     if (instance.status !== "connected") {
-      try {
-        const statusRes = await fetch(`${UAZAPI_URL}/instance/status`, {
-          method: "GET",
-          headers: { "Content-Type": "application/json", "token": token },
-        });
-        const statusData = await statusRes.json();
-        console.log("Live status check:", JSON.stringify(statusData).substring(0, 500));
-
-        const rawStatus = statusData.status;
-        const instanceStatus = statusData.instance?.status;
-        let connected = false;
-
-        if (typeof rawStatus === 'object' && rawStatus !== null && rawStatus.connected === true) {
-          connected = true;
-        } else if (instanceStatus === "connected" || instanceStatus === "open") {
-          connected = true;
-        } else if (typeof rawStatus === 'string' && (rawStatus === "connected" || rawStatus === "open")) {
-          connected = true;
-        }
-
-        if (connected) {
-          const jid = (typeof rawStatus === 'object' && rawStatus?.jid) || statusData.instance?.owner || statusData.owner || statusData.phoneNumber || "";
-          const cleanPhone = typeof jid === 'string' ? jid.replace(/@.*/, "").replace(/:/g, "").replace(/[^0-9]/g, "") : "";
-          await adminClient
-            .from("whatsapp_instances")
-            .update({ status: "connected", phone_number: cleanPhone || "connected" })
-            .eq("tenant_id", profile.tenant_id);
-          console.log("Updated instance status to connected");
-        } else {
-          return new Response(JSON.stringify({ error: "WhatsApp not connected" }), { 
-            status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } 
-          });
-        }
-      } catch (statusErr) {
-        console.error("Status check error:", statusErr);
-        return new Response(JSON.stringify({ error: "WhatsApp not connected" }), { 
-          status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } 
-        });
-      }
+      return new Response(JSON.stringify({ error: "WhatsApp not connected" }), { 
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } 
+      });
     }
 
     const url = new URL(req.url);
