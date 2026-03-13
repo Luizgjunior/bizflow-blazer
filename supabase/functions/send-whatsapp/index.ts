@@ -108,10 +108,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Generate AI variations if enabled (only on first batch)
+    // Load or generate AI variations
     const useAiVariations = campaign.use_ai_variations === true;
     let aiVariations: string[] = [];
-    if (useAiVariations && campaign.mensagem && (campaign.enviados || 0) === 0) {
+    if (useAiVariations && campaign.ai_variations && Array.isArray(campaign.ai_variations) && campaign.ai_variations.length > 0) {
+      aiVariations = campaign.ai_variations;
+      console.log(`Loaded ${aiVariations.length} saved AI variations`);
+    } else if (useAiVariations && campaign.mensagem && (campaign.enviados || 0) === 0) {
       try {
         const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
           method: "POST",
@@ -140,6 +143,8 @@ Regras:
           const content = aiData.choices?.[0]?.message?.content || "";
           aiVariations = content.split("|||").map((v: string) => v.trim()).filter((v: string) => v.length > 0);
           console.log(`Generated ${aiVariations.length} AI variations`);
+          // Save variations for reuse across batches
+          await adminClient.from("whatsapp_campaigns").update({ ai_variations: aiVariations }).eq("id", campaign_id);
         }
       } catch (aiErr) {
         console.error("AI variations error (proceeding without):", aiErr);
