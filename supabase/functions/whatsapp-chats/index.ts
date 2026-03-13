@@ -408,11 +408,10 @@ Deno.serve(async (req) => {
         });
       }
 
-      const number = chatId.replace(/@.*/, "");
       const res = await fetch(`${UAZAPI_URL}/chat/delete`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "token": token },
-        body: JSON.stringify({ number }),
+        body: JSON.stringify({ chatid: chatId }),
       });
       const data = await res.json();
 
