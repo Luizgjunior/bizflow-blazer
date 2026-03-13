@@ -458,9 +458,9 @@ export default function LandingPage() {
                     <Button
                       className="w-full gap-2"
                       variant={plan.popular ? 'default' : 'outline'}
-                      onClick={() => window.open(getWhatsAppUrl(plan.name), '_blank')}
+                      onClick={() => window.open(plan.checkoutUrl, '_blank')}
                     >
-                      Falar com Consultor <ArrowRight className="w-4 h-4" />
+                      Assinar agora <ArrowRight className="w-4 h-4" />
                     </Button>
                   </div>
                 </FadeIn>
