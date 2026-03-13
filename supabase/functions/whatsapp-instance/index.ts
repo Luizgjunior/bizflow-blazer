@@ -121,7 +121,6 @@ Deno.serve(async (req) => {
           await tryFetch(`${UAZAPI_URL}/instance/delete`, {
             method: "DELETE",
             headers: { "Content-Type": "application/json", "admintoken": UAZAPI_ADMIN_TOKEN },
-            body: JSON.stringify({ name: existing.instance_name }),
           });
           
           // Delete local record
