@@ -1,0 +1,1 @@
+ALTER TABLE public.whatsapp_campaigns ADD COLUMN IF NOT EXISTS ai_variations jsonb;

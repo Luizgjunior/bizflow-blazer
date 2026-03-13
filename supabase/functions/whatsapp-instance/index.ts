@@ -45,6 +45,9 @@ Deno.serve(async (req) => {
 
     const tenantId = profile.tenant_id;
     const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "";
+    if (!UAZAPI_URL) {
+      return new Response(JSON.stringify({ error: "UAZAPI_URL not configured" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
 
     const url = new URL(req.url);
@@ -118,7 +121,6 @@ Deno.serve(async (req) => {
           await tryFetch(`${UAZAPI_URL}/instance/delete`, {
             method: "DELETE",
             headers: { "Content-Type": "application/json", "admintoken": UAZAPI_ADMIN_TOKEN },
-            body: JSON.stringify({ name: existing.instance_name }),
           });
           
           // Delete local record
@@ -305,13 +307,12 @@ Deno.serve(async (req) => {
 
         // Step 2: Delete the instance from UazAPI
         const deleteResult = await tryFetch(`${UAZAPI_URL}/instance/delete`, {
-          method: "POST",
+          method: "DELETE",
           headers: { 
             "Content-Type": "application/json",
             "token": instance.instance_token || "",
             "admintoken": UAZAPI_ADMIN_TOKEN,
           },
-          body: JSON.stringify({ name: instance.instance_name }),
         });
         console.log("Delete instance response:", JSON.stringify(deleteResult.data).substring(0, 500));
 

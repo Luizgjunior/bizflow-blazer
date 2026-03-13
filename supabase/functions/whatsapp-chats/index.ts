@@ -50,6 +50,9 @@ Deno.serve(async (req) => {
     }
 
     const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "";
+    if (!UAZAPI_URL) {
+      return new Response(JSON.stringify({ error: "UAZAPI_URL not configured" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     const token = instance.instance_token || "";
 
     // If instance is not marked as connected, return error immediately
@@ -254,7 +257,7 @@ Deno.serve(async (req) => {
       const res = await fetch(`${UAZAPI_URL}/chat/read`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "token": token },
-        body: JSON.stringify({ number: chatId, read: true }),
+        body: JSON.stringify({ chatid: chatId }),
       });
       const data = await res.json();
 
@@ -408,11 +411,10 @@ Deno.serve(async (req) => {
         });
       }
 
-      const number = chatId.replace(/@.*/, "");
       const res = await fetch(`${UAZAPI_URL}/chat/delete`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "token": token },
-        body: JSON.stringify({ number }),
+        body: JSON.stringify({ chatid: chatId }),
       });
       const data = await res.json();
 
@@ -432,7 +434,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      const res = await fetch(`${UAZAPI_URL}/chat/check`, {
+      const res = await fetch(`${UAZAPI_URL}/contact/check`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "token": token },
         body: JSON.stringify({ numbers }),

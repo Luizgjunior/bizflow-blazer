@@ -38,7 +38,12 @@ export default function DisparosPage() {
   useEffect(() => {
     if (!polling) return;
     const interval = setInterval(checkStatus, 5000);
-    return () => clearInterval(interval);
+    const timeout = setTimeout(() => {
+      setPolling(false);
+      setShowQrDialog(false);
+      toast.error('Tempo esgotado. Tente conectar novamente.');
+    }, 180000);
+    return () => { clearInterval(interval); clearTimeout(timeout); };
   }, [polling, checkStatus]);
 
   const handleConnect = async () => {
