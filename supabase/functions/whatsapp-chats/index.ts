@@ -400,7 +400,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── DELETE CHAT ── UazAPI: POST /chat/delete
+    // ── DELETE CHAT ── UazAPI: DELETE /chat or POST /chat/delete
     if (action === "deleteChat") {
       const body = await req.json();
       const { chatId } = body;
@@ -411,14 +411,42 @@ Deno.serve(async (req) => {
         });
       }
 
-      const res = await fetch(`${UAZAPI_URL}/chat/delete`, {
+      console.log("Deleting chat:", chatId);
+
+      // Try POST /chat/delete first
+      let res = await fetch(`${UAZAPI_URL}/chat/delete`, {
         method: "POST",
         headers: { "Content-Type": "application/json", "token": token },
         body: JSON.stringify({ chatid: chatId }),
       });
-      const data = await res.json();
+      let data = await res.json();
+      console.log("chat/delete POST response:", res.status, JSON.stringify(data).substring(0, 500));
 
-      return new Response(JSON.stringify(data), {
+      // If POST fails, try DELETE method
+      if (!res.ok || data.error) {
+        console.log("POST failed, trying DELETE method...");
+        res = await fetch(`${UAZAPI_URL}/chat/delete`, {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json", "token": token },
+          body: JSON.stringify({ chatid: chatId }),
+        });
+        data = await res.json();
+        console.log("chat/delete DELETE response:", res.status, JSON.stringify(data).substring(0, 500));
+      }
+
+      // If still fails, try /chat/clear
+      if (!res.ok || data.error) {
+        console.log("DELETE failed, trying /chat/clear...");
+        res = await fetch(`${UAZAPI_URL}/chat/clear`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", "token": token },
+          body: JSON.stringify({ chatid: chatId }),
+        });
+        data = await res.json();
+        console.log("chat/clear response:", res.status, JSON.stringify(data).substring(0, 500));
+      }
+
+      return new Response(JSON.stringify({ success: true, ...data }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
