@@ -82,6 +82,9 @@ Deno.serve(async (req) => {
     }
 
     const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "";
+    if (!UAZAPI_URL) {
+      return new Response(JSON.stringify({ error: "UAZAPI_URL not configured" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     const instanceToken = instance.instance_token || "";
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
 
