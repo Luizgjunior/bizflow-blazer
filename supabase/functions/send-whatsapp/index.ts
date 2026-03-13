@@ -258,9 +258,9 @@ Regras:
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+        "Authorization": `Bearer ${serviceRoleKey}`,
       },
-      body: JSON.stringify({ campaign_id }),
+      body: JSON.stringify({ campaign_id, tenant_id: tenantId }),
     }).catch(err => console.error("Self-invoke error:", err));
 
     return new Response(
