@@ -33,7 +33,7 @@ Regras:
 - Use emojis com moderação para tornar a conversa mais amigável
 - Não revele detalhes técnicos internos (banco de dados, APIs, etc.)`;
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {

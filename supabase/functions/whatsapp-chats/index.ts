@@ -50,6 +50,9 @@ Deno.serve(async (req) => {
     }
 
     const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "";
+    if (!UAZAPI_URL) {
+      return new Response(JSON.stringify({ error: "UAZAPI_URL not configured" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
     const token = instance.instance_token || "";
 
     // If instance is not marked as connected, return error immediately

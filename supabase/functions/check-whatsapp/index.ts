@@ -56,6 +56,9 @@ Deno.serve(async (req) => {
     }
 
     const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "";
+    if (!UAZAPI_URL) {
+      return new Response(JSON.stringify({ error: "UAZAPI_URL not configured" }), { status: 500, headers: corsHeaders });
+    }
     const instanceToken = instance.instance_token || "";
 
     // Check each number (batch of up to 50 per call)

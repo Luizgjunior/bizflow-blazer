@@ -775,6 +775,7 @@ export type Database = {
       }
       whatsapp_campaigns: {
         Row: {
+          ai_variations: Json | null
           created_at: string
           enviados: number
           falhas: number
@@ -792,6 +793,7 @@ export type Database = {
           use_ai_variations: boolean
         }
         Insert: {
+          ai_variations?: Json | null
           created_at?: string
           enviados?: number
           falhas?: number
@@ -809,6 +811,7 @@ export type Database = {
           use_ai_variations?: boolean
         }
         Update: {
+          ai_variations?: Json | null
           created_at?: string
           enviados?: number
           falhas?: number

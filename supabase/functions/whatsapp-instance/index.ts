@@ -307,13 +307,12 @@ Deno.serve(async (req) => {
 
         // Step 2: Delete the instance from UazAPI
         const deleteResult = await tryFetch(`${UAZAPI_URL}/instance/delete`, {
-          method: "POST",
+          method: "DELETE",
           headers: { 
             "Content-Type": "application/json",
             "token": instance.instance_token || "",
             "admintoken": UAZAPI_ADMIN_TOKEN,
           },
-          body: JSON.stringify({ name: instance.instance_name }),
         });
         console.log("Delete instance response:", JSON.stringify(deleteResult.data).substring(0, 500));
 
