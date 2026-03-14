@@ -356,6 +356,54 @@ export default function CampanhasPage() {
     setContacts((data as CampaignContact[]) || []);
   };
 
+  const handleOpenReport = (c: Campaign) => {
+    const durationSecs = c.started_at && c.finished_at
+      ? Math.round((new Date(c.finished_at).getTime() - new Date(c.started_at).getTime()) / 1000)
+      : 0;
+    const total = c.total_contatos || (c.enviados + c.falhas);
+    const successRate = total > 0 ? Math.round((c.enviados / total) * 100) : 0;
+    setReport({
+      campaign_name: c.nome,
+      enviados: c.enviados,
+      falhas: c.falhas,
+      total_contacts: total,
+      success_rate: successRate,
+      duration_seconds: durationSecs,
+      started_at: c.started_at,
+      finished_at: c.finished_at,
+      delay_stats: { avg_seconds: 9 },
+      contacts: [],
+    });
+    setShowReport(true);
+  };
+
+  const handleRetryFailed = async (campaignId: string) => {
+    setSending(campaignId);
+    try {
+      // Reset failed contacts back to pending
+      await supabase.from('whatsapp_campaign_contacts')
+        .update({ status: 'pending', error_message: null })
+        .eq('campaign_id', campaignId)
+        .eq('status', 'failed');
+      // Reset campaign status to draft so send-whatsapp will process it
+      await supabase.from('whatsapp_campaigns')
+        .update({ status: 'draft' })
+        .eq('id', campaignId);
+      // Trigger send
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) return;
+      const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
+      fetch(`https://${projectId}.supabase.co/functions/v1/send-whatsapp`, {
+        method: 'POST',
+        headers: { 'Authorization': `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ campaign_id: campaignId }),
+      }).catch(err => console.error('Retry error:', err));
+      toast.success('Reenvio das falhas iniciado!');
+      fetchCampaigns();
+    } catch (err: any) { toast.error(err.message || 'Erro ao reenviar'); }
+    finally { setSending(null); }
+  };
+
   const statusBadge = (s: string) => {
     const map: Record<string, { label: string; variant: 'default' | 'secondary' | 'destructive' | 'outline' }> = {
       draft: { label: 'Rascunho', variant: 'secondary' }, sending: { label: 'Enviando', variant: 'default' },
@@ -438,12 +486,21 @@ export default function CampanhasPage() {
                                 </Button>
                               </>
                             )}
+                            {(c.status === 'completed' || c.status === 'failed') && c.falhas > 0 && (
+                              <Button size="sm" variant="outline" className="h-8 gap-1 text-xs" onClick={() => handleRetryFailed(c.id)} disabled={sending === c.id}>
+                                {sending === c.id ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Play className="w-3.5 h-3.5" />}
+                                Reenviar
+                              </Button>
+                            )}
                             <DropdownMenu>
                               <DropdownMenuTrigger asChild>
                                 <Button size="sm" variant="ghost" className="h-8 w-8 p-0"><MoreVertical className="w-4 h-4" /></Button>
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end">
                                 {c.status === 'draft' && <DropdownMenuItem onClick={() => openEdit(c)}><Edit className="w-3.5 h-3.5 mr-2" />Editar</DropdownMenuItem>}
+                                {(c.status === 'completed' || c.status === 'failed') && (
+                                  <DropdownMenuItem onClick={() => handleOpenReport(c)}><BarChart3 className="w-3.5 h-3.5 mr-2" />Relatório</DropdownMenuItem>
+                                )}
                                 <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteConfirm(c.id)}><Trash2 className="w-3.5 h-3.5 mr-2" />Excluir</DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>

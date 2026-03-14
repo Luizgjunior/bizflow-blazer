@@ -9,15 +9,15 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-// Random delay between 3s and 30s
+// Random delay between 3s and 15s (reduced to keep batch under 60s total)
 function getRandomDelay(): number {
   const min = 3000;
-  const max = 30000;
+  const max = 15000;
   return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-// Process a batch of contacts (max ~10 per invocation to avoid timeout)
-const BATCH_SIZE = 10;
+// Process a batch of contacts (max ~5 per invocation to avoid timeout)
+const BATCH_SIZE = 5;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
