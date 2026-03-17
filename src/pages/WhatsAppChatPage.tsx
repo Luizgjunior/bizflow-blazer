@@ -84,18 +84,22 @@ function parseChat(raw: any): Chat {
   // Use remoteJid as the chatId for API calls (e.g. "5511999999999@s.whatsapp.net" or "120363...@g.us")
   const remoteJid = raw.remoteJid || '';
   const isLid = remoteJid.endsWith('@lid');
-  const phone = remoteJid?.replace(/@.*/, '') || raw.phone || '';
+  const rawPhone = remoteJid?.replace(/@.*/, '') || raw.phone || '';
 
-  // For @lid contacts, try to get the real phone from participantAlt in lastMessage
+  // For @lid contacts, try to resolve real phone from lastMessage key fields
   let resolvedPhone = '';
   if (isLid) {
-    const participantAlt = raw.lastMessage?.key?.participantAlt || '';
-    if (participantAlt.endsWith('@s.whatsapp.net')) {
-      resolvedPhone = participantAlt.replace(/@.*/, '');
+    const key = raw.lastMessage?.key || {};
+    // Check participantAlt (group messages) and remoteJidAlt (direct messages)
+    const altJid = key.participantAlt || key.remoteJidAlt || '';
+    if (altJid.endsWith('@s.whatsapp.net')) {
+      resolvedPhone = altJid.replace(/@.*/, '');
     }
   }
 
-  const displayPhone = resolvedPhone || (!isLid ? phone : '');
+  // Use resolved phone for display, or raw phone if not a LID
+  const phone = resolvedPhone || (!isLid ? rawPhone : '');
+  const displayPhone = phone;
   const name = raw.name || raw.pushName || (displayPhone ? formatPhoneDisplay(displayPhone) : 'Contato');
   const lastMsg = raw.lastMessage?.message?.conversation
     || raw.lastMessage?.message?.extendedTextMessage?.text
