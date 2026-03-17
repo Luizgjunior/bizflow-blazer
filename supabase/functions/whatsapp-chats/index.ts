@@ -306,7 +306,7 @@ Deno.serve(async (req) => {
       }
 
       const res = await fetch(`${EVOLUTION_URL}/chat/markMessageAsRead/${instanceName}`, {
-        method: "PUT",
+        method: "POST",
         headers: evoHeaders,
         body: JSON.stringify({
           readMessages: [{ remoteJid: chatId, fromMe: false, id: "" }],

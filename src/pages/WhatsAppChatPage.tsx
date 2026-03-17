@@ -216,6 +216,16 @@ async function apiCall(action: string, body?: any) {
     },
     body: body ? JSON.stringify(body) : undefined,
   });
+  if (!res.ok) {
+    const errorText = await res.text();
+    console.error(`apiCall ${action} failed:`, res.status, errorText);
+    let errorMsg = `Erro na API: ${res.status}`;
+    try {
+      const parsed = JSON.parse(errorText);
+      if (parsed.error) errorMsg = parsed.error;
+    } catch { /* not JSON */ }
+    throw new Error(errorMsg);
+  }
   return res.json();
 }
 
