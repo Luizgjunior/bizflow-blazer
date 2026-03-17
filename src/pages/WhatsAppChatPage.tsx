@@ -724,6 +724,8 @@ export default function WhatsAppChatPage() {
   }, [selectedChat]);
 
   const wasConnectedRef = useRef(true);
+  const profilePicsCache = useRef<Record<string, string>>({});
+  const profilePicsFetched = useRef(false);
 
   const fetchChats = useCallback(async (silent = false) => {
     if (!silent) setLoadingChats(true);
@@ -778,17 +780,28 @@ export default function WhatsAppChatPage() {
         });
       }
 
+      // Merge cached profile pics into parsed chats
+      parsed.forEach((c: Chat) => {
+        if (!c.image && profilePicsCache.current[c.chatId]) {
+          c.image = profilePicsCache.current[c.chatId];
+        }
+      });
+
       setChats(parsed);
 
-      // Fetch profile pictures in background
-      const jidsWithoutPic = parsed.filter((c: Chat) => !c.image && c.chatId).map((c: Chat) => c.chatId);
-      if (jidsWithoutPic.length > 0) {
-        apiCall('profilePics', { remoteJids: jidsWithoutPic }).then((picData) => {
-          const pics = picData?.pics || {};
-          if (Object.keys(pics).length > 0) {
-            setChats(prev => prev.map(c => pics[c.chatId] ? { ...c, image: pics[c.chatId] } : c));
-          }
-        }).catch(() => { /* ignore pic fetch errors */ });
+      // Fetch profile pictures only once
+      if (!profilePicsFetched.current) {
+        profilePicsFetched.current = true;
+        const jidsWithoutPic = parsed.filter((c: Chat) => !c.image && c.chatId).map((c: Chat) => c.chatId);
+        if (jidsWithoutPic.length > 0) {
+          apiCall('profilePics', { remoteJids: jidsWithoutPic }).then((picData) => {
+            const pics = picData?.pics || {};
+            if (Object.keys(pics).length > 0) {
+              Object.assign(profilePicsCache.current, pics);
+              setChats(prev => prev.map(c => pics[c.chatId] ? { ...c, image: pics[c.chatId] } : c));
+            }
+          }).catch(() => { /* ignore pic fetch errors */ });
+        }
       }
     } catch (err: any) {
       if (!silent) toast.error(err.message || 'Erro ao carregar conversas');
