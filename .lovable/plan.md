@@ -1,79 +1,35 @@
 
 
-# Plano: Migrar para Stripe com 3 planos de assinatura
+## Diagnosis
 
-## Resumo
+Based on my investigation:
 
-Substituir a integração Cakto pela Stripe para gerenciar assinaturas mensais com 3 planos. Quando o pagamento falhar ou a assinatura for cancelada, o tenant perde acesso a extrações.
+1. **Send message works at the API level** - I tested the edge function directly and it successfully sent a message to the Evolution API. The send endpoint and payload are correct.
 
-## Planos
+2. **markRead uses wrong HTTP method** - The code uses `PUT` for `/chat/markMessageAsRead/{instance}` but Evolution API v2 requires `POST`. This causes a 404 error every time a chat is opened. While this doesn't directly block sending, it could cause confusion in error handling.
 
-| Plano | Preço | Leads |
-|-------|-------|-------|
-| Pro | R$ 47/mes | 6.000 |
-| Premium | R$ 97/mes | 14.000 |
-| Enterprise | R$ 197/mes | 32.000 |
+3. **Possible frontend timing issue** - The session replay shows the send button entering a loading state but no network request was captured for the `send` action. This could be a transient issue, or the request may have failed silently at the network level.
 
-## Etapas
+## Plan
 
-### 1. Habilitar integração Stripe
-- Ativar o Stripe no projeto (vai pedir a chave secreta)
-- Criar os 3 produtos e preços na Stripe via ferramenta do Lovable
+### 1. Fix markRead HTTP method (PUT → POST)
+In `supabase/functions/whatsapp-chats/index.ts`, change line 309 from `method: "PUT"` to `method: "POST"` for the `markMessageAsRead` endpoint.
 
-### 2. Atualizar banco de dados
-- Adicionar colunas na tabela `tenants`: `stripe_customer_id`, `stripe_subscription_id`, `stripe_status` (substituindo os campos `cakto_*`)
-- Remover colunas Cakto (`cakto_customer_email`, `cakto_subscription_id`)
-- Atualizar valores do enum de plano para `pro`, `premium`, `enterprise`
+### 2. Add error resilience to send action
+Add a `try/catch` wrapper around the `handleSend` in `WhatsAppChatPage.tsx` to ensure any fetch error is properly surfaced via toast, and add a `console.error` for debugging.
 
-### 3. Criar Edge Function `stripe-webhook`
-- Receber eventos do Stripe: `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.deleted`
-- No `checkout.session.completed`: criar usuario (se nao existir), ativar tenant, definir plano e limites conforme o preco pago
-- No `invoice.paid`: manter `ativo = true`
-- No `invoice.payment_failed` / `subscription.deleted`: setar `ativo = false` (bloqueia extrações)
+### 3. Ensure `apiCall` handles non-JSON error responses
+The current `apiCall` function (line 219) calls `res.json()` directly. If the edge function returns a non-JSON error (e.g., a 502 gateway error), this will throw silently. Add a status check before parsing JSON.
 
-### 4. Criar Edge Function `create-checkout`
-- Recebe o `price_id` do plano escolhido
-- Cria (ou recupera) um Stripe Customer pelo email do usuario
-- Gera uma Checkout Session do Stripe em modo `subscription`
-- Retorna a URL do checkout para redirect
+### 4. Redeploy edge function
+Deploy the updated `whatsapp-chats` function with the markRead fix.
 
-### 5. Criar pagina de planos (`/planos`)
-- Pagina publica ou acessivel por usuarios logados sem assinatura
-- Exibe os 3 cards de plano com preço, limite de leads e botao "Assinar"
-- Ao clicar, chama `create-checkout` e redireciona para o Stripe Checkout
+### Technical details
 
-### 6. Atualizar ProtectedRoute
-- Apos login, verificar se o tenant esta `ativo`
-- Se `ativo = false`, redirecionar para `/planos` em vez do dashboard
-- Admins globais ficam isentos dessa verificação
+**Edge function change** (`supabase/functions/whatsapp-chats/index.ts`):
+- Line 309: `method: "PUT"` → `method: "POST"`
 
-### 7. Bloquear extrações para inadimplentes
-- Na pagina de ICPs, antes de executar um ICP (run), verificar `tenant.ativo`
-- Se inativo, mostrar toast informando que a assinatura esta pendente
-
-### 8. Atualizar Backoffice
-- Substituir aba "Cakto" por aba "Assinaturas" mostrando status Stripe de cada tenant
-- Exibir: nome do tenant, plano, status da assinatura, stripe_customer_id
-
-### 9. Limpar codigo Cakto
-- Remover/substituir o webhook-cakto pela nova logica Stripe
-- Remover referencias a Cakto no frontend
-
----
-
-## Detalhes tecnicos
-
-**Mapeamento plano → limites (aplicado no webhook)**:
-- `pro` → 6000
-- `premium` → 14000  
-- `enterprise` → 32000
-
-**Fluxo do usuario**:
-1. Usuario acessa `/planos` e escolhe um plano
-2. E redirecionado ao Stripe Checkout (cartao de credito)
-3. Apos pagamento, webhook cria conta + tenant + ativa
-4. Usuario acessa via "Primeiro Acesso" e define senha
-5. Todo mes o Stripe cobra automaticamente; se falhar, `ativo = false`
-
-**Edge Function `stripe-webhook`**: usara `verify_jwt = false` no config.toml e validara a assinatura do webhook via `Stripe-Signature` header com o secret `STRIPE_WEBHOOK_SECRET`.
+**Frontend change** (`src/pages/WhatsAppChatPage.tsx`):
+- `apiCall` function: Check `res.ok` before parsing JSON; if not ok, read error text and throw
+- This ensures send errors are always visible to the user instead of being swallowed
 
