@@ -83,8 +83,20 @@ function parseChat(raw: any): Chat {
   // Evolution API v2 returns: id (internal DB id), remoteJid (WhatsApp JID), name, isGroup, etc.
   // Use remoteJid as the chatId for API calls (e.g. "5511999999999@s.whatsapp.net" or "120363...@g.us")
   const remoteJid = raw.remoteJid || '';
+  const isLid = remoteJid.endsWith('@lid');
   const phone = remoteJid?.replace(/@.*/, '') || raw.phone || '';
-  const name = raw.name || raw.pushName || formatPhoneDisplay(phone);
+
+  // For @lid contacts, try to get the real phone from participantAlt in lastMessage
+  let resolvedPhone = '';
+  if (isLid) {
+    const participantAlt = raw.lastMessage?.key?.participantAlt || '';
+    if (participantAlt.endsWith('@s.whatsapp.net')) {
+      resolvedPhone = participantAlt.replace(/@.*/, '');
+    }
+  }
+
+  const displayPhone = resolvedPhone || (!isLid ? phone : '');
+  const name = raw.name || raw.pushName || (displayPhone ? formatPhoneDisplay(displayPhone) : 'Contato');
   const lastMsg = raw.lastMessage?.message?.conversation
     || raw.lastMessage?.message?.extendedTextMessage?.text
     || raw.lastMessage?.message?.imageMessage?.caption
