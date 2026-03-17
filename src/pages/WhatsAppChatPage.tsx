@@ -341,10 +341,13 @@ function ChatList({ chats, selectedId, onSelect, loading, searchTerm, onSearchCh
   onSearchChange: (v: string) => void;
   onRefresh: () => void;
 }) {
-  const filtered = chats.filter(c =>
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.phone.includes(searchTerm)
-  );
+  const filtered = chats.filter(c => {
+    const term = searchTerm.toLowerCase();
+    return c.name.toLowerCase().includes(term) ||
+      c.phone.includes(searchTerm) ||
+      (c.leadName && c.leadName.toLowerCase().includes(term)) ||
+      (c.leadCnpj && c.leadCnpj.includes(searchTerm));
+  });
 
   return (
     <div className="flex flex-col h-full">
