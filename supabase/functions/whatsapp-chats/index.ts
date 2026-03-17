@@ -5,6 +5,59 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+/**
+ * Resolve the correct "number" for Evolution API sendText/sendMedia.
+ * - @s.whatsapp.net → strip suffix, use raw phone digits
+ * - @g.us → pass the full remoteJid (group)
+ * - @lid → try to find the real phone via findContacts, fallback to full remoteJid
+ */
+async function resolveNumber(
+  chatId: string,
+  evoUrl: string,
+  instanceName: string,
+  evoHeaders: Record<string, string>
+): Promise<string> {
+  if (chatId.endsWith("@g.us")) {
+    return chatId; // groups: pass full JID
+  }
+
+  if (chatId.endsWith("@lid")) {
+    // LID = WhatsApp internal identifier. Try to resolve real phone via findContacts.
+    try {
+      const res = await fetch(`${evoUrl}/chat/findContacts/${instanceName}`, {
+        method: "POST",
+        headers: evoHeaders,
+        body: JSON.stringify({ where: { id: chatId } }),
+      });
+      const data = await res.json();
+      console.log("findContacts for LID:", chatId, "response:", JSON.stringify(data).substring(0, 500));
+
+      // data may be an array of contacts or { contacts: [...] }
+      const contacts = Array.isArray(data) ? data : (data?.contacts || data?.data || []);
+      if (contacts.length > 0) {
+        const contact = contacts[0];
+        // Look for remoteJid or pushName that contains a phone number
+        const altJid = contact.remoteJid || contact.jid || contact.id || "";
+        if (altJid && altJid.endsWith("@s.whatsapp.net")) {
+          return altJid.replace(/@.*/, "");
+        }
+        // Some versions expose the phone number directly
+        if (contact.pushName && /^\d{10,}$/.test(contact.pushName.replace(/\D/g, ""))) {
+          return contact.pushName.replace(/\D/g, "");
+        }
+      }
+    } catch (err) {
+      console.error("findContacts error for LID:", err.message);
+    }
+
+    // Fallback: try passing the full LID as number (some Evolution versions handle it)
+    return chatId;
+  }
+
+  // Standard @s.whatsapp.net: strip suffix
+  return chatId.replace(/@.*/, "");
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -124,8 +177,10 @@ Deno.serve(async (req) => {
 
       let messages: any[] = [];
       if (data?.messages && Array.isArray(data.messages)) {
+        // Direct array of messages
         messages = data.messages;
       } else if (data?.messages?.records && Array.isArray(data.messages.records)) {
+        // Paginated format: { messages: { total, pages, records: [...] } }
         messages = data.messages.records;
       } else if (Array.isArray(data)) {
         messages = data;
@@ -151,22 +206,13 @@ Deno.serve(async (req) => {
         });
       }
 
-      // For LID contacts, use the full remoteJid; for regular contacts, extract number
-      const isLid = chatId.endsWith("@lid");
-      const isGroup = chatId.endsWith("@g.us");
-      const sendPayload: any = { text: message };
-
-      if (isLid || isGroup) {
-        // Use remoteJid directly for LID and group contacts
-        sendPayload.number = chatId;
-      } else {
-        sendPayload.number = chatId.replace(/@.*/, "");
-      }
+      const number = await resolveNumber(chatId, EVOLUTION_URL, instanceName, evoHeaders);
+      console.log("sendText: chatId=", chatId, "resolved number=", number);
 
       const res = await fetch(`${EVOLUTION_URL}/message/sendText/${instanceName}`, {
         method: "POST",
         headers: evoHeaders,
-        body: JSON.stringify(sendPayload),
+        body: JSON.stringify({ number, text: message }),
       });
       const data = await res.json();
       console.log("sendText response:", res.status, JSON.stringify(data).substring(0, 500));
@@ -194,7 +240,9 @@ Deno.serve(async (req) => {
         });
       }
 
-      const number = chatId.replace(/@.*/, "");
+      const number = await resolveNumber(chatId, EVOLUTION_URL, instanceName, evoHeaders);
+      console.log("sendMedia: chatId=", chatId, "resolved number=", number);
+
       const res = await fetch(`${EVOLUTION_URL}/message/sendMedia/${instanceName}`, {
         method: "POST",
         headers: evoHeaders,
@@ -225,13 +273,14 @@ Deno.serve(async (req) => {
       }
 
       const res = await fetch(`${EVOLUTION_URL}/chat/markMessageAsRead/${instanceName}`, {
-        method: "POST",
+        method: "PUT",
         headers: evoHeaders,
         body: JSON.stringify({
           readMessages: [{ remoteJid: chatId, fromMe: false, id: "" }],
         }),
       });
-      const data = await res.json();
+      let data: any = {};
+      try { data = await res.json(); } catch { /* ignore */ }
       console.log("markRead response:", res.status, JSON.stringify(data).substring(0, 500));
 
       return new Response(JSON.stringify(data), {
@@ -250,7 +299,7 @@ Deno.serve(async (req) => {
         });
       }
 
-      const res = await fetch(`${EVOLUTION_URL}/message/delete/${instanceName}`, {
+      const res = await fetch(`${EVOLUTION_URL}/chat/deleteMessage/${instanceName}`, {
         method: "DELETE",
         headers: evoHeaders,
         body: JSON.stringify({ id: messageid, remoteJid: chatId, fromMe: true }),
