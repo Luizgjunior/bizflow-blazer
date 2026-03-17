@@ -22,7 +22,9 @@ async function resolveNumber(
   }
 
   if (chatId.endsWith("@lid")) {
-    // LID = WhatsApp internal identifier. Try to resolve real phone via findContacts.
+    // LID = WhatsApp internal identifier. Try multiple strategies to resolve.
+
+    // Strategy 1: findContacts
     try {
       const res = await fetch(`${evoUrl}/chat/findContacts/${instanceName}`, {
         method: "POST",
@@ -32,16 +34,13 @@ async function resolveNumber(
       const data = await res.json();
       console.log("findContacts for LID:", chatId, "response:", JSON.stringify(data).substring(0, 500));
 
-      // data may be an array of contacts or { contacts: [...] }
       const contacts = Array.isArray(data) ? data : (data?.contacts || data?.data || []);
       if (contacts.length > 0) {
         const contact = contacts[0];
-        // Look for remoteJid or pushName that contains a phone number
         const altJid = contact.remoteJid || contact.jid || contact.id || "";
         if (altJid && altJid.endsWith("@s.whatsapp.net")) {
           return altJid.replace(/@.*/, "");
         }
-        // Some versions expose the phone number directly
         if (contact.pushName && /^\d{10,}$/.test(contact.pushName.replace(/\D/g, ""))) {
           return contact.pushName.replace(/\D/g, "");
         }
@@ -50,7 +49,41 @@ async function resolveNumber(
       console.error("findContacts error for LID:", err.message);
     }
 
-    // Fallback: try passing the full LID as number (some Evolution versions handle it)
+    // Strategy 2: fetch last message from this chat to find participantAlt
+    try {
+      const res = await fetch(`${evoUrl}/chat/findMessages/${instanceName}`, {
+        method: "POST",
+        headers: evoHeaders,
+        body: JSON.stringify({
+          where: { key: { remoteJid: chatId } },
+          limit: 5,
+        }),
+      });
+      const data = await res.json();
+      const msgs = data?.messages?.records || (Array.isArray(data?.messages) ? data.messages : (Array.isArray(data) ? data : []));
+      
+      for (const msg of msgs) {
+        // Check key.participantAlt (real phone in @s.whatsapp.net format)
+        const alt = msg?.key?.participantAlt || msg?.participantAlt || "";
+        if (alt && alt.endsWith("@s.whatsapp.net")) {
+          const phone = alt.replace(/@.*/, "");
+          console.log("Resolved LID via participantAlt:", chatId, "->", phone);
+          return phone;
+        }
+        // Check participant field
+        const participant = msg?.key?.participant || msg?.participant || "";
+        if (participant && participant.endsWith("@s.whatsapp.net")) {
+          const phone = participant.replace(/@.*/, "");
+          console.log("Resolved LID via participant:", chatId, "->", phone);
+          return phone;
+        }
+      }
+    } catch (err) {
+      console.error("findMessages for LID resolution error:", err.message);
+    }
+
+    // Fallback: pass the full LID (may fail with some API versions)
+    console.warn("Could not resolve LID to phone number:", chatId);
     return chatId;
   }
 
