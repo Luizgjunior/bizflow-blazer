@@ -125,6 +125,8 @@ Deno.serve(async (req) => {
       let messages: any[] = [];
       if (data?.messages && Array.isArray(data.messages)) {
         messages = data.messages;
+      } else if (data?.messages?.records && Array.isArray(data.messages.records)) {
+        messages = data.messages.records;
       } else if (Array.isArray(data)) {
         messages = data;
       } else if (data?.data?.messages && Array.isArray(data.data.messages)) {
