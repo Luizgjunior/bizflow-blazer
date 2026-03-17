@@ -779,6 +779,17 @@ export default function WhatsAppChatPage() {
       }
 
       setChats(parsed);
+
+      // Fetch profile pictures in background
+      const jidsWithoutPic = parsed.filter((c: Chat) => !c.image && c.chatId).map((c: Chat) => c.chatId);
+      if (jidsWithoutPic.length > 0) {
+        apiCall('profilePics', { remoteJids: jidsWithoutPic }).then((picData) => {
+          const pics = picData?.pics || {};
+          if (Object.keys(pics).length > 0) {
+            setChats(prev => prev.map(c => pics[c.chatId] ? { ...c, image: pics[c.chatId] } : c));
+          }
+        }).catch(() => { /* ignore pic fetch errors */ });
+      }
     } catch (err: any) {
       if (!silent) toast.error(err.message || 'Erro ao carregar conversas');
     } finally {
