@@ -151,11 +151,22 @@ Deno.serve(async (req) => {
         });
       }
 
-      const number = chatId.replace(/@.*/, "");
+      // For LID contacts, use the full remoteJid; for regular contacts, extract number
+      const isLid = chatId.endsWith("@lid");
+      const isGroup = chatId.endsWith("@g.us");
+      const sendPayload: any = { text: message };
+
+      if (isLid || isGroup) {
+        // Use remoteJid directly for LID and group contacts
+        sendPayload.number = chatId;
+      } else {
+        sendPayload.number = chatId.replace(/@.*/, "");
+      }
+
       const res = await fetch(`${EVOLUTION_URL}/message/sendText/${instanceName}`, {
         method: "POST",
         headers: evoHeaders,
-        body: JSON.stringify({ number, text: message }),
+        body: JSON.stringify(sendPayload),
       });
       const data = await res.json();
       console.log("sendText response:", res.status, JSON.stringify(data).substring(0, 500));
