@@ -724,6 +724,8 @@ export default function WhatsAppChatPage() {
   }, [selectedChat]);
 
   const wasConnectedRef = useRef(true);
+  const profilePicsCache = useRef<Record<string, string>>({});
+  const profilePicsFetched = useRef(false);
 
   const fetchChats = useCallback(async (silent = false) => {
     if (!silent) setLoadingChats(true);
