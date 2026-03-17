@@ -57,17 +57,19 @@ function formatTs(ts: number): string {
 }
 
 function parseChat(raw: any): Chat {
-  // UazAPI v2 returns: wa_chatid, phone, wa_contactName, wa_name, name, lead_name, etc.
-  const chatId = raw.wa_chatid || raw.chatid || raw.id || '';
-  const phone = raw.phone || chatId.replace(/@.*/, '');
-  const name = raw.wa_contactName || raw.wa_name || raw.name || raw.lead_name || raw.lead_fullName || phone;
-  const lastMsg = raw.wa_lastMessageTextVote || raw.lastMessage || '';
-  const ts = raw.wa_lastMsgTimestamp || raw.timestamp || raw.t || 0;
-  const unread = raw.wa_unreadCount || raw.unreadCount || 0;
-  const isGroup = raw.wa_isGroup || raw.isGroup || (chatId.includes('@g.us')) || false;
-  const image = raw.imagePreview || raw.image || '';
+  // Evolution API v2 returns: id, name, isGroup, unreadCount, lastMessage { message, messageTimestamp, pushName }
+  const chatId = raw.id || '';
+  const phone = raw.id?.replace(/@.*/, '') || raw.phone || '';
+  const name = raw.name || raw.pushName || phone;
+  const lastMsg = raw.lastMessage?.message?.conversation
+    || raw.lastMessage?.message?.extendedTextMessage?.text
+    || raw.lastMessage?.message?.imageMessage?.caption
+    || '';
+  const ts = raw.lastMessage?.messageTimestamp || raw.updatedAt || 0;
+  const unread = raw.unreadCount || 0;
+  const isGroup = raw.isGroup || raw.id?.includes('@g.us') || false;
+  const image = raw.profilePicUrl || raw.image || '';
 
-  // Build chatId from phone if not available
   const finalChatId = chatId || (phone ? `${phone}@s.whatsapp.net` : '');
 
   return {
