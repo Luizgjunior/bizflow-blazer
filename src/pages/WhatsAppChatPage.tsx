@@ -84,18 +84,22 @@ function parseChat(raw: any): Chat {
   // Use remoteJid as the chatId for API calls (e.g. "5511999999999@s.whatsapp.net" or "120363...@g.us")
   const remoteJid = raw.remoteJid || '';
   const isLid = remoteJid.endsWith('@lid');
-  const phone = remoteJid?.replace(/@.*/, '') || raw.phone || '';
+  const rawPhone = remoteJid?.replace(/@.*/, '') || raw.phone || '';
 
-  // For @lid contacts, try to get the real phone from participantAlt in lastMessage
+  // For @lid contacts, try to resolve real phone from lastMessage key fields
   let resolvedPhone = '';
   if (isLid) {
-    const participantAlt = raw.lastMessage?.key?.participantAlt || '';
-    if (participantAlt.endsWith('@s.whatsapp.net')) {
-      resolvedPhone = participantAlt.replace(/@.*/, '');
+    const key = raw.lastMessage?.key || {};
+    // Check participantAlt (group messages) and remoteJidAlt (direct messages)
+    const altJid = key.participantAlt || key.remoteJidAlt || '';
+    if (altJid.endsWith('@s.whatsapp.net')) {
+      resolvedPhone = altJid.replace(/@.*/, '');
     }
   }
 
-  const displayPhone = resolvedPhone || (!isLid ? phone : '');
+  // Use resolved phone for display, or raw phone if not a LID
+  const phone = resolvedPhone || (!isLid ? rawPhone : '');
+  const displayPhone = phone;
   const name = raw.name || raw.pushName || (displayPhone ? formatPhoneDisplay(displayPhone) : 'Contato');
   const lastMsg = raw.lastMessage?.message?.conversation
     || raw.lastMessage?.message?.extendedTextMessage?.text
@@ -761,8 +765,8 @@ export default function WhatsAppChatPage() {
       const parsed = (data.chats || []).map(parseChat);
       parsed.sort((a: Chat, b: Chat) => (b.timestamp || 0) - (a.timestamp || 0));
 
-      // Enrich chats with lead/deal data from DB
-      const phones = parsed.filter((c: Chat) => !c.isGroup && c.phone).map((c: Chat) => c.phone);
+      // Enrich chats with lead/deal data from DB (only real phone numbers, not LID internal IDs)
+      const phones = parsed.filter((c: Chat) => !c.isGroup && c.phone && c.phone.length <= 15).map((c: Chat) => c.phone);
       if (phones.length > 0) {
         const [leadsRes, dealsRes] = await Promise.all([
           supabase.from('leads').select('razao_social, cnpj, raw_json').in('cnpj', phones.map((p: string) => p.replace(/^55/, ''))).limit(500),
@@ -866,7 +870,8 @@ export default function WhatsAppChatPage() {
         const existingPhones = new Set((existingDeals || []).map(d => d.telefone).filter(Boolean));
 
         // Create deals for contacts that don't have one yet (non-group only)
-        const newContacts = chats.filter(c => !c.isGroup && c.phone && !existingPhones.has(c.phone));
+        // Only create deals for contacts with real phone numbers (not empty from unresolved LIDs)
+        const newContacts = chats.filter(c => !c.isGroup && c.phone && c.phone.length <= 15 && !existingPhones.has(c.phone));
 
         if (newContacts.length === 0) return;
 
