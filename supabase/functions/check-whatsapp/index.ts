@@ -68,7 +68,7 @@ Deno.serve(async (req) => {
       return phone;
     }).filter((p: string) => p.length >= 12);
 
-    console.log(`Checking ${normalizedNumbers.length} numbers via UazAPI`);
+    console.log(`Checking ${normalizedNumbers.length} numbers via Evolution API`);
 
     const results: { number: string; has_whatsapp: boolean; error?: string }[] = [];
 

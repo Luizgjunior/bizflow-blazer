@@ -71,3 +71,8 @@ Yes, you can!
 To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
 
 Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+
+## Variáveis de Ambiente — WhatsApp (Evolution API)
+
+- **EVOLUTION_URL**: URL base da sua instância Evolution API (ex: `https://evo.seudominio.com`)
+- **EVOLUTION_API_KEY**: API Key global da Evolution API (configurada no painel do servidor)
