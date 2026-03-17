@@ -92,11 +92,11 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "WhatsApp not connected" }), { status: 400, headers: corsHeaders });
     }
 
-    const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "";
-    if (!UAZAPI_URL) {
-      return new Response(JSON.stringify({ error: "UAZAPI_URL not configured" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    const EVOLUTION_URL = Deno.env.get("EVOLUTION_URL") || "";
+    if (!EVOLUTION_URL) {
+      return new Response(JSON.stringify({ error: "EVOLUTION_URL not configured" }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    const instanceToken = instance.instance_token || "";
+    const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY") || "";
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
 
     // Get pending contacts (limited batch)
@@ -191,15 +191,15 @@ Regras:
         let sendResult;
 
         if (campaign.tipo === "media" && campaign.media_url) {
-          sendResult = await fetch(`${UAZAPI_URL}/send/media`, {
+          sendResult = await fetch(`${EVOLUTION_URL}/message/sendMedia/${instance.instance_name}`, {
             method: "POST",
-            headers: { "Content-Type": "application/json", "token": instanceToken },
-            body: JSON.stringify({ number: phone, type: campaign.media_type || "image", file: campaign.media_url, caption: messageText }),
+            headers: { "Content-Type": "application/json", "apikey": EVOLUTION_API_KEY },
+            body: JSON.stringify({ number: phone, mediatype: campaign.media_type || "image", media: campaign.media_url, caption: messageText }),
           });
         } else {
-          sendResult = await fetch(`${UAZAPI_URL}/send/text`, {
+          sendResult = await fetch(`${EVOLUTION_URL}/message/sendText/${instance.instance_name}`, {
             method: "POST",
-            headers: { "Content-Type": "application/json", "token": instanceToken },
+            headers: { "Content-Type": "application/json", "apikey": EVOLUTION_API_KEY },
             body: JSON.stringify({ number: phone, text: messageText }),
           });
         }
