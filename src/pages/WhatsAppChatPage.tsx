@@ -58,12 +58,33 @@ function formatTs(ts: number): string {
   return date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
 }
 
+function formatPhoneDisplay(digits: string): string {
+  if (!digits) return 'Desconhecido';
+  // Brazilian numbers: 55 + 2-digit DDD + 8-9 digit number
+  if (digits.startsWith('55') && (digits.length === 12 || digits.length === 13)) {
+    const ddd = digits.slice(2, 4);
+    const number = digits.slice(4);
+    const formatted = number.length === 9
+      ? `${number.slice(0, 5)}-${number.slice(5)}`
+      : `${number.slice(0, 4)}-${number.slice(4)}`;
+    return `+55 ${ddd} ${formatted}`;
+  }
+  // Generic international: +CC remaining grouped
+  if (digits.length > 6) {
+    const cc = digits.slice(0, 2);
+    const rest = digits.slice(2);
+    const mid = Math.ceil(rest.length / 2);
+    return `+${cc} ${rest.slice(0, mid)} ${rest.slice(mid)}`;
+  }
+  return `+${digits}`;
+}
+
 function parseChat(raw: any): Chat {
   // Evolution API v2 returns: id (internal DB id), remoteJid (WhatsApp JID), name, isGroup, etc.
   // Use remoteJid as the chatId for API calls (e.g. "5511999999999@s.whatsapp.net" or "120363...@g.us")
   const remoteJid = raw.remoteJid || '';
   const phone = remoteJid?.replace(/@.*/, '') || raw.phone || '';
-  const name = raw.name || raw.pushName || phone;
+  const name = raw.name || raw.pushName || formatPhoneDisplay(phone);
   const lastMsg = raw.lastMessage?.message?.conversation
     || raw.lastMessage?.message?.extendedTextMessage?.text
     || raw.lastMessage?.message?.imageMessage?.caption

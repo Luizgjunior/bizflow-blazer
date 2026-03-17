@@ -1,32 +1,79 @@
 
 
-## Problem
+# Plano: Migrar para Stripe com 3 planos de assinatura
 
-When a WhatsApp contact doesn't have a `pushName` (saved name), the chat list shows the raw remoteJid digits (e.g., `237512345784459`) instead of a formatted phone number like WhatsApp Web does (e.g., `+55 11 99999-9999`).
+## Resumo
 
-## Solution
+Substituir a integração Cakto pela Stripe para gerenciar assinaturas mensais com 3 planos. Quando o pagamento falhar ou a assinatura for cancelada, o tenant perde acesso a extrações.
 
-1. **Add a phone number formatter** in `WhatsAppChatPage.tsx` that formats raw digits into a readable phone format, similar to WhatsApp Web:
-   - Brazilian numbers (55...): `+55 11 99999-9999`
-   - International numbers: `+XX XX XXXXX-XXXX` (generic grouping)
-   - Short/unknown formats: prefix with `+` and group digits
+## Planos
 
-2. **Update `parseChat`** to use the formatter when the name falls back to the phone number (i.e., when there's no `pushName` or `name` from the API).
+| Plano | Preço | Leads |
+|-------|-------|-------|
+| Pro | R$ 47/mes | 6.000 |
+| Premium | R$ 97/mes | 14.000 |
+| Enterprise | R$ 197/mes | 32.000 |
 
-### Technical Detail
+## Etapas
 
-In `parseChat` (line 66), currently:
-```typescript
-const name = raw.name || raw.pushName || phone;
-```
+### 1. Habilitar integração Stripe
+- Ativar o Stripe no projeto (vai pedir a chave secreta)
+- Criar os 3 produtos e preços na Stripe via ferramenta do Lovable
 
-Will become:
-```typescript
-const name = raw.name || raw.pushName || formatPhoneDisplay(phone);
-```
+### 2. Atualizar banco de dados
+- Adicionar colunas na tabela `tenants`: `stripe_customer_id`, `stripe_subscription_id`, `stripe_status` (substituindo os campos `cakto_*`)
+- Remover colunas Cakto (`cakto_customer_email`, `cakto_subscription_id`)
+- Atualizar valores do enum de plano para `pro`, `premium`, `enterprise`
 
-Where `formatPhoneDisplay` formats digits like:
-- `5511999999999` → `+55 11 99999-9999`
-- `237512345784459` → `+237 51 23457-84459` (best-effort grouping)
-- Already handles country code detection for BR numbers
+### 3. Criar Edge Function `stripe-webhook`
+- Receber eventos do Stripe: `checkout.session.completed`, `invoice.paid`, `invoice.payment_failed`, `customer.subscription.deleted`
+- No `checkout.session.completed`: criar usuario (se nao existir), ativar tenant, definir plano e limites conforme o preco pago
+- No `invoice.paid`: manter `ativo = true`
+- No `invoice.payment_failed` / `subscription.deleted`: setar `ativo = false` (bloqueia extrações)
+
+### 4. Criar Edge Function `create-checkout`
+- Recebe o `price_id` do plano escolhido
+- Cria (ou recupera) um Stripe Customer pelo email do usuario
+- Gera uma Checkout Session do Stripe em modo `subscription`
+- Retorna a URL do checkout para redirect
+
+### 5. Criar pagina de planos (`/planos`)
+- Pagina publica ou acessivel por usuarios logados sem assinatura
+- Exibe os 3 cards de plano com preço, limite de leads e botao "Assinar"
+- Ao clicar, chama `create-checkout` e redireciona para o Stripe Checkout
+
+### 6. Atualizar ProtectedRoute
+- Apos login, verificar se o tenant esta `ativo`
+- Se `ativo = false`, redirecionar para `/planos` em vez do dashboard
+- Admins globais ficam isentos dessa verificação
+
+### 7. Bloquear extrações para inadimplentes
+- Na pagina de ICPs, antes de executar um ICP (run), verificar `tenant.ativo`
+- Se inativo, mostrar toast informando que a assinatura esta pendente
+
+### 8. Atualizar Backoffice
+- Substituir aba "Cakto" por aba "Assinaturas" mostrando status Stripe de cada tenant
+- Exibir: nome do tenant, plano, status da assinatura, stripe_customer_id
+
+### 9. Limpar codigo Cakto
+- Remover/substituir o webhook-cakto pela nova logica Stripe
+- Remover referencias a Cakto no frontend
+
+---
+
+## Detalhes tecnicos
+
+**Mapeamento plano → limites (aplicado no webhook)**:
+- `pro` → 6000
+- `premium` → 14000  
+- `enterprise` → 32000
+
+**Fluxo do usuario**:
+1. Usuario acessa `/planos` e escolhe um plano
+2. E redirecionado ao Stripe Checkout (cartao de credito)
+3. Apos pagamento, webhook cria conta + tenant + ativa
+4. Usuario acessa via "Primeiro Acesso" e define senha
+5. Todo mes o Stripe cobra automaticamente; se falhar, `ativo = false`
+
+**Edge Function `stripe-webhook`**: usara `verify_jwt = false` no config.toml e validara a assinatura do webhook via `Stripe-Signature` header com o secret `STRIPE_WEBHOOK_SECRET`.
 
