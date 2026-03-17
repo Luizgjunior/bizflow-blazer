@@ -92,18 +92,16 @@ Deno.serve(async (req) => {
             results.push({ number: cleanNumber || batch[data.indexOf(item)] || "", has_whatsapp: item.exists === true });
           }
         } else if (data && typeof data === "object" && !data.error) {
-          // Single object response or map-like response
-          // Try to match numbers from the batch
-          for (const phone of batch) {
-            // Check if data has the number as key or in a results array
-            if (data[phone] !== undefined) {
-              results.push({ number: phone, has_whatsapp: !!data[phone] });
-            } else if (data.exists !== undefined) {
-              // Single number check response
-              results.push({ number: phone, has_whatsapp: data.exists === true || data.numberExists === true || data.isRegistered === true });
-            } else {
-              // Unknown format, assume valid to avoid blocking
-              console.log(`Unknown response format for ${phone}, assuming valid`);
+          // Object with results array or unexpected format
+          const items = data.results || data.data || [];
+          if (Array.isArray(items) && items.length > 0) {
+            for (const item of items) {
+              const cleanNumber = (item.jid?.replace(/@.*/, "") || "").replace(/\D/g, "");
+              results.push({ number: cleanNumber || batch[items.indexOf(item)] || "", has_whatsapp: item.exists === true });
+            }
+          } else {
+            console.log(`Unknown response format, keeping all ${batch.length} numbers`);
+            for (const phone of batch) {
               results.push({ number: phone, has_whatsapp: true });
             }
           }
