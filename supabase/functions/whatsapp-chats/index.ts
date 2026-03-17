@@ -185,6 +185,46 @@ Deno.serve(async (req) => {
       });
     }
 
+    // ── FETCH PROFILE PICTURES (batch) ──
+    if (action === "profilePics") {
+      const body = await req.json();
+      const remoteJids: string[] = body.remoteJids || [];
+      if (!remoteJids.length) {
+        return new Response(JSON.stringify({ pics: {} }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      const pics: Record<string, string> = {};
+      // Fetch in parallel, max 10 at a time
+      const batchSize = 10;
+      for (let i = 0; i < remoteJids.length; i += batchSize) {
+        const batch = remoteJids.slice(i, i + batchSize);
+        const results = await Promise.allSettled(
+          batch.map(async (jid) => {
+            try {
+              const res = await fetch(`${EVOLUTION_URL}/chat/fetchProfilePictureUrl/${instanceName}`, {
+                method: "POST",
+                headers: evoHeaders,
+                body: JSON.stringify({ number: jid }),
+              });
+              if (res.ok) {
+                const data = await res.json();
+                const url = data?.profilePictureUrl || data?.profilePicUrl || data?.url || data?.picture || "";
+                if (url) pics[jid] = url;
+              }
+            } catch (_) {
+              // ignore individual failures
+            }
+          })
+        );
+      }
+
+      return new Response(JSON.stringify({ pics }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     // ── GET MESSAGES FOR A CHAT ──
     if (action === "messages") {
       const body = await req.json();
