@@ -191,15 +191,15 @@ Regras:
         let sendResult;
 
         if (campaign.tipo === "media" && campaign.media_url) {
-          sendResult = await fetch(`${UAZAPI_URL}/send/media`, {
+          sendResult = await fetch(`${EVOLUTION_URL}/message/sendMedia/${instance.instance_name}`, {
             method: "POST",
-            headers: { "Content-Type": "application/json", "token": instanceToken },
-            body: JSON.stringify({ number: phone, type: campaign.media_type || "image", file: campaign.media_url, caption: messageText }),
+            headers: { "Content-Type": "application/json", "apikey": EVOLUTION_API_KEY },
+            body: JSON.stringify({ number: phone, mediatype: campaign.media_type || "image", media: campaign.media_url, caption: messageText }),
           });
         } else {
-          sendResult = await fetch(`${UAZAPI_URL}/send/text`, {
+          sendResult = await fetch(`${EVOLUTION_URL}/message/sendText/${instance.instance_name}`, {
             method: "POST",
-            headers: { "Content-Type": "application/json", "token": instanceToken },
+            headers: { "Content-Type": "application/json", "apikey": EVOLUTION_API_KEY },
             body: JSON.stringify({ number: phone, text: messageText }),
           });
         }
