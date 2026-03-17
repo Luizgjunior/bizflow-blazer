@@ -765,8 +765,8 @@ export default function WhatsAppChatPage() {
       const parsed = (data.chats || []).map(parseChat);
       parsed.sort((a: Chat, b: Chat) => (b.timestamp || 0) - (a.timestamp || 0));
 
-      // Enrich chats with lead/deal data from DB
-      const phones = parsed.filter((c: Chat) => !c.isGroup && c.phone).map((c: Chat) => c.phone);
+      // Enrich chats with lead/deal data from DB (only real phone numbers, not LID internal IDs)
+      const phones = parsed.filter((c: Chat) => !c.isGroup && c.phone && c.phone.length <= 15).map((c: Chat) => c.phone);
       if (phones.length > 0) {
         const [leadsRes, dealsRes] = await Promise.all([
           supabase.from('leads').select('razao_social, cnpj, raw_json').in('cnpj', phones.map((p: string) => p.replace(/^55/, ''))).limit(500),
