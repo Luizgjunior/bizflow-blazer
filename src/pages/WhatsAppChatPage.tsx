@@ -26,6 +26,8 @@ type Chat = {
   isGroup: boolean;
   phone: string;
   image: string;
+  leadName?: string;
+  leadCnpj?: string;
 };
 
 type Message = {
