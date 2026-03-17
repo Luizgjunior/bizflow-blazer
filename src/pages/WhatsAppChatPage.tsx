@@ -26,6 +26,8 @@ type Chat = {
   isGroup: boolean;
   phone: string;
   image: string;
+  leadName?: string;
+  leadCnpj?: string;
 };
 
 type Message = {
@@ -339,10 +341,13 @@ function ChatList({ chats, selectedId, onSelect, loading, searchTerm, onSearchCh
   onSearchChange: (v: string) => void;
   onRefresh: () => void;
 }) {
-  const filtered = chats.filter(c =>
-    c.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    c.phone.includes(searchTerm)
-  );
+  const filtered = chats.filter(c => {
+    const term = searchTerm.toLowerCase();
+    return c.name.toLowerCase().includes(term) ||
+      c.phone.includes(searchTerm) ||
+      (c.leadName && c.leadName.toLowerCase().includes(term)) ||
+      (c.leadCnpj && c.leadCnpj.includes(searchTerm));
+  });
 
   return (
     <div className="flex flex-col h-full">
@@ -398,6 +403,9 @@ function ChatList({ chats, selectedId, onSelect, loading, searchTerm, onSearchCh
                     chat.unreadCount > 0 ? "text-primary font-semibold" : "text-muted-foreground"
                   )}>{chat.timestampFormatted}</span>
                 </div>
+                {chat.leadName && chat.leadName !== chat.name && (
+                  <p className="text-[11px] text-primary/80 truncate">{chat.leadName}{chat.leadCnpj ? ` · ${chat.leadCnpj}` : ''}</p>
+                )}
                 <div className="flex items-center justify-between mt-0.5">
                   <p className="text-xs text-muted-foreground truncate pr-2">{chat.lastMessage || 'Sem mensagens'}</p>
                   {chat.unreadCount > 0 && (
@@ -691,7 +699,6 @@ export default function WhatsAppChatPage() {
     try {
       const data = await apiCall('chats');
       if (data.error) {
-        // WhatsApp desconectou — limpa todo o histórico local automaticamente
         if (data.error === 'WhatsApp not connected') {
           if (wasConnectedRef.current) {
             wasConnectedRef.current = false;
@@ -708,6 +715,38 @@ export default function WhatsAppChatPage() {
       wasConnectedRef.current = true;
       const parsed = (data.chats || []).map(parseChat);
       parsed.sort((a: Chat, b: Chat) => (b.timestamp || 0) - (a.timestamp || 0));
+
+      // Enrich chats with lead/deal data from DB
+      const phones = parsed.filter((c: Chat) => !c.isGroup && c.phone).map((c: Chat) => c.phone);
+      if (phones.length > 0) {
+        const [leadsRes, dealsRes] = await Promise.all([
+          supabase.from('leads').select('razao_social, cnpj, raw_json').in('cnpj', phones.map((p: string) => p.replace(/^55/, ''))).limit(500),
+          supabase.from('crm_deals').select('titulo, cnpj, telefone, contato_nome').in('telefone', phones).limit(500),
+        ]);
+
+        const dealsByPhone = new Map<string, any>();
+        (dealsRes.data || []).forEach((d: any) => { if (d.telefone) dealsByPhone.set(d.telefone, d); });
+
+        const leadsByCnpj = new Map<string, any>();
+        (leadsRes.data || []).forEach((l: any) => { if (l.cnpj) leadsByCnpj.set(l.cnpj, l); });
+
+        parsed.forEach((chat: Chat) => {
+          if (chat.isGroup) return;
+          const deal = dealsByPhone.get(chat.phone);
+          if (deal) {
+            chat.leadName = deal.contato_nome || deal.titulo || undefined;
+            chat.leadCnpj = deal.cnpj || undefined;
+          }
+          // Also try matching by phone without country code
+          const phoneShort = chat.phone.replace(/^55/, '');
+          const lead = leadsByCnpj.get(phoneShort) || leadsByCnpj.get(chat.phone);
+          if (lead) {
+            chat.leadName = chat.leadName || lead.razao_social || undefined;
+            chat.leadCnpj = chat.leadCnpj || lead.cnpj || undefined;
+          }
+        });
+      }
+
       setChats(parsed);
     } catch (err: any) {
       if (!silent) toast.error(err.message || 'Erro ao carregar conversas');
