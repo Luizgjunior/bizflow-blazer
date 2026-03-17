@@ -55,11 +55,11 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "WhatsApp not connected" }), { status: 400, headers: corsHeaders });
     }
 
-    const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "";
-    if (!UAZAPI_URL) {
-      return new Response(JSON.stringify({ error: "UAZAPI_URL not configured" }), { status: 500, headers: corsHeaders });
+    const EVOLUTION_URL = Deno.env.get("EVOLUTION_URL") || "";
+    if (!EVOLUTION_URL) {
+      return new Response(JSON.stringify({ error: "EVOLUTION_URL not configured" }), { status: 500, headers: corsHeaders });
     }
-    const instanceToken = instance.instance_token || "";
+    const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY") || "";
 
     // Normalize all numbers
     const normalizedNumbers = numbers.slice(0, 200).map((num: string) => {
