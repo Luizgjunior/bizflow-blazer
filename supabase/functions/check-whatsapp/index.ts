@@ -55,11 +55,11 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "WhatsApp not connected" }), { status: 400, headers: corsHeaders });
     }
 
-    const UAZAPI_URL = Deno.env.get("UAZAPI_URL") || "";
-    if (!UAZAPI_URL) {
-      return new Response(JSON.stringify({ error: "UAZAPI_URL not configured" }), { status: 500, headers: corsHeaders });
+    const EVOLUTION_URL = Deno.env.get("EVOLUTION_URL") || "";
+    if (!EVOLUTION_URL) {
+      return new Response(JSON.stringify({ error: "EVOLUTION_URL not configured" }), { status: 500, headers: corsHeaders });
     }
-    const instanceToken = instance.instance_token || "";
+    const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY") || "";
 
     // Normalize all numbers
     const normalizedNumbers = numbers.slice(0, 200).map((num: string) => {
@@ -77,9 +77,9 @@ Deno.serve(async (req) => {
       const batch = normalizedNumbers.slice(i, i + 50);
       
       try {
-        const res = await fetch(`${UAZAPI_URL}/chat/check`, {
+        const res = await fetch(`${EVOLUTION_URL}/chat/whatsappNumbers/${instance.instance_name}`, {
           method: "POST",
-          headers: { "Content-Type": "application/json", "token": instanceToken },
+          headers: { "Content-Type": "application/json", "apikey": EVOLUTION_API_KEY },
           body: JSON.stringify({ numbers: batch }),
         });
 
@@ -87,26 +87,21 @@ Deno.serve(async (req) => {
         console.log(`Batch ${i / 50 + 1} response status: ${res.status}, sample:`, JSON.stringify(data).slice(0, 500));
 
         if (Array.isArray(data)) {
-          // Response is an array of results
           for (const item of data) {
-            const number = item.number || item.jid?.replace(/@.*/, "") || "";
-            const cleanNumber = number.replace(/\D/g, "");
-            const hasWhatsapp = item.exists === true || item.numberExists === true || item.status === "valid" || item.isRegistered === true;
-            results.push({ number: cleanNumber || batch[data.indexOf(item)] || "", has_whatsapp: hasWhatsapp });
+            const cleanNumber = (item.jid?.replace(/@.*/, "") || "").replace(/\D/g, "");
+            results.push({ number: cleanNumber || batch[data.indexOf(item)] || "", has_whatsapp: item.exists === true });
           }
         } else if (data && typeof data === "object" && !data.error) {
-          // Single object response or map-like response
-          // Try to match numbers from the batch
-          for (const phone of batch) {
-            // Check if data has the number as key or in a results array
-            if (data[phone] !== undefined) {
-              results.push({ number: phone, has_whatsapp: !!data[phone] });
-            } else if (data.exists !== undefined) {
-              // Single number check response
-              results.push({ number: phone, has_whatsapp: data.exists === true || data.numberExists === true || data.isRegistered === true });
-            } else {
-              // Unknown format, assume valid to avoid blocking
-              console.log(`Unknown response format for ${phone}, assuming valid`);
+          // Object with results array or unexpected format
+          const items = data.results || data.data || [];
+          if (Array.isArray(items) && items.length > 0) {
+            for (const item of items) {
+              const cleanNumber = (item.jid?.replace(/@.*/, "") || "").replace(/\D/g, "");
+              results.push({ number: cleanNumber || batch[items.indexOf(item)] || "", has_whatsapp: item.exists === true });
+            }
+          } else {
+            console.log(`Unknown response format, keeping all ${batch.length} numbers`);
+            for (const phone of batch) {
               results.push({ number: phone, has_whatsapp: true });
             }
           }
