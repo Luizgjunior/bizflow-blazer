@@ -403,6 +403,9 @@ function ChatList({ chats, selectedId, onSelect, loading, searchTerm, onSearchCh
                     chat.unreadCount > 0 ? "text-primary font-semibold" : "text-muted-foreground"
                   )}>{chat.timestampFormatted}</span>
                 </div>
+                {chat.leadName && chat.leadName !== chat.name && (
+                  <p className="text-[11px] text-primary/80 truncate">{chat.leadName}{chat.leadCnpj ? ` · ${chat.leadCnpj}` : ''}</p>
+                )}
                 <div className="flex items-center justify-between mt-0.5">
                   <p className="text-xs text-muted-foreground truncate pr-2">{chat.lastMessage || 'Sem mensagens'}</p>
                   {chat.unreadCount > 0 && (
