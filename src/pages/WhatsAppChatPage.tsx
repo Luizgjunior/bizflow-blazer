@@ -57,9 +57,10 @@ function formatTs(ts: number): string {
 }
 
 function parseChat(raw: any): Chat {
-  // Evolution API v2 returns: id, name, isGroup, unreadCount, lastMessage { message, messageTimestamp, pushName }
-  const chatId = raw.id || '';
-  const phone = raw.id?.replace(/@.*/, '') || raw.phone || '';
+  // Evolution API v2 returns: id (internal DB id), remoteJid (WhatsApp JID), name, isGroup, etc.
+  // Use remoteJid as the chatId for API calls (e.g. "5511999999999@s.whatsapp.net" or "120363...@g.us")
+  const remoteJid = raw.remoteJid || '';
+  const phone = remoteJid?.replace(/@.*/, '') || raw.phone || '';
   const name = raw.name || raw.pushName || phone;
   const lastMsg = raw.lastMessage?.message?.conversation
     || raw.lastMessage?.message?.extendedTextMessage?.text
@@ -67,13 +68,13 @@ function parseChat(raw: any): Chat {
     || '';
   const ts = raw.lastMessage?.messageTimestamp || raw.updatedAt || 0;
   const unread = raw.unreadCount || 0;
-  const isGroup = raw.isGroup || raw.id?.includes('@g.us') || false;
+  const isGroup = raw.isGroup || remoteJid?.includes('@g.us') || false;
   const image = raw.profilePicUrl || raw.image || '';
 
-  const finalChatId = chatId || (phone ? `${phone}@s.whatsapp.net` : '');
+  const finalChatId = remoteJid || (phone ? `${phone}@s.whatsapp.net` : '');
 
   return {
-    id: raw.id || finalChatId || phone,
+    id: remoteJid || raw.id || phone,
     chatId: finalChatId,
     name: name || phone || 'Desconhecido',
     lastMessage: lastMsg,
