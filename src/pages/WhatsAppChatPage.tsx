@@ -870,7 +870,8 @@ export default function WhatsAppChatPage() {
         const existingPhones = new Set((existingDeals || []).map(d => d.telefone).filter(Boolean));
 
         // Create deals for contacts that don't have one yet (non-group only)
-        const newContacts = chats.filter(c => !c.isGroup && c.phone && !existingPhones.has(c.phone));
+        // Only create deals for contacts with real phone numbers (not empty from unresolved LIDs)
+        const newContacts = chats.filter(c => !c.isGroup && c.phone && c.phone.length <= 15 && !existingPhones.has(c.phone));
 
         if (newContacts.length === 0) return;
 
