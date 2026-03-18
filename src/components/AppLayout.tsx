@@ -53,7 +53,7 @@ const navItems = [
   { path: '/disparos', label: 'Conexão', icon: Send },
 ];
 
-const bottomNavItems = navItems.slice(0, 6);
+const bottomNavPaths = new Set(navItems.slice(0, 6).map(n => n.path));
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
