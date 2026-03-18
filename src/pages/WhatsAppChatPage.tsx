@@ -879,7 +879,9 @@ export default function WhatsAppChatPage() {
 
     const createDealsForNewContacts = async () => {
       try {
-        // Get first pipeline stage for this tenant
+        // Wait until enrichment is loaded so we know which phones already have deals
+        if (!enrichmentCache.current) return;
+
         const { data: stages } = await supabase
           .from('crm_pipeline_stages')
           .select('id, tenant_id')
@@ -889,15 +891,8 @@ export default function WhatsAppChatPage() {
         if (!stages || stages.length === 0) return;
         const firstStage = stages[0];
 
-        // Get existing deals' phone numbers
-        const { data: existingDeals } = await supabase
-          .from('crm_deals')
-          .select('telefone');
+        const existingPhones = new Set(enrichmentCache.current.dealsByPhone.keys());
 
-        const existingPhones = new Set((existingDeals || []).map(d => d.telefone).filter(Boolean));
-
-        // Create deals for contacts that don't have one yet (non-group only)
-        // Only create deals for contacts with real phone numbers (not empty from unresolved LIDs)
         const newContacts = chats.filter(c => !c.isGroup && c.phone && c.phone.length <= 15 && !existingPhones.has(c.phone));
 
         if (newContacts.length === 0) return;
