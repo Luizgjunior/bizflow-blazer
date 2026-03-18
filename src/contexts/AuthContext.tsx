@@ -28,6 +28,7 @@ interface AuthContextType {
   loading: boolean;
   profileLoading: boolean;
   subscription: SubscriptionInfo;
+  allowedPages: string[] | null; // null = all pages allowed
   checkSubscription: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signUp: (email: string, password: string, nome: string, empresaNome?: string, plano?: string) => Promise<{ error: any }>;
@@ -43,6 +44,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
   const [profileLoading, setProfileLoading] = useState(true);
+  const [allowedPages, setAllowedPages] = useState<string[] | null>(null);
   const [subscription, setSubscription] = useState<SubscriptionInfo>({
     subscribed: false,
     plano: null,
@@ -65,12 +67,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setProfile(null);
         setRole(null);
+        setAllowedPages(null);
         setProfileLoading(false);
         return;
       }
 
       if (profileRes.data) setProfile(profileRes.data);
-      setRole(roleRes.data?.role ?? null);
+      const userRole = roleRes.data?.role ?? null;
+      setRole(userRole);
+
+      // Fetch allowed pages for the tenant (admin_global sees everything)
+      if (userRole === 'admin_global') {
+        setAllowedPages(null); // null = all allowed
+      } else if (profileRes.data?.tenant_id) {
+        const { data: pages } = await supabase
+          .from('tenant_allowed_pages')
+          .select('page_path')
+          .eq('tenant_id', profileRes.data.tenant_id);
+        if (pages && pages.length > 0) {
+          setAllowedPages(pages.map(p => p.page_path));
+        } else {
+          // No restrictions configured = all pages allowed
+          setAllowedPages(null);
+        }
+      } else {
+        setAllowedPages(null);
+      }
     } finally {
       setProfileLoading(false);
     }
@@ -85,7 +107,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         return;
       }
       if (data?.error) {
-        // User was deleted from auth — sign out stale session
         if (typeof data.error === 'string' && data.error.includes('does not exist')) {
           console.warn('User no longer exists, signing out');
           await supabase.auth.signOut();
@@ -93,6 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setUser(null);
           setProfile(null);
           setRole(null);
+          setAllowedPages(null);
           setSubscription({ subscribed: false, plano: null, subscription_end: null });
           return;
         }
@@ -127,7 +149,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
 
     const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      // Skip the initial event if getSession already handled it
       if (!initialized) return;
 
       setSession(session);
@@ -138,6 +159,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } else {
         setProfile(null);
         setRole(null);
+        setAllowedPages(null);
         setProfileLoading(false);
         setSubscription({ subscribed: false, plano: null, subscription_end: null });
       }
@@ -147,7 +169,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => authSub.unsubscribe();
   }, []);
 
-  // Check subscription on login and periodically
   useEffect(() => {
     if (session) {
       checkSubscription();
@@ -177,6 +198,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut();
     setProfile(null);
     setRole(null);
+    setAllowedPages(null);
     setSubscription({ subscribed: false, plano: null, subscription_end: null });
   };
 
@@ -192,6 +214,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loading,
         profileLoading,
         subscription,
+        allowedPages,
         checkSubscription,
         signIn,
         signUp,
