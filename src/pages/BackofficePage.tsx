@@ -8,7 +8,7 @@ import {
   Target, Play, FileText, Activity, Webhook, Copy, Check, Info,
   Edit, TrendingUp, AlertTriangle, Save, CreditCard, DollarSign,
   TrendingDown, CalendarDays, Receipt, Mail, MessageCircle, Bot,
-  Eye, ChevronRight,
+  Eye, ChevronRight, Monitor,
 } from 'lucide-react';
 import { LineChart, Line } from 'recharts';
 import { motion } from 'framer-motion';
