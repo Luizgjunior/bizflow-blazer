@@ -498,6 +498,9 @@ function TenantsTab() {
                     <td className="p-3 text-sm text-muted-foreground">{new Date(t.created_at).toLocaleDateString('pt-BR')}</td>
                     <td className="p-3 pr-4 text-right">
                       <div className="flex items-center justify-end gap-1">
+                        <Button size="sm" variant="ghost" className="h-7 px-2" title="Telas" onClick={() => setPagesTenant(t)}>
+                          <Monitor className="w-3.5 h-3.5" />
+                        </Button>
                         <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => openEdit(t)}>
                           <Edit className="w-3.5 h-3.5" />
                         </Button>
