@@ -58,12 +58,18 @@ const bottomNavItems = navItems.slice(0, 6);
 export default function AppLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile, role, signOut, isAdmin } = useAuth();
+  const { profile, role, signOut, isAdmin, allowedPages } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const allNavItems = isAdmin
-    ? [...navItems, { path: '/backoffice', label: 'Backoffice', icon: Shield }]
+  // Filter nav items based on tenant allowed pages
+  // allowedPages === null means all pages are allowed (no restrictions or admin)
+  const filteredNavItems = allowedPages
+    ? navItems.filter(item => allowedPages.includes(item.path))
     : navItems;
+
+  const allNavItems = isAdmin
+    ? [...filteredNavItems, { path: '/backoffice', label: 'Backoffice', icon: Shield }]
+    : filteredNavItems;
 
   const handleSignOut = async () => {
     await signOut();
