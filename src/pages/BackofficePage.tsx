@@ -528,6 +528,9 @@ function TenantsTab() {
                 </div>
                 <p className="text-xs text-muted-foreground mb-3">Limite: {t.limites_consulta.toLocaleString()} consultas</p>
                 <div className="flex gap-2">
+                  <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={() => setPagesTenant(t)}>
+                    <Monitor className="w-3.5 h-3.5" /> Telas
+                  </Button>
                   <Button size="sm" variant="outline" className="flex-1 gap-1.5 text-xs" onClick={() => openEdit(t)}>
                     <Edit className="w-3.5 h-3.5" /> Editar
                   </Button>
@@ -539,6 +542,15 @@ function TenantsTab() {
             ))}
           </div>
         </>
+      )}
+
+      {/* Tenant Pages Dialog */}
+      {pagesTenant && (
+        <TenantPagesDialog
+          tenant={pagesTenant}
+          open={!!pagesTenant}
+          onOpenChange={(v) => { if (!v) setPagesTenant(null); }}
+        />
       )}
     </div>
   );
