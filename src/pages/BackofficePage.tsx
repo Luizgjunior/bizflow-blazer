@@ -376,6 +376,7 @@ function TenantsTab() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTenant, setEditingTenant] = useState<any>(null);
+  const [pagesTenant, setPagesTenant] = useState<any>(null);
   const [nome, setNome] = useState('');
   const [plano, setPlano] = useState('pro');
   const [limites, setLimites] = useState('1000');
