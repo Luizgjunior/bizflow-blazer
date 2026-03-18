@@ -8,7 +8,7 @@ import {
   Target, Play, FileText, Activity, Webhook, Copy, Check, Info,
   Edit, TrendingUp, AlertTriangle, Save, CreditCard, DollarSign,
   TrendingDown, CalendarDays, Receipt, Mail, MessageCircle, Bot,
-  Eye, ChevronRight,
+  Eye, ChevronRight, Monitor,
 } from 'lucide-react';
 import { LineChart, Line } from 'recharts';
 import { motion } from 'framer-motion';
@@ -25,6 +25,147 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
+
+// All configurable pages for tenant access control
+const CONFIGURABLE_PAGES = [
+  { path: '/crm-dashboard', label: 'CRM Dashboard' },
+  { path: '/whatsapp-chat', label: 'Chat WhatsApp' },
+  { path: '/crm', label: 'CRM Kanban' },
+  { path: '/', label: 'Dashboard de Prospecção' },
+  { path: '/icps', label: 'ICPs' },
+  { path: '/runs', label: 'Runs' },
+  { path: '/leads', label: 'Leads' },
+  { path: '/exports', label: 'Exports' },
+  { path: '/campanhas', label: 'Campanhas' },
+  { path: '/disparos', label: 'Conexão' },
+];
+
+function TenantPagesDialog({ tenant, open, onOpenChange }: { tenant: any; open: boolean; onOpenChange: (v: boolean) => void }) {
+  const queryClient = useQueryClient();
+  const [selectedPages, setSelectedPages] = useState<string[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  // Fetch current allowed pages for this tenant
+  const { data: currentPages, isLoading } = useQuery({
+    queryKey: ['tenant-pages', tenant.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('tenant_allowed_pages')
+        .select('page_path')
+        .eq('tenant_id', tenant.id);
+      return (data || []).map((p: any) => p.page_path);
+    },
+    enabled: open,
+  });
+
+  // Sync fetched data into local state
+  if (currentPages && !loaded) {
+    // If no pages configured, default to all selected
+    setSelectedPages(currentPages.length > 0 ? currentPages : CONFIGURABLE_PAGES.map(p => p.path));
+    setLoaded(true);
+  }
+
+  // Reset loaded state when dialog closes
+  if (!open && loaded) {
+    setLoaded(false);
+  }
+
+  const togglePage = (path: string) => {
+    setSelectedPages(prev =>
+      prev.includes(path) ? prev.filter(p => p !== path) : [...prev, path]
+    );
+  };
+
+  const selectAll = () => setSelectedPages(CONFIGURABLE_PAGES.map(p => p.path));
+  const deselectAll = () => setSelectedPages([]);
+
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      // Delete all existing pages for this tenant
+      await supabase.from('tenant_allowed_pages').delete().eq('tenant_id', tenant.id);
+
+      // If all pages selected, don't insert (null = all allowed)
+      if (selectedPages.length === CONFIGURABLE_PAGES.length) return;
+
+      // Insert selected pages
+      if (selectedPages.length > 0) {
+        const inserts = selectedPages.map(path => ({
+          tenant_id: tenant.id,
+          page_path: path,
+        }));
+        const { error } = await supabase.from('tenant_allowed_pages').insert(inserts);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['tenant-pages', tenant.id] });
+      toast.success('Permissões de telas salvas!');
+      onOpenChange(false);
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Monitor className="w-4 h-4" />
+            Telas — {tenant.nome}
+          </DialogTitle>
+        </DialogHeader>
+        <p className="text-xs text-muted-foreground -mt-2">
+          Selecione as telas que os usuários deste tenant poderão acessar. Se todas estiverem marcadas, não há restrição.
+        </p>
+        {isLoading ? (
+          <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+        ) : (
+          <>
+            <div className="flex gap-2 mb-2">
+              <Button variant="outline" size="sm" className="text-xs" onClick={selectAll}>Marcar todas</Button>
+              <Button variant="outline" size="sm" className="text-xs" onClick={deselectAll}>Desmarcar todas</Button>
+            </div>
+            <ScrollArea className="max-h-[320px]">
+              <div className="space-y-2">
+                {CONFIGURABLE_PAGES.map(page => (
+                  <label
+                    key={page.path}
+                    className="flex items-center gap-3 p-2.5 rounded-lg border border-border hover:bg-muted/50 cursor-pointer transition-colors"
+                  >
+                    <Checkbox
+                      checked={selectedPages.includes(page.path)}
+                      onCheckedChange={() => togglePage(page.path)}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium text-foreground">{page.label}</p>
+                      <p className="text-[10px] text-muted-foreground">{page.path}</p>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </ScrollArea>
+            <div className="flex items-center justify-between mt-2">
+              <p className="text-xs text-muted-foreground">
+                {selectedPages.length}/{CONFIGURABLE_PAGES.length} telas selecionadas
+              </p>
+              <Button
+                size="sm"
+                className="gap-1.5"
+                onClick={() => saveMutation.mutate()}
+                disabled={saveMutation.isPending}
+              >
+                {saveMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />}
+                Salvar
+              </Button>
+            </div>
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function BackofficePage() {
   const { isAdmin, loading } = useAuth();
@@ -235,6 +376,7 @@ function TenantsTab() {
   const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingTenant, setEditingTenant] = useState<any>(null);
+  const [pagesTenant, setPagesTenant] = useState<any>(null);
   const [nome, setNome] = useState('');
   const [plano, setPlano] = useState('pro');
   const [limites, setLimites] = useState('1000');
@@ -356,6 +498,9 @@ function TenantsTab() {
                     <td className="p-3 text-sm text-muted-foreground">{new Date(t.created_at).toLocaleDateString('pt-BR')}</td>
                     <td className="p-3 pr-4 text-right">
                       <div className="flex items-center justify-end gap-1">
+                        <Button size="sm" variant="ghost" className="h-7 px-2" title="Telas" onClick={() => setPagesTenant(t)}>
+                          <Monitor className="w-3.5 h-3.5" />
+                        </Button>
                         <Button size="sm" variant="ghost" className="h-7 px-2" onClick={() => openEdit(t)}>
                           <Edit className="w-3.5 h-3.5" />
                         </Button>
@@ -383,6 +528,9 @@ function TenantsTab() {
                 </div>
                 <p className="text-xs text-muted-foreground mb-3">Limite: {t.limites_consulta.toLocaleString()} consultas</p>
                 <div className="flex gap-2">
+                  <Button size="sm" variant="outline" className="gap-1.5 text-xs" onClick={() => setPagesTenant(t)}>
+                    <Monitor className="w-3.5 h-3.5" /> Telas
+                  </Button>
                   <Button size="sm" variant="outline" className="flex-1 gap-1.5 text-xs" onClick={() => openEdit(t)}>
                     <Edit className="w-3.5 h-3.5" /> Editar
                   </Button>
@@ -394,6 +542,15 @@ function TenantsTab() {
             ))}
           </div>
         </>
+      )}
+
+      {/* Tenant Pages Dialog */}
+      {pagesTenant && (
+        <TenantPagesDialog
+          tenant={pagesTenant}
+          open={!!pagesTenant}
+          onOpenChange={(v) => { if (!v) setPagesTenant(null); }}
+        />
       )}
     </div>
   );

@@ -627,6 +627,35 @@ export type Database = {
           },
         ]
       }
+      tenant_allowed_pages: {
+        Row: {
+          created_at: string
+          id: string
+          page_path: string
+          tenant_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          page_path: string
+          tenant_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          page_path?: string
+          tenant_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tenant_allowed_pages_tenant_id_fkey"
+            columns: ["tenant_id"]
+            isOneToOne: false
+            referencedRelation: "tenants"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       tenants: {
         Row: {
           ativo: boolean

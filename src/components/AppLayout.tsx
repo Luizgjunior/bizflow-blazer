@@ -53,17 +53,23 @@ const navItems = [
   { path: '/disparos', label: 'Conexão', icon: Send },
 ];
 
-const bottomNavItems = navItems.slice(0, 6);
+const bottomNavPaths = new Set(navItems.slice(0, 6).map(n => n.path));
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const location = useLocation();
   const navigate = useNavigate();
-  const { profile, role, signOut, isAdmin } = useAuth();
+  const { profile, role, signOut, isAdmin, allowedPages } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  const allNavItems = isAdmin
-    ? [...navItems, { path: '/backoffice', label: 'Backoffice', icon: Shield }]
+  // Filter nav items based on tenant allowed pages
+  // allowedPages === null means all pages are allowed (no restrictions or admin)
+  const filteredNavItems = allowedPages
+    ? navItems.filter(item => allowedPages.includes(item.path))
     : navItems;
+
+  const allNavItems = isAdmin
+    ? [...filteredNavItems, { path: '/backoffice', label: 'Backoffice', icon: Shield }]
+    : filteredNavItems;
 
   const handleSignOut = async () => {
     await signOut();
@@ -190,7 +196,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
 
       {/* Mobile Bottom Nav */}
       <nav className="lg:hidden fixed bottom-0 left-0 right-0 h-16 bg-card/90 backdrop-blur-lg border-t border-border z-40 flex items-center justify-around px-2">
-        {bottomNavItems.map((item) => {
+        {allNavItems.filter(item => bottomNavPaths.has(item.path)).slice(0, 6).map((item) => {
           const isActive = location.pathname === item.path;
           return (
             <Link
