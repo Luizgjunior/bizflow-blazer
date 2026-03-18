@@ -742,6 +742,45 @@ export default function WhatsAppChatPage() {
   const wasConnectedRef = useRef(true);
   const profilePicsCache = useRef<Record<string, string>>({});
   const profilePicsFetched = useRef(false);
+  const enrichmentCache = useRef<{ dealsByPhone: Map<string, any>; leadsByCnpj: Map<string, any> } | null>(null);
+  const enrichmentFetched = useRef(false);
+
+  // Enrich parsed chats with cached lead/deal data
+  const enrichChats = useCallback((parsed: Chat[]) => {
+    if (!enrichmentCache.current) return;
+    const { dealsByPhone, leadsByCnpj } = enrichmentCache.current;
+    parsed.forEach((chat: Chat) => {
+      if (chat.isGroup || !chat.phone || chat.phone.length > 15) return;
+      const deal = dealsByPhone.get(chat.phone);
+      if (deal) {
+        chat.leadName = deal.contato_nome || deal.titulo || undefined;
+        chat.leadCnpj = deal.cnpj || undefined;
+      }
+      const phoneShort = chat.phone.replace(/^55/, '');
+      const lead = leadsByCnpj.get(phoneShort) || leadsByCnpj.get(chat.phone);
+      if (lead) {
+        chat.leadName = chat.leadName || lead.razao_social || undefined;
+        chat.leadCnpj = chat.leadCnpj || lead.cnpj || undefined;
+      }
+    });
+  }, []);
+
+  // Fetch enrichment data once (leads + deals)
+  const fetchEnrichment = useCallback(async (phones: string[]) => {
+    if (enrichmentFetched.current || phones.length === 0) return;
+    enrichmentFetched.current = true;
+    try {
+      const [leadsRes, dealsRes] = await Promise.all([
+        supabase.from('leads').select('razao_social, cnpj, raw_json').in('cnpj', phones.map((p: string) => p.replace(/^55/, ''))).limit(500),
+        supabase.from('crm_deals').select('titulo, cnpj, telefone, contato_nome').in('telefone', phones).limit(500),
+      ]);
+      const dealsByPhone = new Map<string, any>();
+      (dealsRes.data || []).forEach((d: any) => { if (d.telefone) dealsByPhone.set(d.telefone, d); });
+      const leadsByCnpj = new Map<string, any>();
+      (leadsRes.data || []).forEach((l: any) => { if (l.cnpj) leadsByCnpj.set(l.cnpj, l); });
+      enrichmentCache.current = { dealsByPhone, leadsByCnpj };
+    } catch { /* ignore */ }
+  }, []);
 
   const fetchChats = useCallback(async (silent = false) => {
     if (!silent) setLoadingChats(true);
@@ -765,66 +804,54 @@ export default function WhatsAppChatPage() {
       const parsed = (data.chats || []).map(parseChat);
       parsed.sort((a: Chat, b: Chat) => (b.timestamp || 0) - (a.timestamp || 0));
 
-      // Enrich chats with lead/deal data from DB (only real phone numbers, not LID internal IDs)
       const phones = parsed.filter((c: Chat) => !c.isGroup && c.phone && c.phone.length <= 15).map((c: Chat) => c.phone);
-      if (phones.length > 0) {
-        const [leadsRes, dealsRes] = await Promise.all([
-          supabase.from('leads').select('razao_social, cnpj, raw_json').in('cnpj', phones.map((p: string) => p.replace(/^55/, ''))).limit(500),
-          supabase.from('crm_deals').select('titulo, cnpj, telefone, contato_nome').in('telefone', phones).limit(500),
-        ]);
 
-        const dealsByPhone = new Map<string, any>();
-        (dealsRes.data || []).forEach((d: any) => { if (d.telefone) dealsByPhone.set(d.telefone, d); });
-
-        const leadsByCnpj = new Map<string, any>();
-        (leadsRes.data || []).forEach((l: any) => { if (l.cnpj) leadsByCnpj.set(l.cnpj, l); });
-
-        parsed.forEach((chat: Chat) => {
-          if (chat.isGroup) return;
-          const deal = dealsByPhone.get(chat.phone);
-          if (deal) {
-            chat.leadName = deal.contato_nome || deal.titulo || undefined;
-            chat.leadCnpj = deal.cnpj || undefined;
-          }
-          // Also try matching by phone without country code
-          const phoneShort = chat.phone.replace(/^55/, '');
-          const lead = leadsByCnpj.get(phoneShort) || leadsByCnpj.get(chat.phone);
-          if (lead) {
-            chat.leadName = chat.leadName || lead.razao_social || undefined;
-            chat.leadCnpj = chat.leadCnpj || lead.cnpj || undefined;
-          }
+      // On first load, fetch enrichment + profile pics in parallel (non-blocking for UI)
+      if (!enrichmentFetched.current && phones.length > 0) {
+        // Show chats immediately, then enrich asynchronously
+        parsed.forEach((c: Chat) => {
+          if (!c.image && profilePicsCache.current[c.chatId]) c.image = profilePicsCache.current[c.chatId];
         });
-      }
+        setChats([...parsed]);
 
-      // Merge cached profile pics into parsed chats
-      parsed.forEach((c: Chat) => {
-        if (!c.image && profilePicsCache.current[c.chatId]) {
-          c.image = profilePicsCache.current[c.chatId];
-        }
-      });
+        // Fetch enrichment and pics in parallel
+        const enrichPromise = fetchEnrichment(phones);
+        const picsPromise = !profilePicsFetched.current ? (async () => {
+          profilePicsFetched.current = true;
+          const jidsWithoutPic = parsed.filter((c: Chat) => !c.image && c.chatId).map((c: Chat) => c.chatId);
+          if (jidsWithoutPic.length > 0) {
+            try {
+              const picData = await apiCall('profilePics', { remoteJids: jidsWithoutPic });
+              const pics = picData?.pics || {};
+              if (Object.keys(pics).length > 0) {
+                Object.assign(profilePicsCache.current, pics);
+              }
+            } catch { /* ignore */ }
+          }
+        })() : Promise.resolve();
 
-      setChats(parsed);
+        await Promise.all([enrichPromise, picsPromise]);
 
-      // Fetch profile pictures only once
-      if (!profilePicsFetched.current) {
-        profilePicsFetched.current = true;
-        const jidsWithoutPic = parsed.filter((c: Chat) => !c.image && c.chatId).map((c: Chat) => c.chatId);
-        if (jidsWithoutPic.length > 0) {
-          apiCall('profilePics', { remoteJids: jidsWithoutPic }).then((picData) => {
-            const pics = picData?.pics || {};
-            if (Object.keys(pics).length > 0) {
-              Object.assign(profilePicsCache.current, pics);
-              setChats(prev => prev.map(c => pics[c.chatId] ? { ...c, image: pics[c.chatId] } : c));
-            }
-          }).catch(() => { /* ignore pic fetch errors */ });
-        }
+        // Re-enrich and update with pics
+        enrichChats(parsed);
+        parsed.forEach((c: Chat) => {
+          if (!c.image && profilePicsCache.current[c.chatId]) c.image = profilePicsCache.current[c.chatId];
+        });
+        setChats([...parsed]);
+      } else {
+        // Subsequent polls: just apply cached enrichment + pics (instant)
+        enrichChats(parsed);
+        parsed.forEach((c: Chat) => {
+          if (!c.image && profilePicsCache.current[c.chatId]) c.image = profilePicsCache.current[c.chatId];
+        });
+        setChats(parsed);
       }
     } catch (err: any) {
       if (!silent) toast.error(err.message || 'Erro ao carregar conversas');
     } finally {
       if (!silent) setLoadingChats(false);
     }
-  }, []);
+  }, [enrichChats, fetchEnrichment]);
 
   const fetchMessages = useCallback(async (chatId: string, silent = false) => {
     if (!silent) setLoadingMessages(true);
@@ -852,7 +879,9 @@ export default function WhatsAppChatPage() {
 
     const createDealsForNewContacts = async () => {
       try {
-        // Get first pipeline stage for this tenant
+        // Wait until enrichment is loaded so we know which phones already have deals
+        if (!enrichmentCache.current) return;
+
         const { data: stages } = await supabase
           .from('crm_pipeline_stages')
           .select('id, tenant_id')
@@ -862,15 +891,8 @@ export default function WhatsAppChatPage() {
         if (!stages || stages.length === 0) return;
         const firstStage = stages[0];
 
-        // Get existing deals' phone numbers
-        const { data: existingDeals } = await supabase
-          .from('crm_deals')
-          .select('telefone');
+        const existingPhones = new Set(enrichmentCache.current.dealsByPhone.keys());
 
-        const existingPhones = new Set((existingDeals || []).map(d => d.telefone).filter(Boolean));
-
-        // Create deals for contacts that don't have one yet (non-group only)
-        // Only create deals for contacts with real phone numbers (not empty from unresolved LIDs)
         const newContacts = chats.filter(c => !c.isGroup && c.phone && c.phone.length <= 15 && !existingPhones.has(c.phone));
 
         if (newContacts.length === 0) return;
