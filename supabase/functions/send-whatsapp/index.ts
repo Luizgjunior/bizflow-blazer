@@ -99,14 +99,43 @@ Deno.serve(async (req) => {
     const EVOLUTION_API_KEY = Deno.env.get("EVOLUTION_API_KEY") || "";
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY") || "";
 
+    // Get already sent/sending phone numbers to avoid duplicates
+    const { data: alreadySent } = await adminClient
+      .from("whatsapp_campaign_contacts")
+      .select("telefone")
+      .eq("campaign_id", campaign_id)
+      .in("status", ["sent", "sending"]);
+
+    const sentPhones = new Set(
+      (alreadySent || []).map((c) => c.telefone.replace(/\D/g, ""))
+    );
+
     // Get pending contacts (limited batch)
-    const { data: contacts } = await adminClient
+    const { data: allPending } = await adminClient
       .from("whatsapp_campaign_contacts")
       .select("*")
       .eq("campaign_id", campaign_id)
       .eq("status", "pending")
       .order("created_at", { ascending: true })
-      .limit(BATCH_SIZE);
+      .limit(BATCH_SIZE * 2);
+
+    // Filter out contacts whose normalized phone was already sent in this campaign
+    const contacts: typeof allPending = [];
+    const seenInBatch = new Set<string>();
+    for (const c of allPending || []) {
+      const normalized = c.telefone.replace(/\D/g, "");
+      if (sentPhones.has(normalized) || seenInBatch.has(normalized)) {
+        // Mark as skipped duplicate
+        await adminClient
+          .from("whatsapp_campaign_contacts")
+          .update({ status: "failed", error_message: "Número duplicado na campanha" })
+          .eq("id", c.id);
+        continue;
+      }
+      seenInBatch.add(normalized);
+      contacts.push(c);
+      if (contacts.length >= BATCH_SIZE) break;
+    }
 
     if (!contacts || contacts.length === 0) {
       await adminClient
