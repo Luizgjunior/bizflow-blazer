@@ -808,43 +808,15 @@ export default function WhatsAppChatPage() {
 
       // On first load, fetch enrichment + profile pics in parallel (non-blocking for UI)
       if (!enrichmentFetched.current && phones.length > 0) {
-        // Show chats immediately, then enrich asynchronously
-        parsed.forEach((c: Chat) => {
-          if (!c.image && profilePicsCache.current[c.chatId]) c.image = profilePicsCache.current[c.chatId];
-        });
         setChats([...parsed]);
         if (!silent) setLoadingChats(false);
 
-        // Fetch enrichment and pics in parallel (background, non-blocking)
-        const enrichPromise = fetchEnrichment(phones);
-        const picsPromise = !profilePicsFetched.current ? (async () => {
-          profilePicsFetched.current = true;
-          const jidsWithoutPic = parsed.filter((c: Chat) => !c.image && c.chatId).map((c: Chat) => c.chatId);
-          if (jidsWithoutPic.length > 0) {
-            try {
-              const picData = await apiCall('profilePics', { remoteJids: jidsWithoutPic });
-              const pics = picData?.pics || {};
-              if (Object.keys(pics).length > 0) {
-                Object.assign(profilePicsCache.current, pics);
-              }
-            } catch { /* ignore */ }
-          }
-        })() : Promise.resolve();
-
-        await Promise.all([enrichPromise, picsPromise]);
-
-        // Re-enrich and update with pics
+        // Fetch enrichment only in background
+        await fetchEnrichment(phones);
         enrichChats(parsed);
-        parsed.forEach((c: Chat) => {
-          if (!c.image && profilePicsCache.current[c.chatId]) c.image = profilePicsCache.current[c.chatId];
-        });
         setChats([...parsed]);
       } else {
-        // Subsequent polls: just apply cached enrichment + pics (instant)
         enrichChats(parsed);
-        parsed.forEach((c: Chat) => {
-          if (!c.image && profilePicsCache.current[c.chatId]) c.image = profilePicsCache.current[c.chatId];
-        });
         if (!silent) setLoadingChats(false);
         setChats(parsed);
       }
