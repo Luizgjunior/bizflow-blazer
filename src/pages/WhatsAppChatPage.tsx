@@ -740,8 +740,6 @@ export default function WhatsAppChatPage() {
   }, [selectedChat]);
 
   const wasConnectedRef = useRef(true);
-  const profilePicsCache = useRef<Record<string, string>>({});
-  const profilePicsFetched = useRef(false);
   const enrichmentCache = useRef<{ dealsByPhone: Map<string, any>; leadsByCnpj: Map<string, any> } | null>(null);
   const enrichmentFetched = useRef(false);
 
