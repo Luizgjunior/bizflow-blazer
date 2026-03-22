@@ -242,7 +242,11 @@ function getAvatarColor(name: string) {
 
 async function apiCall(action: string, body?: any) {
   const { data: { session } } = await supabase.auth.getSession();
-  if (!session) throw new Error('Not authenticated');
+  if (!session) {
+    // Session expired — redirect to login
+    window.location.href = '/login';
+    throw new Error('Not authenticated');
+  }
   const projectId = import.meta.env.VITE_SUPABASE_PROJECT_ID;
   const url = `https://${projectId}.supabase.co/functions/v1/whatsapp-chats?action=${action}`;
   const res = await fetch(url, {
