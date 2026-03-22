@@ -813,8 +813,9 @@ export default function WhatsAppChatPage() {
           if (!c.image && profilePicsCache.current[c.chatId]) c.image = profilePicsCache.current[c.chatId];
         });
         setChats([...parsed]);
+        if (!silent) setLoadingChats(false);
 
-        // Fetch enrichment and pics in parallel
+        // Fetch enrichment and pics in parallel (background, non-blocking)
         const enrichPromise = fetchEnrichment(phones);
         const picsPromise = !profilePicsFetched.current ? (async () => {
           profilePicsFetched.current = true;
@@ -844,11 +845,11 @@ export default function WhatsAppChatPage() {
         parsed.forEach((c: Chat) => {
           if (!c.image && profilePicsCache.current[c.chatId]) c.image = profilePicsCache.current[c.chatId];
         });
+        if (!silent) setLoadingChats(false);
         setChats(parsed);
       }
     } catch (err: any) {
       if (!silent) toast.error(err.message || 'Erro ao carregar conversas');
-    } finally {
       if (!silent) setLoadingChats(false);
     }
   }, [enrichChats, fetchEnrichment]);
